@@ -36,7 +36,7 @@ sinkq_enqueue (sink_queue *queue, void *e)
   new_sink_node->data = e;
   new_sink_node->next = NULL;
 
-  //  prev_newest = xchg (&queue->newest, new_sink_node);
+  prev_newest = __sync_lock_test_and_set (&queue->newest, new_sink_node);
   
   prev_newest->next = new_sink_node;
 
