@@ -10,14 +10,16 @@
 // Notifier implementation 
 //
 
-// Callback to send signal to an executor.
-static
-void
-timer_send_usr1(gpointer elem, gpointer user)
-{
-  executor_t *exec = (executor_t*) elem;
-  pthread_kill(exec->thread, SIGUSR1);
-}
+int time_is_up = 0;
+
+/* // Callback to send signal to an executor. */
+/* static */
+/* void */
+/* timer_send_usr1(gpointer elem, gpointer user) */
+/* { */
+/*   executor_t *exec = (executor_t*) elem; */
+/*   pthread_kill(exec->thread, SIGUSR1); */
+/* } */
 
 
 // Handler that sends each executor a signal.
@@ -27,7 +29,9 @@ timer_handler(int x)
   switch(x)
     {
     case SIGALRM:
-      g_list_foreach(executors, timer_send_usr1, NULL);
+      /* printf("Sending SIGUSR1 signals\n"); */
+      // g_list_foreach(executors, timer_send_usr1, NULL);
+      time_is_up = 1;
       break;
     case SIGINT:
       printf("notifier: SIGINT\n");
@@ -98,9 +102,9 @@ setup_timer()
   
   // Setup a 500 microsecond repeating timer
   timer_param.it_interval.tv_sec = 0;
-  timer_param.it_interval.tv_usec = 500;
+  timer_param.it_interval.tv_usec = 10000;
   timer_param.it_value.tv_sec = 0;
-  timer_param.it_value.tv_usec = 500;
+  timer_param.it_value.tv_usec = 10000;
 
   setitimer(ITIMER_REAL,
             &timer_param,

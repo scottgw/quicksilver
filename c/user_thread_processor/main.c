@@ -9,42 +9,43 @@
 #include "processor.h"
 #include "work_list.h"
 
-processor_t *proc1;
-processor_t *proc2;
+processor_t proc1;
+processor_t proc2;
 
 int
-fib(int i)
+fib(processor_t exec, int i)
 {
+  maybe_yield(exec);
   if (i < 2)
     return 1;
   else
-    return fib(i-1) + fib(i-2);
+    return fib(exec, i-1) + fib(exec, i-2);
 }
 
 void
-task2(user_stack_t starter)
+task2(processor_t exec)
 {
-  STARTSTACK(starter);
+  int x;
   printf("Thread2 on the go\n");
-  printf("Result2: %d\n", fib(40));
+  x = fib(exec, 38);
+  printf("Result2: %d\n", x);
   printf("Thread2 finished\n");
-  ENDSTACK(starter);
 }
 
-
 void
-task1(user_stack_t starter)
+task1(processor_t exec)
 {
-  SWAPSTACK(starter);
+  int x;
   printf("Thread1 on the go\n");  
-  printf("Result1: %d\n", fib(40));  
+  x = fib(exec, 38);
+  printf("Result1: %d\n", x);
   printf("Thread1 finished\n");
-  ENDSTACK(starter);
 }
 
 int
 main(int argc, char **argv)
 {
+  /* printf("%d\n", fib(38));*/
   /* free_work_list(make_work_list()); */
   proc1 = make_processor();
   proc2 = make_processor();

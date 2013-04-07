@@ -6,3 +6,6 @@ create_notifier();
 
 void
 setup_timer();
+
+
+extern int time_is_up;
