@@ -5,10 +5,10 @@
 
 #define LIST_SIZE 1024
 
-work_list_t
-make_work_list()
+list_t
+list_make()
 {
-  work_list_t list = (work_list_t)malloc(sizeof(struct work_list));
+  list_t list = (list_t)malloc(sizeof(struct list));
   list->data = malloc(LIST_SIZE*sizeof(void*));
   list->start = 0;
   list->end = 0;
@@ -17,7 +17,7 @@ make_work_list()
 }
 
 void*
-take_work_item(work_list_t list)
+list_take(list_t list)
 {
   void* data;
   assert (list->size != 0);
@@ -28,7 +28,17 @@ take_work_item(work_list_t list)
 }
 
 void
-add_work_item(work_list_t list, void* data)
+list_foreach(list_t list, void (*func)(void*, void*), void* user_data)
+{
+  int end = list->end;
+  for(int i = list->start; i < end; i++)
+    {
+      func(list->data[i], user_data);
+    }
+}
+
+void
+list_add(list_t list, void* data)
 {
   *(list->data + list->end) = data;
   list->size++;
@@ -36,7 +46,7 @@ add_work_item(work_list_t list, void* data)
 }
 
 int
-work_list_size(work_list_t list)
+list_size(list_t list)
 {
   assert (list != NULL);
   return list->size;
@@ -44,7 +54,7 @@ work_list_size(work_list_t list)
 
 
 void
-free_work_list(work_list_t list)
+list_free(list_t list)
 {
   free(list->data);
   free(list);

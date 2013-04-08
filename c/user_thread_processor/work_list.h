@@ -1,23 +1,24 @@
 #ifndef __WORK_LIST_H_
 #define __WORK_LIST_H_
 
-#include <glib.h>
 #include "types.h"
 
-
-work_list_t
-make_work_list();
+list_t
+list_make();
 
 void*
-take_work_item(work_list_t);
+list_take(list_t);
 
 void
-add_work_item(work_list_t, void*);
+list_add(list_t, void*);
+
+void
+list_foreach(list_t, void (*)(void*, void*), void*);
 
 int
-work_list_size(work_list_t);
+list_size(list_t);
 
 void
-free_work_list(work_list_t);
+list_free(list_t);
 
 #endif // __WORK_LIST_H_

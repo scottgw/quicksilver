@@ -1,13 +1,10 @@
 #ifndef __EXECUTOR_H_
 #define __EXECUTOR_H_
 
-#include <glib.h>
 #include <pthread.h>
 
 #include "work_list.h"
 #include "processor.h"
-
-GList *executors;
 
 // Constructs the executor thread and adds the executor
 // To the list of executors.
@@ -24,6 +21,6 @@ executor_reschedule(executor_t);
 
 // Creates 'n' executors and stores them in the 'executors' list.
 void
-create_executors(work_list_t list, int n);
+create_executors(list_t list, int n);
 
 #endif // __EXECUTOR_H_

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/time.h>
-#include <glib.h>
+#include <unistd.h>
 
 #include "executor.h"
 #include "notifier.h"
@@ -10,17 +10,8 @@
 // Notifier implementation 
 //
 
-int time_is_up = 0;
-
-/* // Callback to send signal to an executor. */
-/* static */
-/* void */
-/* timer_send_usr1(gpointer elem, gpointer user) */
-/* { */
-/*   executor_t *exec = (executor_t*) elem; */
-/*   pthread_kill(exec->thread, SIGUSR1); */
-/* } */
-
+volatile int time_is_up = 0;
+volatile int notifier_done = 0;
 
 // Handler that sends each executor a signal.
 void
@@ -28,14 +19,12 @@ timer_handler(int x)
 {
   switch(x)
     {
-    case SIGALRM:
-      /* printf("Sending SIGUSR1 signals\n"); */
-      // g_list_foreach(executors, timer_send_usr1, NULL);
-      time_is_up = 1;
-      break;
     case SIGINT:
       printf("notifier: SIGINT\n");
       pthread_exit(NULL);
+      break;
+    default:
+      printf("notifier: unknown signal\n");
       break;
     }
 }
@@ -52,7 +41,6 @@ setup_handler()
   alarm_action.sa_mask    = mask;
   alarm_action.sa_flags   = 0;
 
-  sigaction (SIGALRM, &alarm_action, NULL);
   sigaction (SIGINT, &alarm_action, NULL);
 }
 
@@ -62,27 +50,11 @@ setup_handler()
 void*
 notifier(void* ptr)
 {
-  sigset_t mask, old_mask;
-  setup_handler();
-  
-  // We only listem for SIGALRM, may want to also listen
-  // for general interrupts.
-  sigemptyset(&mask);
-  sigaddset(&mask, SIGALRM);
-  sigaddset(&mask, SIGINT);
-
-  // Block the signal we want, so we don't miss it
-  // while the loop iterates.
-  pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
-  pthread_sigmask(SIG_BLOCK, &mask, &old_mask);
-  while(1) // FIXME: this should have a real condition to end the
-           // thread eventually
+  while(notifier_done == 0)
     {
-      sigsuspend(&old_mask);
+      usleep(1000);
+      time_is_up = 1;
     }
-
-  // Unblock the signals to continue as normal.
-  pthread_sigmask(SIG_UNBLOCK, &mask, NULL);
 
   return NULL;
 }
@@ -93,20 +65,4 @@ create_notifier()
   pthread_t thr;
   pthread_create(&thr, NULL, notifier, NULL);
   return thr;
-}
-
-void
-setup_timer()
-{
-  struct itimerval timer_param;
-  
-  // Setup a 500 microsecond repeating timer
-  timer_param.it_interval.tv_sec = 0;
-  timer_param.it_interval.tv_usec = 10000;
-  timer_param.it_value.tv_sec = 0;
-  timer_param.it_value.tv_usec = 10000;
-
-  setitimer(ITIMER_REAL,
-            &timer_param,
-            NULL);
 }

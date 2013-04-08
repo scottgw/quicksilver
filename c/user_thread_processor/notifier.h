@@ -4,8 +4,6 @@
 pthread_t
 create_notifier();
 
-void
-setup_timer();
+extern volatile int time_is_up;
+extern volatile int notifier_done;
 
-
-extern int time_is_up;
