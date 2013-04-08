@@ -40,7 +40,7 @@ void
 task_set_func(task_t task, void (*f)(void*), void* data)
 {
   assert (task != NULL);
-  makecontext(&task->ctx, (void (*)())task_wrapper, 4, task, f, data);
+  makecontext(&task->ctx, (void (*)())task_wrapper, 3, task, f, data);
 }
 
 void
