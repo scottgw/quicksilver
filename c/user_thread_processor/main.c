@@ -7,7 +7,7 @@
 #include "executor.h"
 #include "notifier.h"
 #include "processor.h"
-#include "work_list.h"
+#include "list.h"
 
 #define N 30
 

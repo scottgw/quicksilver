@@ -1,6 +1,6 @@
 CC_OPTS=-O3 -Wall -g -pthread -std=gnu99
 
-main: main.o executor.o notifier.o processor.o work_list.o
+main: main.o executor.o notifier.o processor.o list.o
 	${CC} ${CC_OPTS} $^ -o $@
 
 %.o: %.c

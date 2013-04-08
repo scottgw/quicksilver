@@ -3,7 +3,7 @@
 
 #include <pthread.h>
 
-#include "work_list.h"
+#include "list.h"
 #include "processor.h"
 
 // Constructs the executor thread and adds the executor

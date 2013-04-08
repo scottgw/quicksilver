@@ -8,7 +8,7 @@
 
 #include "executor.h"
 #include "processor.h"
-#include "work_list.h"
+#include "list.h"
 #include "notifier.h"
 
 list_t executors;

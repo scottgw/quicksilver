@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "work_list.h"
+#include "list.h"
 
 #define LIST_SIZE 1024
 

@@ -1,5 +1,5 @@
-#ifndef __WORK_LIST_H_
-#define __WORK_LIST_H_
+#ifndef __LIST_H_
+#define __LIST_H_
 
 #include "types.h"
 
@@ -21,4 +21,4 @@ list_size(list_t);
 void
 list_free(list_t);
 
-#endif // __WORK_LIST_H_
+#endif // __LIST_H_
