@@ -5,15 +5,12 @@
 #include <pthread.h>
 #include <glib.h>
 
+#include <ucontext.h>
+
 #include "executor.h"
 #include "processor.h"
 #include "work_list.h"
 #include "notifier.h"
-
-struct executor
-{
-  pthread_t thread;
-};
 
 /* extern volatile int register_count; */
 /* extern volatile int num_executors; */
@@ -22,22 +19,53 @@ static
 void
 get_next_processor(executor_t exec)
 {
-  if (current_proc != NULL)
+  /* printf("next proc: %d\n", work_list_size(exec->work)); */
+  if (exec->current_proc != NULL)
     {
-      add_work_item(work, current_proc);
+      add_work_item(exec->work, exec->current_proc);
     }
-  current_proc = take_work_item(work);
-  printf ("exec: %d in queue\n", work_list_size(work));
-  assert (current_proc != NULL);
+  assert(work_list_size(exec->work) > 0);
+  exec->current_proc = take_work_item(exec->work);
+  /* printf ("exec: %d in queue\n", work_list_size(work)); */
+  assert (exec->current_proc != NULL);
 }
 
 static
 void
 switch_to_next_processor(executor_t exec)
 {
+  /* printf("switching\n"); */
   get_next_processor(exec);
-  yield_to_processor(current_proc);
-  assert (current_proc != NULL);
+  if (proc_running(exec->current_proc))
+    {
+      yield_to_processor(exec, exec->current_proc);
+      if (exec->current_proc->is_done == 1)
+        exec->current_proc = NULL;
+    }
+  else
+    {
+      proc_start(exec->current_proc, exec);
+    }
+}
+
+static
+void
+executor_loop2(executor_t exec)
+{
+  
+  printf("Executor running\n");
+  while(1)
+    {
+      if (work_list_size(exec->work) > 0)
+        switch_to_next_processor(exec);
+      else
+        {
+          printf("no workers\n");
+          /* free_work_list(work);*/
+          pthread_exit(NULL);
+        }
+    }
+
 }
 
 static 
@@ -45,17 +73,16 @@ void*
 executor_loop(void* data)
 {
   executor_t exec = data;
-  printf("Executor running\n");
-  while(1)
-    {
-      if (work_list_size(work) > 0)
-        switch_to_next_processor(exec);
-      else
-        {
-          /* free_work_list(work);*/
-          pthread_exit(NULL);
-        }
-    }
+  void* stack = malloc(STACKSIZE);
+
+  getcontext(&exec->ctx);
+
+  exec->ctx.uc_stack.ss_sp   = stack + STACKSIZE;
+  exec->ctx.uc_stack.ss_size = STACKSIZE;
+
+  makecontext(&exec->ctx, (void (*)())executor_loop2, 1, exec);
+  setcontext(&exec->ctx);
+  
   return NULL;
 }
 
@@ -75,6 +102,7 @@ executor_t
 make_executor()
 {
   executor_t exec = malloc(sizeof(executor_t));
+  exec->current_proc = NULL;
   return exec;
 }
 
@@ -87,14 +115,12 @@ join_executors()
 
 
 void
-create_executors(int n)
+create_executors(work_list_t work, int n)
 {
-  work = make_work_list();
-  current_proc = NULL;
-
   for(int i = 0; i < n; i++)
     {
       executor_t exec = make_executor();
+      exec->work = work;
       executors = g_list_append(executors, exec);
       pthread_create(&exec->thread, NULL, executor_loop, exec);
     }

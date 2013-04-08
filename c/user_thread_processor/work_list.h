@@ -2,11 +2,7 @@
 #define __WORK_LIST_H_
 
 #include <glib.h>
-
-typedef struct
-{
-  GSequence* seq;
-} work_list_t;
+#include "types.h"
 
 
 work_list_t

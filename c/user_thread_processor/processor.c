@@ -1,66 +1,13 @@
 #include <stdlib.h>
 #include <stdint.h>
-#include <setjmp.h>
+#include <ucontext.h>
 #include <assert.h>
 
 #include "processor.h"
 #include "executor.h"
 #include "notifier.h"
 
-#define STACKSIZE 4*1024*sizeof(int)
-
-#define SWAPSTACK(val, other_stack)                                     \
-  asm volatile (                                                        \
-                "    call 1f                 # push IP           \n"    \
-                "1:  addq $(2f-1b), 0(%%rsp) # jump past xchg PC \n"    \
-                "    xchgq %%rsp, %%rcx      # swap stacks       \n"    \
-                "    ret                     # pop to new stack  \n"    \
-                "2:\n"                                                  \
-                : "=a"(val), "=c" (other_stack)                         \
-                : "a"(val), "c" (other_stack)                           \
-                : "%rbx","%rdx","%rbp","%rsi","%rdi","%r8",             \
-                  "%r9","%r10", "%r11","%r12","%r13","%r14","%r15",     \
-                  "memory","cc");
-
-
-extern void* thread_return_addr;
-
-#define NEWSTACK(func, other_stack)                                     \
-  asm volatile (                                                        \
-                "    call 1f                  # push PC\n"              \
-                "1:  addq $(2f-1b), 0(%%rsp)  # jump past xchg\n"       \
-                "    xchgq %%rsp, %%rcx       # swap stacks \n"         \
-                "    movq %%rcx, %%rdi        # set up call \n"         \
-                "    push thread_return_addr  # 'return address' \n"    \
-                "    jmp *%%rax               # do the call \n"         \
-                "2:\n"                                                  \
-                : "=a" (func), "=c" (other_stack)                       \
-                : "a" (func), "c" (other_stack)                         \
-                : "%rbx","%rdx","%rbp","%rsi","%rdi","%r8","%r9",       \
-                  "%r10","%r11","%r12","%r13","%r14","%r15","%rsp",     \
-                  "memory","cc");
-
-
 int global_id = 0;
-
-struct processor
-{
-  // I don't really know if both of these are needed,
-  // but it seems that a copy of the original base should
-  // be kept, as 'stack' will jump around.
-  user_stack_t stack;
-
-  user_stack_t executor_stack;
-
-  // The stack base, so we can reset it.
-  user_stack_t base;
-
-  int id;
-  
-  int is_done;
-  void (*func)(processor_t);
-};
-
 
 static
 void
@@ -71,50 +18,81 @@ thread_end()
 
 static
 void
-task_wrapper(user_stack_t starter)
+task_wrapper(processor_t proc)
 {
-  processor_t proc = NULL;
-
-  // This initial swap goes back to the starting thread.
-  SWAPSTACK(proc, starter);
-  
-  // When we're rescheduled, the proc will be 'us', as it will
-  // be kicked off by an executor.
   printf("starting func %d\n", proc->id);
-
-  proc->executor_stack = starter;
   proc->func(proc);
-
   printf ("func is done %d\n", proc->id);
-
   proc->is_done = 1;
 
-  SWAPSTACK(proc, starter);
-
+  setcontext(&proc->executor->ctx);
   assert (0 && "task_wrapper: should never get here");
 }
+
+void
+yield_to_processor(executor_t exec, processor_t proc)
+{
+  /* printf ("swapping %d\n", proc->id); */
+
+  proc->executor = exec;
+  exec->has_switched = 0;
+  getcontext(&proc->executor->ctx);
+  if(exec->has_switched == 0)
+    {
+      exec->has_switched++;
+      setcontext(&proc->ctx);
+    }
+  exec->has_switched++;
+  /* printf("coming back from yielding to proc %d\n", exec->has_switched); */
+  /* assert (proc != NULL); */
+  /* printf ("swapped %d\n", proc->id); */
+}
+
 
 // Yields to the executor (via its stack).
 void
 yield_to_executor(processor_t proc)
 {
-  user_stack_t stack = proc->executor_stack;
+  proc->has_switched = 0;
+  getcontext(&proc->ctx);
+  if (proc->has_switched == 0)
+    {
+      proc->has_switched++;
+      setcontext(&proc->executor->ctx);
+    }
+  proc->has_switched++;
+  /* printf("coming back from yielding to exec %d\n", proc->has_switched); */
+}
 
-  // We could send proc or some other information,
-  // proc is redundant as the executor already
-  // has proc as its current_proc.
-  SWAPSTACK(proc, stack);
-
-  proc->executor_stack = stack;
+int
+proc_running(processor_t proc)
+{
+  return proc->is_running;
 }
 
 void
-maybe_yield(processor_t proc)
+proc_start(processor_t proc, executor_t exec)
 {
-  if (time_is_up)
+  printf("starting proc\n");
+  proc->is_running = 1;
+  proc->executor = exec;
+  exec->has_switched = 0;
+
+  getcontext(&proc->executor->ctx);
+  if(exec->has_switched == 0)
+    {
+      exec->has_switched++;
+      setcontext(&proc->ctx);
+    }
+}
+
+void
+maybe_yield(processor_t proc, int i)
+{
+  if (time_is_up == 1)
     {
       time_is_up = 0;
-      /* printf("Yielding\n"); */
+      printf("Yielding %d\n", i);
       yield_to_executor(proc);
     }
 }
@@ -127,11 +105,12 @@ processor_t
 make_processor()
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
+
   proc->base = malloc(STACKSIZE);
   proc->func = NULL;
-  proc->executor_stack = NULL;
-  global_id++;
-  proc->id = global_id;
+  proc->id = global_id++;
+  proc->is_running = 0;
+
   return proc;
 }
 
@@ -141,23 +120,21 @@ free_processor(processor_t proc)
   free (proc);
 }
 
-void
-reset_stack_to(void (*f)(), processor_t proc)
-{
-  void (*wrapper_lval)() = task_wrapper;
-  proc->stack = proc->base + STACKSIZE;  
-  proc->func = f;
-  NEWSTACK(wrapper_lval, proc->stack);
-}
+// from coroutines from Lua
+#define __JMP_BUF_SP   ((sizeof(__jmp_buf)/sizeof(int))-2)
+#define __JMP_BUF_IP   (__JMP_BUF_SP + 1)
 
 void
-yield_to_processor(processor_t proc)
+reset_stack_to(void (*f)(processor_t), processor_t proc)
 {
-  user_stack_t stack = proc->stack;
-  printf ("swapping %d\n", proc->id);
-  SWAPSTACK(proc, stack);
-  assert (proc != NULL);
-  printf ("swapped %d\n", proc->id);
+  proc->func = f;
+
+  getcontext(&proc->ctx);
+
+  proc->ctx.uc_stack.ss_sp   = proc->base + STACKSIZE;
+  proc->ctx.uc_stack.ss_size = STACKSIZE;
+
+  makecontext(&proc->ctx, (void (*)())task_wrapper, 1, proc);
 }
 
 
@@ -166,7 +143,7 @@ yield_to_processor(processor_t proc)
 
 /* #if __GLIBC__ == 2 || defined(__UCLIBC__)      /\* arm-linux-glibc2 *\/  */
 /* #ifndef __JMP_BUF_SP  */
-/* #define __JMP_BUF_SP   ((sizeof(__jmp_buf)/sizeof(int))-2)  */
+
 /* #endif  */
 /* #define COCO_PATCHCTX(coco, buf, func, stack, a0) \  */
 /*   buf->__jmpbuf[__JMP_BUF_SP+1] = (int)(func); /\* pc *\/ \  */

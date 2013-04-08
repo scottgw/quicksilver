@@ -5,8 +5,6 @@
 
 #include "types.h"
 
-typedef void* user_stack_t;
-
 typedef void (*threadfunc)(user_stack_t);
 
 processor_t
@@ -16,12 +14,18 @@ void
 reset_stack_to(proc_func, processor_t);
 
 void
-yield_to_processor(processor_t);
+yield_to_processor(executor_t, processor_t);
 
 void
 free_processor(processor_t);
 
+int
+proc_running(processor_t);
+
 void
-maybe_yield(processor_t);
+proc_start(processor_t, executor_t);
+
+void
+maybe_yield(processor_t, int);
 
 #endif // __PROCESSOR_H_
