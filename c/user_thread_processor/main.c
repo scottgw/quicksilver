@@ -44,21 +44,21 @@ fib(processor_t proc, int i)
 }
 
 void
-task2(processor_t proc)
+task2(void* data)
 {
   int x;
   printf("Thread2 on the go\n");
-  x = fibY(proc, N);
+  x = fibY((processor_t) data, N);
   printf("Result2: %d\n", x);
   printf("Thread2 finished\n");
 }
 
 void
-task1(processor_t proc)
+task1(void* data)
 {
   int x;
   printf("Thread1 on the go\n");  
-  x = fibY(proc, N);
+  x = fibY((processor_t) data, N);
   printf("Result1: %d\n", x);
   printf("Thread1 finished\n");
 }

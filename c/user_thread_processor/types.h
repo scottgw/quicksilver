@@ -22,31 +22,35 @@ typedef struct processor* processor_t;
 struct executor;
 typedef struct executor* executor_t;
 
-typedef enum {TASK_RUNNING, TASK_RUNNABLE, TASK_FINISHED} task_state;
+typedef enum {TASK_UNINIT,
+              TASK_RUNNING,
+              TASK_RUNNABLE,
+              TASK_FINISHED}
+  task_state;
+
+struct task
+{
+  user_stack_t base;
+  ucontext_t ctx;  
+  volatile task_state state;
+  struct task* next;
+};
+
+typedef struct task* task_t;
 
 struct processor
 {
-  user_stack_t base;
+  task_t task;
   executor_t executor;
-  ucontext_t ctx;
-
-  volatile task_state state;
-
-  volatile int has_switched;
   int id;  
-  void (*func)(processor_t);
 };
-
-typedef void (*proc_func)(processor_t);
-
 
 struct executor
 {
+  task_t task;
+
   list_t work;
   processor_t current_proc;
-
-  volatile int has_switched;
-  ucontext_t ctx;
   pthread_t thread;
 };
 

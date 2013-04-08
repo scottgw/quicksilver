@@ -5,13 +5,11 @@
 
 #include "types.h"
 
-typedef void (*threadfunc)(user_stack_t);
-
 processor_t
 make_processor();
 
 void
-reset_stack_to(proc_func, processor_t);
+reset_stack_to(void (*)(void*), processor_t);
 
 void
 yield_to_processor(executor_t, processor_t);
