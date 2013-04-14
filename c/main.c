@@ -1,107 +1,101 @@
 #include <stdio.h>
-#include <pthread.h>
 #include <stdlib.h>
-#include <assert.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <stdint.h>
 
-#include "private_queue.h"
+#include "executor.h"
+#include "notifier.h"
+#include "processor.h"
+#include "list.h"
 
-#define N 1000000
+#define N 30
 
+processor_t proc1;
+processor_t proc2;
+
+__attribute__ ((noinline))
+static
 void
-*in_priv_test(void *q_in)
+false_yield(processor_t proc, int i)
 {
-  private_queue *q = (private_queue *) q_in;
- 
-  for (int i = 0; i < N; i++)
-    {
-      int *x = (int*) malloc(sizeof(int));
-      *x = i;
-      pq_enqueue(q, x);
-    }
- 
-  pthread_exit(NULL);
-}
-
-int out_count = 0;
-
-void
-*out_priv_test(void *q_in)
-{
-  private_queue *q = (private_queue *) q_in;
- 
-  for (int i = 0; i < N; i++)
-    {
-      int *x;
-      
-      if (pq_dequeue(q, (void**)&x))
-        {
-          out_count++;
-          free(x);
-        }
-        
-    }
-
-  pthread_exit(NULL);
+  return;
 }
 
 int
-threaded_priv_test()
+fibY(processor_t proc, int i)
 {
-  private_queue *q = pq_create();
-  pthread_t thr1;
-  pthread_t thr2;
+  maybe_yield(proc, i);
+  if (i < 2)
+    return 1;
+  else
+    return fibY(proc, i-1) + fibY(proc, i-2);
+}
 
-  pthread_create(&thr1, NULL, in_priv_test, (void *) q);
-  pthread_create(&thr2, NULL, out_priv_test, (void *) q);
 
-  pthread_join(thr1, NULL);
-  pthread_join(thr2, NULL);
+int
+fib(processor_t proc, int i)
+{
+  false_yield(proc, i);
+  if (i < 2)
+    return 1;
+  else
+    return fib(proc, i-1) + fib(proc, i-2);
+}
+
+void
+task2(void* data)
+{
+  int x;
+  printf("Thread2 on the go\n");
+  x = fibY((processor_t) data, N);
+  printf("Result2: %d\n", x);
+  printf("Thread2 finished\n");
+}
+
+void
+task1(void* data)
+{
+  int x;
+  printf("Thread1 on the go\n");  
+  x = fibY((processor_t) data, N);
+  printf("Result1: %d\n", x);
+  printf("Thread1 finished\n");
+}
+
+int
+main(int argc, char **argv)
+{
+  list_t work = list_make();
+
+  /* printf("%d\n", fib(NULL, N)); */
+  /* printf("%d\n", fib(NULL, N)); */
+
+  proc1 = make_processor();
+  proc2 = make_processor();
+
+  reset_stack_to (task1, proc1);
+  reset_stack_to (task2, proc2);
+
+  list_add(work, proc1);
+  list_add(work, proc2);
+
+  create_executors(work, 1);
 
   {
-    int i = 0;
-    int *tmp;
-    while (pq_dequeue(q, (void**)&tmp))
-      {
-        free(tmp);
-        i++;
-      }
-
-    // The remaining elements plus the ones removed should add
-    // up to the original number of inserted entries.
-    assert (i + out_count == N);
+    pthread_t notifier = create_notifier();
+    pthread_join(notifier, NULL);
   }
 
-  pq_free(q);
+  join_executors();
 
-  pthread_exit(NULL);
-}
+  printf("post join\n");
 
-int
-unthreaded_priv_test()
-{
-  int x = 42;
-  int y = 10;
-  int *z;
-  private_queue *q = pq_create();
+  list_free(work);
+  free_processor(proc1);
+  free_processor(proc2);
 
-  pq_enqueue(q, &x);
-  pq_enqueue(q, &y);
+  printf("end of test\n");
 
-  pq_dequeue(q, (void**)&z);
-  assert (*z == 42);
-
-  pq_dequeue(q, (void**)&z);
-  assert (*z == 10);
-
-  pq_free(q);
-  return 0;
-}
-
-
-int
-main (int argc, char** argv)
-{
-  threaded_priv_test();
-  unthreaded_priv_test();
   return 0;
 }
