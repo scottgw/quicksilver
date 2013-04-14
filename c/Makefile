@@ -1,25 +1,26 @@
-MODULES=executor list task processor main notifier
+MODULES=executor list task processor main notifier sync_ops
 SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 
-CCFLAGS=-O3 -Wall -std=gnu99 -pthread -g
+INCLUDES=-I./liblfds6.1.1/liblfds611/inc
+CFLAGS=-O3 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES)
+
+main: $(OBJS) liblfds.a
+	${CC} $^ -o $@ ${CFLAGS}
 
 depend: .depend
 
 .depend: $(SRCS)
 	rm -f ./.depend
-	$(CC) $(CFLAGS) -MM $^ > ./.depend;
+	$(CC) -MM $^ $(CFLAGS) > ./.depend;
 
 include .depend
 
-main: $(OBJS) liblfds.a
-	${CC} ${CCFLAGS} $^ -o $@
-
 sink_test: sink_test.o sink_queue.o sink_queue.h
-	${CC} ${CCFLAGS} $^ -o $@
+	${CC} $^ -o $@ $(CFLAGS)
 
 %.o: %.c
-	${CC} ${CCFLAGS} $< -c
+	${CC} $< -c ${CFLAGS}
 
 clean:
 	@rm -f *.o main sink_test .depend
