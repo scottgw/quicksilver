@@ -1,16 +1,22 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "conc_queue.h"
 
-#define CAS(ptr1, ptr2, val)                                            \
-  __atomic_compare_exchange((ptr1),(ptr2),(val),                        \
-                            false,                                      \
-                            __ATOMIC_RELAXED, __ATOMIC_RELAXED)
-
 /* #define CAS(ptr1, ptr2, val)                                            \ */
-/*   __sync_bool_compare_and_swap((ptr1),(ptr),(val)) */
+/*   __atomic_compare_exchange((ptr1),(ptr2),(val),                        \ */
+/*                             false,                                      \ */
+/*                             __ATOMIC_RELAXED, __ATOMIC_RELAXED) */
+
+#define CAS(ptr1, ptr2, val)                                            \
+  __sync_bool_compare_and_swap((ptr1),(ptr2),(val))
+
+
+#define CASPTR(ptr1, ptr2, val)                                            \
+  __sync_bool_compare_and_swap((unsigned __int128*)(ptr1),ptr_to_128(ptr2),ptr_to_128(val))
+
 
 
 union pointer_int
@@ -20,17 +26,59 @@ union pointer_int
 };
 
 inline
-static
+static bool dcas( volatile uint64_t *destination, uint64_t *exchange, uint64_t *compare )
+{
+  unsigned char cas_result;
+  
+  assert( destination != NULL );
+  assert( exchange != NULL );
+  assert( compare != NULL );
+  
+  // TRD : __asm__ with "memory" in the clobber list is for GCC a full compiler barrier
+  __asm__ __volatile__
+    (
+     "lock;"           // make cmpxchg16b atomic
+     "cmpxchg16b %0;"  // cmpxchg16b sets ZF on success
+     "setz       %3;"  // if ZF set, set cas_result to 1
+
+     // output
+     : "+m" (*(volatile uint64_t (*)[2]) destination), "+a" (*compare), "+d" (*(compare+1)), "=q" (cas_result)
+
+       // input
+     : "b" (*exchange), "c" (*(exchange+1))
+
+       // clobbered
+     : "cc", "memory"
+     );
+
+  return( cas_result );
+}
+
+
+bool
+cas_ptr(volatile struct pointer *p, struct pointer old, struct pointer new)
+{
+  /* unsigned __int128 *ip = p; */
+  /* unsigned __int128 iold = *(unsigned __int128*)&old; */
+  /* unsigned __int128 inew = *(unsigned __int128*)&new; */
+  /* return CAS(ip, iold, inew); */
+  return dcas((uint64_t*)p, (uint64_t*)&old, (uint64_t*)&new);
+}
+
+
 unsigned __int128
 ptr_to_128(struct pointer p)
 {
   /* union pointer_int ptr_union ; */
-  /* ptr_union.p = p;  */
+  /* ptr_union.p = p; */
   /* return ptr_union.i; */
   /* unsigned __int128 x = (__int128)((void*)p.ptr); */
   /* unsigned __int128 y = (__int128)p.count; */
   /* return (x << 64) | y; */
-  return (*(unsigned __int128*)(&p));
+  unsigned __int128 *iptr = &p;
+  unsigned __int128 i = *iptr;
+  return i;
+  /* return (*(unsigned __int128*)(&p)); */
 }
 
 static
@@ -89,7 +137,7 @@ cq_enqueue(cqueue_t q, void* value)
           if (next.ptr == NULL)
             {
               struct pointer new_ptr = { node, next.count + 1 };
-              if (CAS(&tail.ptr->next, &next, &new_ptr))
+              if (cas_ptr(&tail.ptr->next, next, new_ptr))
                 {
                   break;
                 }
@@ -97,12 +145,12 @@ cq_enqueue(cqueue_t q, void* value)
           else
             {
               struct pointer new_ptr = { next.ptr, tail.count + 1 };
-              CAS(&q->tail, &tail, &new_ptr);
+              cas_ptr(&q->tail, tail, new_ptr);
             }
         }
     }
   struct pointer new_ptr = { node, tail.count + 1 };
-  CAS(&q->tail, &tail, &new_ptr);
+  cas_ptr(&q->tail, tail, new_ptr);
 }  
 
 bool
@@ -123,13 +171,13 @@ cq_dequeue(cqueue_t q, void **result)
                   return false;
                 }
               struct pointer new_ptr = {next.ptr, tail.count + 1};
-              CAS(&q->tail, &tail, &new_ptr);
+              cas_ptr(&q->tail, tail, new_ptr);
             }
           else
             {
               *result = next.ptr->value;
               struct pointer new_ptr = {next.ptr, head.count + 1};
-              if (CAS(&q->head, &head, &new_ptr))
+              if (cas_ptr(&q->head, head, new_ptr))
                 {
                   break;
                 }
