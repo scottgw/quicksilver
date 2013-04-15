@@ -2,8 +2,30 @@
 #define _TYPES_H
 
 #include <ucontext.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "liblfds611.h"
 
 #define STACKSIZE 4*1024*sizeof(int)
+
+// some shorter type names for the LFDS structures
+typedef struct lfds611_queue_state* conc_queue_t;
+
+typedef struct lfds611_slist_state* conc_list_t;
+typedef struct lfds611_slist_element* conc_list_elem_t;
+
+
+// global sync data
+struct sync_data 
+{
+  uint64_t max_tasks;
+  conc_list_t sleep_list;
+  conc_queue_t runnable_queue;
+};
+
+typedef struct sync_data* sync_data_t;
+
 
 struct list
 {

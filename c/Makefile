@@ -3,7 +3,7 @@ SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 
 INCLUDES=-I./liblfds6.1.1/liblfds611/inc
-CFLAGS=-O3 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES)
+CFLAGS=-O0 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES)
 
 main: $(OBJS) liblfds.a
 	${CC} $^ -o $@ ${CFLAGS}

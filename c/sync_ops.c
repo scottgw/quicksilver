@@ -33,24 +33,24 @@ sync_data_new(uint64_t max_tasks)
 }
 
 void
-sync_data_enqueue_runnable(sync_data_t sync_data, task_t task)
+sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
 {
-  assert(task != NULL);
-  assert(task->state != TASK_RUNNING);
-  assert(lfds611_queue_enqueue(sync_data->runnable_queue, task) == 1);
+  assert(proc != NULL && proc->task != NULL);
+  assert(proc->task->state != TASK_RUNNING);
+  assert(lfds611_queue_enqueue(sync_data->runnable_queue, proc) == 1);
 }
 
-task_t
+processor_t
 sync_data_dequeue_runnable(sync_data_t sync_data)
 {
-  task_t task = NULL;
+  processor_t proc = NULL;
 
-  if (lfds611_queue_dequeue(sync_data->runnable_queue, (void**)&task) == 1)
+  if (lfds611_queue_dequeue(sync_data->runnable_queue, (void**)&proc) == 1)
     {
-      assert(task->state == TASK_RUNNABLE);
+      assert(proc->task->state == TASK_RUNNABLE);
     }
 
-  return task;  
+  return proc;  
 }
 
 

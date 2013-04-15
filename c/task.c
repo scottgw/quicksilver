@@ -47,7 +47,7 @@ void
 task_run(task_t task)
 {
   task->state = TASK_RUNNING;
-  setcontext(&task->ctx);
+  assert(setcontext(&task->ctx) == 0);
 }
 
 void
@@ -55,7 +55,7 @@ yield_to(task_t from_task, task_t to_task)
 {
   assert (from_task->state == TASK_RUNNING);
   volatile int flag = 0;
-  getcontext(&from_task->ctx);
+  assert (getcontext(&from_task->ctx) == 0);
   if (flag == 0)
     {
       flag = 1;

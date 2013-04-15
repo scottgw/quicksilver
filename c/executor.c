@@ -97,7 +97,6 @@ join_executor(void* elem, void* user)
   pthread_join(exec->thread, NULL);
 }
 
-
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t

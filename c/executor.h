@@ -6,6 +6,8 @@
 #include "list.h"
 #include "processor.h"
 
+#include "sync_ops.h"
+
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t

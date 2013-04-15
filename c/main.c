@@ -9,6 +9,9 @@
 #include "processor.h"
 #include "list.h"
 
+#include "sync_ops.h"
+
+#define MAX_TASKS 16*1024
 #define N 30
 
 processor_t proc1;
