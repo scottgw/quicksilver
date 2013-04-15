@@ -19,7 +19,7 @@ typedef struct lfds611_slist_element* conc_list_elem_t;
 // global sync data
 struct sync_data 
 {
-  uint64_t max_tasks;
+  lfds611_atom_t max_tasks;
   conc_list_t sleep_list;
   conc_queue_t runnable_queue;
 };
@@ -71,7 +71,8 @@ struct executor
 {
   task_t task;
 
-  list_t work;
+  sync_data_t sync_data;
+  volatile bool done;
   processor_t current_proc;
   pthread_t thread;
 };

@@ -3,7 +3,7 @@ SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 
 INCLUDES=-I./liblfds6.1.1/liblfds611/inc
-CFLAGS=-O0 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES)
+CFLAGS=-O0 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES) -L./
 
 main: $(OBJS) liblfds.a
 	${CC} $^ -o $@ ${CFLAGS}
@@ -30,4 +30,4 @@ liblfds.a: liblfds6.1.1/liblfds611/bin/liblfds611.a
 	cp $< $@
 
 liblfds6.1.1/liblfds611/bin/liblfds611.a: liblfds6.1.1/liblfds611/makefile.linux
-	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/
+	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ ardbg

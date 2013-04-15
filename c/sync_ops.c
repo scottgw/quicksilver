@@ -20,7 +20,7 @@ sleep_free(void *item, void *user_data)
 }
 
 sync_data_t
-sync_data_new(uint64_t max_tasks)
+sync_data_new(lfds611_atom_t max_tasks)
 {
   sync_data_t result = (sync_data_t)malloc(sizeof(struct sync_data));
 
@@ -33,10 +33,18 @@ sync_data_new(uint64_t max_tasks)
 }
 
 void
+sync_data_use(sync_data_t sync_data)
+{  
+  lfds611_queue_use(sync_data->runnable_queue);
+  lfds611_slist_use(sync_data->sleep_list);
+}
+
+void
 sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
 {
   assert(proc != NULL && proc->task != NULL);
   assert(proc->task->state != TASK_RUNNING);
+  proc->task->state = TASK_RUNNABLE;
   assert(lfds611_queue_enqueue(sync_data->runnable_queue, proc) == 1);
 }
 

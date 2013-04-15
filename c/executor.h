@@ -11,7 +11,7 @@
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t
-make_executor();
+make_executor(sync_data_t);
 
 // Join all the executors in 'executors'.
 void
@@ -23,6 +23,6 @@ executor_reschedule(executor_t);
 
 // Creates 'n' executors and stores them in the 'executors' list.
 void
-create_executors(list_t list, int n);
+create_executors(sync_data_t sync_data, int n);
 
 #endif // __EXECUTOR_H_

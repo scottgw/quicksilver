@@ -11,8 +11,12 @@
 
 #include "sync_ops.h"
 
-#define MAX_TASKS 16*1024
+// FIXME: 16382 actually causes a segfault in makecontext for
+// the executor, and it's not clear why lower values work OK.
+#define MAX_TASKS 8192
 #define N 30
+
+// lfds611_atom_tb MAX_TASKS = 16384;
 
 processor_t proc1;
 processor_t proc2;
@@ -69,7 +73,9 @@ task1(void* data)
 int
 main(int argc, char **argv)
 {
-  list_t work = list_make();
+  sync_data_t sync_data = sync_data_new(MAX_TASKS);
+
+  /* list_t work = list_make(); */
 
   /* printf("%d\n", fib(NULL, N)); */
   /* printf("%d\n", fib(NULL, N)); */
@@ -80,10 +86,13 @@ main(int argc, char **argv)
   reset_stack_to (task1, proc1);
   reset_stack_to (task2, proc2);
 
-  list_add(work, proc1);
-  list_add(work, proc2);
+  /* list_add(work, proc1); */
+  /* list_add(work, proc2); */
 
-  create_executors(work, 1);
+  sync_data_enqueue_runnable(sync_data, proc1);
+  sync_data_enqueue_runnable(sync_data, proc2);
+
+  create_executors(sync_data, 1); // sync_data, 1);
 
   {
     pthread_t notifier = create_notifier();
@@ -94,7 +103,7 @@ main(int argc, char **argv)
 
   printf("post join\n");
 
-  list_free(work);
+  /* list_free(work); */
   free_processor(proc1);
   free_processor(proc2);
 
