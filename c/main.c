@@ -14,7 +14,7 @@
 // FIXME: 16382 actually causes a segfault in makecontext for
 // the executor, and it's not clear why lower values work OK.
 #define MAX_TASKS 8192
-#define N 30
+#define N 40
 
 // lfds611_atom_tb MAX_TASKS = 16384;
 
@@ -92,7 +92,7 @@ main(int argc, char **argv)
   sync_data_enqueue_runnable(sync_data, proc1);
   sync_data_enqueue_runnable(sync_data, proc2);
 
-  create_executors(sync_data, 1); // sync_data, 1);
+  create_executors(sync_data, 2); // sync_data, 1);
 
   {
     pthread_t notifier = create_notifier();
