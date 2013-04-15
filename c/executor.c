@@ -70,7 +70,7 @@ executor_run(void* data)
   executor_t exec = data;
   ucontext_t loop_ctx;
   
-  /* sync_data_use(exec->sync_data); */
+  sync_data_use(exec->sync_data);
 
   // volatile because we'll have to reload this after a
   // context switch by setcontext.
