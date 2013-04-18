@@ -13,6 +13,10 @@
 executor_t
 make_executor(sync_data_t);
 
+// Free the memory for the executor.
+void
+executor_free(executor_t);
+
 // Join all the executors in 'executors'.
 void
 join_executors();

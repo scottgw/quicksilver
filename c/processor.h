@@ -17,6 +17,9 @@ yield_to_processor(executor_t, processor_t);
 void
 free_processor(processor_t);
 
+void
+proc_sleep(processor_t, struct timespec);
+
 int
 proc_running(processor_t);
 

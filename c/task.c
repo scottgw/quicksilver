@@ -32,8 +32,10 @@ task_wrapper(task_t task, void (*f)(void*), void* data)
   f(data);
   task->state = TASK_FINISHED;
 
-  if (task->next != NULL)
+  if (task->next != NULL) {
+    printf("running next task\n");
     task_run (task->next);
+  }
 }
 
 void
@@ -41,6 +43,7 @@ task_set_func(task_t task, void (*f)(void*), void* data)
 {
   assert (task != NULL);
   makecontext(&task->ctx, (void (*)())task_wrapper, 3, task, f, data);
+  task->state = TASK_RUNNABLE;
 }
 
 void
@@ -53,13 +56,14 @@ task_run(task_t task)
 void
 yield_to(task_t from_task, task_t to_task)
 {
-  assert (from_task->state == TASK_RUNNING);
+  assert (from_task->state == TASK_RUNNING || from_task->state == TASK_WAITING);
   volatile int flag = 0;
   assert (getcontext(&from_task->ctx) == 0);
   if (flag == 0)
     {
       flag = 1;
-      from_task->state = TASK_RUNNABLE;
+      if (from_task->state == TASK_RUNNING)
+        from_task->state = TASK_RUNNABLE;
       task_run(to_task);
     }
 }

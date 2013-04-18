@@ -13,13 +13,10 @@
 
 // FIXME: 16382 actually causes a segfault in makecontext for
 // the executor, and it's not clear why lower values work OK.
-#define MAX_TASKS 8192
+//
+// update, now it doesn't fail with large MAX_TASKS; that is disturbing.
+#define MAX_TASKS 16
 #define N 40
-
-// lfds611_atom_tb MAX_TASKS = 16384;
-
-processor_t proc1;
-processor_t proc2;
 
 __attribute__ ((noinline))
 static
@@ -51,6 +48,20 @@ fib(processor_t proc, int i)
 }
 
 void
+task3(void* data)
+{
+  processor_t proc = (processor_t)data;
+  struct timespec ts;
+  ts.tv_sec = 1;
+  ts.tv_nsec = 0;
+  printf("Pre sleep\n");
+  proc_sleep(proc, ts);
+  printf("post sleep 1\n");
+  proc_sleep(proc, ts);
+  printf("post sleep 2\n");
+}
+
+void
 task2(void* data)
 {
   int x;
@@ -74,29 +85,31 @@ int
 main(int argc, char **argv)
 {
   sync_data_t sync_data = sync_data_new(MAX_TASKS);
+  processor_t proc1;
+  processor_t proc2;
+  processor_t proc3;
 
-  /* list_t work = list_make(); */
 
   /* printf("%d\n", fib(NULL, N)); */
   /* printf("%d\n", fib(NULL, N)); */
 
   proc1 = make_processor();
   proc2 = make_processor();
+  proc3 = make_processor();
 
   reset_stack_to (task1, proc1);
   reset_stack_to (task2, proc2);
-
-  /* list_add(work, proc1); */
-  /* list_add(work, proc2); */
+  reset_stack_to (task3, proc3);
 
   sync_data_enqueue_runnable(sync_data, proc1);
   sync_data_enqueue_runnable(sync_data, proc2);
+  sync_data_enqueue_runnable(sync_data, proc3);
 
-  create_executors(sync_data, 2); // sync_data, 1);
+  create_executors(sync_data, 2);
 
   {
-    pthread_t notifier = create_notifier();
-    pthread_join(notifier, NULL);
+    notifier_t notifier = notifier_spawn(sync_data);
+    pthread_join(notifier->thread, NULL);
   }
 
   join_executors();

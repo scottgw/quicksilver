@@ -19,12 +19,12 @@ sync_data_dequeue_runnable(sync_data_t sync_data);
 
 void
 sync_data_add_sleeper(sync_data_t sync_data,
-                      task_t task,
+                      processor_t proc,
                       struct timespec duration);
 
 void
 sync_data_get_sleepers(sync_data_t sync_data,
-                       task_t **tasks,
+                       processor_t **procs,
                        uint64_t *num_awoken);
 
 

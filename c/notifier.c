@@ -5,6 +5,7 @@
 
 #include "executor.h"
 #include "notifier.h"
+#include "sync_ops.h"
 
 //
 // Notifier implementation 
@@ -44,25 +45,53 @@ setup_handler()
   sigaction (SIGINT, &alarm_action, NULL);
 }
 
+static
+void
+reschedule_awoken(notifier_t notifier)
+{
+  uint64_t num_awoken;
+  processor_t *procs;
+
+  sync_data_get_sleepers(notifier->sync_data, &procs, &num_awoken);
+
+  for(int i = 0; i < num_awoken; i++)
+    {
+      sync_data_enqueue_runnable(notifier->sync_data, procs[i]);
+    }
+
+  free(procs);
+}
+
 // This thread continually waits on the
 // timeout and sends the SIGUSR1 to the executors
 // so they will switch to another processor.
 void*
-notifier(void* ptr)
+notifier_run(void* ptr)
 {
+  notifier_t notifier = (notifier_t)ptr;
   while(notifier_done == 0)
     {
       usleep(1000);
+      reschedule_awoken(notifier);
       time_is_up = 1;
     }
 
   return NULL;
 }
 
-pthread_t
-create_notifier()
+notifier_t
+notifier_new(sync_data_t sync_data)
 {
-  pthread_t thr;
-  pthread_create(&thr, NULL, notifier, NULL);
-  return thr;
+  notifier_t notifier = (notifier_t)malloc(sizeof(struct notifier));
+  notifier->sync_data = sync_data;
+
+  return notifier;
+}
+
+notifier_t
+notifier_spawn(sync_data_t sync_data)
+{
+  notifier_t notifier = notifier_new(sync_data);
+  pthread_create(&notifier->thread, NULL, notifier_run, notifier);
+  return notifier;
 }

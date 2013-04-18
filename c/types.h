@@ -47,7 +47,8 @@ typedef struct executor* executor_t;
 typedef enum {TASK_UNINIT,
               TASK_RUNNING,
               TASK_RUNNABLE,
-              TASK_FINISHED}
+              TASK_FINISHED,
+              TASK_WAITING}
   task_state;
 
 struct task
@@ -77,6 +78,13 @@ struct executor
   pthread_t thread;
 };
 
+struct notifier
+{
+  sync_data_t sync_data;
+  pthread_t thread;
+};
+
+typedef struct notifier* notifier_t;
 
 
 #endif // _TYPES_H

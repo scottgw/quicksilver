@@ -6,7 +6,7 @@
 
 struct sleeper
 {
-  task_t task;
+  processor_t proc;
   struct timespec end_time;
 };
 
@@ -42,9 +42,9 @@ sync_data_use(sync_data_t sync_data)
 void
 sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
 {
-  assert(proc != NULL && proc->task != NULL);
-  assert(proc->task->state != TASK_RUNNING);
-  proc->task->state = TASK_RUNNABLE;
+  assert(proc != NULL);
+  assert(proc->task != NULL);
+  assert(proc->task->state == TASK_RUNNABLE);
   assert(lfds611_queue_enqueue(sync_data->runnable_queue, proc) == 1);
 }
 
@@ -63,15 +63,21 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
 
 
 void
-sync_data_add_sleeper(sync_data_t sync_data, task_t task, struct timespec duration)
+sync_data_add_sleeper(sync_data_t sync_data,
+                      processor_t proc,
+                      struct timespec duration)
 {
+  assert (proc != NULL);
+  assert (proc->task != NULL);
+  assert (proc->task->state == TASK_RUNNING);
   conc_list_t sleepers = sync_data->sleep_list;
   sleeper_t sleeper = (sleeper_t) malloc(sizeof(struct sleeper));
 
   struct timespec current_time;
   clock_gettime(CLOCK_REALTIME, &current_time);
 
-  sleeper->task = task;
+  proc->task->state = TASK_WAITING;
+  sleeper->proc = proc;
   sleeper->end_time.tv_sec = current_time.tv_sec + duration.tv_sec;
   sleeper->end_time.tv_nsec = current_time.tv_nsec + duration.tv_nsec;
 
@@ -81,7 +87,7 @@ sync_data_add_sleeper(sync_data_t sync_data, task_t task, struct timespec durati
 
 void
 sync_data_get_sleepers(sync_data_t sync_data,
-                       task_t **tasks,
+                       processor_t **procs,
                        uint64_t *num_awoken)
 {
   conc_list_t sleepers = sync_data->sleep_list;
@@ -104,7 +110,7 @@ sync_data_get_sleepers(sync_data_t sync_data,
         }
     }
 
-  *tasks = (task_t*) malloc(sizeof(struct task)*n);
+  *procs = (processor_t*) malloc(sizeof(struct processor)*n);
 
   n = 0;
   // Put the tasks in an array.
@@ -115,10 +121,11 @@ sync_data_get_sleepers(sync_data_t sync_data,
       if (sleeper->end_time.tv_sec >= current_time.tv_sec &&
           sleeper->end_time.tv_nsec >= current_time.tv_nsec)
         {
-          lfds611_slist_logically_delete_element(sleepers, item);
-          (*tasks)[n] = sleeper->task;
-          free(sleeper);
+          assert (sleeper->proc != NULL);
+          (*procs)[n] = sleeper->proc;
+          sleeper->proc->task->state = TASK_RUNNABLE;
           n++;
+          lfds611_slist_logically_delete_element(sleepers, item);
         }
     }
 

@@ -32,20 +32,18 @@ switch_to_next_processor(executor_t exec)
 
       // If the came back finished, then remove it from the
       // work list.
-      if(proc->task->state != TASK_FINISHED)
+      if(proc->task->state == TASK_RUNNABLE)
         sync_data_enqueue_runnable(exec->sync_data, proc);
     }
   else
     {
       printf("no workers\n");
-      /* free_executor(exec); */
       exec->done = true;
     }
 }
 
-static
 void
-free_executor(executor_t exec)
+executor_free(executor_t exec)
 {
   free (exec->task);
   free (exec);
