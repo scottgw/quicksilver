@@ -21,6 +21,14 @@ maybe_yield(processor_t proc, int i)
 }
 
 void
+proc_wake(processor_t proc)
+{
+  assert(proc->task->state == TASK_WAITING);
+  proc->task->state = TASK_RUNNABLE;
+  sync_data_enqueue_runnable(proc->executor->sync_data, proc);
+}
+
+void
 yield_to_executor(processor_t proc)
 {
   yield_to(proc->task, proc->executor->task);

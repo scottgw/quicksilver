@@ -12,6 +12,9 @@ void
 reset_stack_to(void (*)(void*), processor_t);
 
 void
+proc_wake(processor_t proc);
+
+void
 yield_to_processor(executor_t, processor_t);
 
 void
