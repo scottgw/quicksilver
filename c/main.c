@@ -8,6 +8,7 @@
 #include "notifier.h"
 #include "processor.h"
 #include "list.h"
+#include "task_mutex.h"
 
 #include "sync_ops.h"
 

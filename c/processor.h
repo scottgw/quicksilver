@@ -15,6 +15,9 @@ void
 yield_to_processor(executor_t, processor_t);
 
 void
+yield_to_executor(processor_t);
+
+void
 free_processor(processor_t);
 
 void

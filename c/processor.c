@@ -21,6 +21,12 @@ maybe_yield(processor_t proc, int i)
 }
 
 void
+yield_to_executor(processor_t proc)
+{
+  yield_to(proc->task, proc->executor->task);
+}
+
+void
 proc_sleep(processor_t proc, struct timespec duration)
 {
   sync_data_add_sleeper(proc->executor->sync_data,

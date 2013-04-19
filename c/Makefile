@@ -1,4 +1,4 @@
-MODULES=executor list task processor main notifier sync_ops
+MODULES=executor list task processor main notifier sync_ops task_mutex
 SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 
