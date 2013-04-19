@@ -4,10 +4,13 @@ SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 
 INCLUDES=-I./liblfds6.1.1/liblfds611/inc
-CFLAGS=-O0 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES) -L./
+CFLAGS=-O3 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES) -L./ -fPIC
 
-main: $(OBJS) liblfds.a
-	${CC} $^ -o $@ ${CFLAGS}
+libqs.so: $(OBJS) liblfds.so
+	${CC} $(OBJS) -L./ -llfds -shared -o libqs.so
+
+main: main.c liblfds.so libqs.so
+	${CC}  -llfds -lqs  ${CFLAGS} main.c -o $@
 
 depend: .depend
 
@@ -24,11 +27,12 @@ sink_test: sink_test.o sink_queue.o sink_queue.h
 	${CC} $< -c ${CFLAGS}
 
 clean:
-	@rm -f *.o main sink_test .depend
+	@rm -f *.o main sink_test .depend libqs.so liblfds.so
+	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ clean
 
 # to build the concurrent data strutures library
-liblfds.a: liblfds6.1.1/liblfds611/bin/liblfds611.a
+liblfds.so: liblfds6.1.1/liblfds611/bin/liblfds611.so
 	cp $< $@
 
-liblfds6.1.1/liblfds611/bin/liblfds611.a: liblfds6.1.1/liblfds611/makefile.linux
-	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ ardbg
+liblfds6.1.1/liblfds611/bin/liblfds611.so: liblfds6.1.1/liblfds611/makefile.linux
+	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ sodbg
