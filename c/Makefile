@@ -1,16 +1,14 @@
-MODULES=executor list task processor main notifier \
+MODULES=executor list task processor notifier \
         sync_ops task_mutex task_condition
 SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 
+include common.mk
 INCLUDES=-I./liblfds6.1.1/liblfds611/inc
-CFLAGS=-O3 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES) -L./ -fPIC
+CFLAGS=-O3 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES) -lqs -llfds -fPIC
 
 libqs.so: $(OBJS) liblfds.so
-	${CC} $(OBJS) -L./ -llfds -shared -o libqs.so
-
-main: main.c liblfds.so libqs.so
-	${CC}  -llfds -lqs  ${CFLAGS} main.c -o $@
+	$(CC) $(OBJS) -L./ -lrt -llfds -shared -o libqs.so
 
 depend: .depend
 
@@ -20,14 +18,8 @@ depend: .depend
 
 include .depend
 
-sink_test: sink_test.o sink_queue.o sink_queue.h
-	${CC} $^ -o $@ $(CFLAGS)
-
-%.o: %.c
-	${CC} $< -c ${CFLAGS}
-
 clean:
-	@rm -f *.o main sink_test .depend libqs.so liblfds.so
+	@rm -f *.o main .depend libqs.so liblfds.so
 	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ clean
 
 # to build the concurrent data strutures library
