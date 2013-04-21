@@ -32,25 +32,6 @@ task_mutex_free(task_mutex_t mutex)
 }
 
 void
-task_mutex_lock_for_cv(task_mutex_t mutex, processor_t proc)
-{
- if (__sync_fetch_and_add(&mutex->count, 1) > 0)
-    {
-      // if the owner is already set then we add to the wait list 
-      // and yield to the executor.
-      lfds611_queue_enqueue(mutex->wait_queue, proc);
-      yield_to_executor(proc);
-    }
- else
-   {
-     // if not, set the owner.
-     __sync_synchronize();
-     mutex->owner = proc;
-   }
-}
-
-
-void
 task_mutex_lock(task_mutex_t mutex, processor_t proc)
 {
  if (__sync_fetch_and_add(&mutex->count, 1) > 0)
