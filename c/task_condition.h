@@ -7,7 +7,7 @@ struct task_condition;
 typedef struct task_condition* task_condition_t;
 
 task_condition_t
-task_condition_new(processor_t proc);
+task_condition_new();
 
 void
 task_condition_free(task_condition_t cv);

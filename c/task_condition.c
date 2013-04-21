@@ -12,7 +12,7 @@ struct task_condition
 };
 
 task_condition_t
-task_condition_new(processor_t proc)
+task_condition_new()
 {
   task_condition_t cv = (task_condition_t)malloc(sizeof(struct task_condition));
 
