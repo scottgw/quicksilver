@@ -17,7 +17,7 @@ task_mutex_t
 task_mutex_new()
 {
   task_mutex_t mutex = (task_mutex_t)malloc(sizeof(struct task_mutex));
-
+  mutex->count = 0;
   mutex->owner = NULL;
   assert(lfds611_queue_new(&mutex->wait_queue, INIT_WAIT_QUEUE_SIZE) == 1);
 
@@ -57,6 +57,7 @@ task_mutex_lock(task_mutex_t mutex, processor_t proc)
     {
       // if the owner is already set then we add to the wait list 
       // and yield to the executor.
+      proc->task->state = TASK_WAITING;
       lfds611_queue_enqueue(mutex->wait_queue, proc);
       yield_to_executor(proc);
     }
@@ -74,14 +75,16 @@ task_mutex_unlock(task_mutex_t mutex, processor_t proc)
   processor_t other_proc = NULL;
   assert(mutex->owner == proc);
   
-  if (__sync_fetch_and_sub(&mutex->count, 1) > 0)
+  if (__sync_fetch_and_sub(&mutex->count, 1) > 1)
     {
-      // if there's someone in the loop, spin to dequee them from the wait-queue.
+      // if there's someone in the loop, spin to dequeue them from the wait-queue.
       // spinning is OK here because we only have to wait between when they
-      // increased the counter and when the enqeuue themselves (finite time).
+      // increased the counter and when the enqueue themselves which
+      // is a finite amount of time.
       while(lfds611_queue_dequeue(mutex->wait_queue, (void**)&other_proc) != 1);
       __sync_synchronize();
       mutex->owner = other_proc;
+      other_proc->task->state = TASK_RUNNABLE;
       sync_data_enqueue_runnable(proc->executor->sync_data, other_proc);
     }
   else
