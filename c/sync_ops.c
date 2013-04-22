@@ -24,12 +24,26 @@ sync_data_new(lfds611_atom_t max_tasks)
 {
   sync_data_t result = (sync_data_t)malloc(sizeof(struct sync_data));
 
+  result->num_processors = 0;
   result->max_tasks = max_tasks;
 
   assert(lfds611_queue_new(&result->runnable_queue, max_tasks) == 1);
+  result->run_queue_size = 0;
+  pthread_mutex_init(&result->run_mutex, NULL);
+  pthread_cond_init(&result->not_empty, NULL);
+
   assert(lfds611_slist_new(&result->sleep_list, sleep_free, NULL) == 1);
 
   return result;
+}
+
+void
+sync_data_free(sync_data_t sync_data)
+{
+  pthread_cond_destroy(&sync_data->not_empty);
+  pthread_mutex_destroy(&sync_data->run_mutex);
+  lfds611_queue_delete(sync_data->runnable_queue, NULL, NULL);
+  lfds611_slist_delete(sync_data->sleep_list);
 }
 
 void
@@ -39,6 +53,11 @@ sync_data_use(sync_data_t sync_data)
   lfds611_slist_use(sync_data->sleep_list);
 }
 
+
+/* -------------------- */
+/* Run queue operations */
+/* -------------------- */
+
 void
 sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
 {
@@ -46,21 +65,84 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   assert(proc->task != NULL);
   assert(proc->task->state == TASK_RUNNABLE);
   assert(lfds611_queue_enqueue(sync_data->runnable_queue, proc) == 1);
+
+  if (__sync_fetch_and_add(&sync_data->run_queue_size, 1) == 0)
+    {
+      // if this enqueue makes the queue not empty then broadcast
+      pthread_cond_broadcast(&sync_data->not_empty);
+    }
 }
 
 processor_t
 sync_data_dequeue_runnable(sync_data_t sync_data)
 {
-  processor_t proc = NULL;
-
-  if (lfds611_queue_dequeue(sync_data->runnable_queue, (void**)&proc) == 1)
+  if (sync_data->num_processors > 0)
     {
-      assert(proc->task->state == TASK_RUNNABLE);
-    }
+      processor_t proc;
 
-  return proc;  
+      if (lfds611_queue_dequeue(sync_data->runnable_queue, (void**)&proc) == 1)
+        {
+          assert(proc->task->state == TASK_RUNNABLE);
+        }
+      else
+        {
+          pthread_mutex_lock(&sync_data->run_mutex);
+
+          while (lfds611_queue_dequeue
+                 (sync_data->runnable_queue, (void**)&proc) != 1 && 
+                 sync_data->num_processors > 0)
+            {
+              pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
+            }
+
+          pthread_mutex_unlock(&sync_data->run_mutex);
+        }
+      if (sync_data->num_processors > 0)
+        {
+          assert (proc != NULL);
+          return proc;
+        }
+      else
+        {
+          pthread_cond_broadcast(&sync_data->not_empty);
+          printf("sync_data_dequeue: no more processors\n");
+          return NULL;
+        }
+    }
+  else
+    {
+      pthread_cond_broadcast(&sync_data->not_empty);
+      printf("sync_data_dequeue: no more processors\n");
+      return NULL;
+    }
 }
 
+
+/* ---------------------- */
+/* Processor registration */
+/* ---------------------- */
+void
+sync_data_register_proc(sync_data_t sync_data)
+{
+  __sync_fetch_and_add(&sync_data->num_processors, 1);
+}
+
+void
+sync_data_deregister_proc(sync_data_t sync_data)
+{
+  __sync_fetch_and_sub(&sync_data->num_processors, 1);
+}
+
+uint64_t
+sync_data_num_processors(sync_data_t sync_data)
+{
+  return sync_data->num_processors;
+}
+
+
+/* ---------------- */
+/* Sleep operations */
+/* ---------------- */
 
 void
 sync_data_add_sleeper(sync_data_t sync_data,
@@ -70,6 +152,8 @@ sync_data_add_sleeper(sync_data_t sync_data,
   assert (proc != NULL);
   assert (proc->task != NULL);
   assert (proc->task->state == TASK_RUNNING);
+
+  conc_list_elem_t item;
   conc_list_t sleepers = sync_data->sleep_list;
   sleeper_t sleeper = (sleeper_t) malloc(sizeof(struct sleeper));
 
@@ -81,7 +165,8 @@ sync_data_add_sleeper(sync_data_t sync_data,
   sleeper->end_time.tv_sec = current_time.tv_sec + duration.tv_sec;
   sleeper->end_time.tv_nsec = current_time.tv_nsec + duration.tv_nsec;
 
-  conc_list_elem_t item = lfds611_slist_new_head (sleepers, sleeper);
+  item = lfds611_slist_new_head (sleepers, sleeper);
+
   assert (item != NULL && "Insertion failed");
 }
 

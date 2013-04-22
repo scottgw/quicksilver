@@ -4,6 +4,7 @@
 #include <ucontext.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <pthread.h>
 
 #include "liblfds611.h"
 
@@ -17,11 +18,18 @@ typedef struct lfds611_slist_element* conc_list_elem_t;
 
 
 // global sync data
-struct sync_data 
+struct sync_data
 {
   lfds611_atom_t max_tasks;
+
+  volatile uint64_t num_processors;
+
   conc_list_t sleep_list;
+
   conc_queue_t runnable_queue;
+  volatile uint64_t run_queue_size;
+  pthread_mutex_t run_mutex;
+  pthread_cond_t not_empty;
 };
 
 typedef struct sync_data* sync_data_t;
