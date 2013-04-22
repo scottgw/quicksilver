@@ -33,20 +33,24 @@ void
 task2(void* data)
 {
   int x;
+  processor_t proc = (processor_t)data;
   printf("Thread2 on the go\n");
-  x = fib((processor_t) data, N);
+  x = fib(proc, N);
   printf("Result2: %d\n", x);
   printf("Thread2 finished\n");
+  sync_data_deregister_proc(proc->executor->sync_data);
 }
 
 void
 task1(void* data)
 {
   int x;
+  processor_t proc = (processor_t)data;
   printf("Thread1 on the go\n");  
-  x = fib((processor_t) data, N);
+  x = fib(proc, N);
   printf("Result1: %d\n", x);
   printf("Thread1 finished\n");
+  sync_data_deregister_proc(proc->executor->sync_data);
 }
 
 int
@@ -58,6 +62,9 @@ main(int argc, char **argv)
 
   reset_stack_to (task1, proc1);
   reset_stack_to (task2, proc2);
+
+  sync_data_register_proc(sync_data);
+  sync_data_register_proc(sync_data);
 
   sync_data_enqueue_runnable(sync_data, proc1);
   sync_data_enqueue_runnable(sync_data, proc2);
