@@ -1,11 +1,11 @@
 #ifndef _TYPES_H
 #define _TYPES_H
 
-#include <ucontext.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <pthread.h>
 
+#include "ctx.h"
 #include "liblfds611.h"
 
 #define STACKSIZE 4*1024*sizeof(int)
@@ -62,7 +62,7 @@ typedef enum {TASK_UNINIT,
 struct task
 {
   user_stack_t base;
-  ucontext_t ctx;  
+  ctx_t ctx;  
   volatile task_state state;
   struct task* next;
 };

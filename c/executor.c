@@ -66,23 +66,24 @@ void*
 executor_run(void* data)
 {
   executor_t exec = data;
-  ucontext_t loop_ctx;
+  ctx_t loop_ctx = ctx_new();
   
   sync_data_use(exec->sync_data);
 
   // volatile because we'll have to reload this after a
   // context switch by setcontext.
   int volatile flag = 0;
-  getcontext(&loop_ctx);
+  ctx_get(loop_ctx);
   if (flag == 0)
     {
       flag = 1;
-      exec->task->ctx.uc_link = &loop_ctx;
+      ctx_set_next(exec->task->ctx, loop_ctx);
       task_set_func(exec->task, executor_loop, exec);
       task_run(exec->task);
     }
   printf("end exec loop\n");
   notifier_done = 1;
+  
   return NULL;
 }
 
