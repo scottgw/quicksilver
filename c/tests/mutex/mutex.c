@@ -33,6 +33,7 @@ task2(void* data)
   printf("Thread 2: back from yield\n");
   task_mutex_unlock(mutex, proc);
   printf("Thread 2 finished\n");
+  sync_data_deregister_proc(proc->executor->sync_data);
 }
 
 void
@@ -47,6 +48,7 @@ task1(void* data)
   printf("Thread 1: back from yield\n");
   task_mutex_unlock(mutex, proc);
   printf("Thread 1 finished\n");
+  sync_data_deregister_proc(proc->executor->sync_data);
 }
 
 int
@@ -59,6 +61,9 @@ main(int argc, char **argv)
 
   reset_stack_to (task1, proc1);
   reset_stack_to (task2, proc2);
+
+  sync_data_register_proc(sync_data);
+  sync_data_register_proc(sync_data);
 
   sync_data_enqueue_runnable(sync_data, proc1);
   sync_data_enqueue_runnable(sync_data, proc2);
