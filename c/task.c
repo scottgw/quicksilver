@@ -73,11 +73,9 @@ void
 yield_to(task_t from_task, task_t to_task)
 {
   assert (from_task->state == TASK_RUNNING || from_task->state == TASK_WAITING);
-  volatile int flag = 0;
-  assert (ctx_get(from_task->ctx) == 0);
-  if (flag == 0)
+  volatile bool flag = ctx_save(from_task->ctx);
+  if (flag)
     {
-      flag = 1;
       if (from_task->state == TASK_RUNNING)
         from_task->state = TASK_RUNNABLE;
       task_run(to_task);

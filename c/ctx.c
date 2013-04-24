@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ucontext.h>
 #include <stdlib.h>
 
@@ -25,6 +26,23 @@ void
 ctx_set_next(ctx_t ctx, ctx_t next_ctx)
 {
   ctx->ctx.uc_link = &next_ctx->ctx;
+}
+
+volatile
+bool
+ctx_save(volatile ctx_t ctx)
+{
+  volatile int flag = true;
+  assert (ctx_get(ctx) == 0);
+  if (flag)
+    {
+      flag = false;
+    }
+  else
+    {
+      flag = true;
+    }
+  return !flag;
 }
 
 uint32_t
