@@ -11,7 +11,6 @@ task_make()
   task->base = malloc(STACKSIZE);
   task->state = TASK_UNINIT;
   task->ctx = ctx_new();
-  ctx_get(task->ctx);
   ctx_set_stack_ptr(task->ctx, task->base + STACKSIZE);
   ctx_set_stack_size(task->ctx, STACKSIZE);
   

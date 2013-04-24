@@ -9,10 +9,20 @@ struct ctx
   ucontext_t ctx;
 };
 
+
+static
+uint32_t
+ctx_get(ctx_t ctx)
+{
+  return getcontext(&ctx->ctx);
+}
+
+
 ctx_t
 ctx_new()
 {
   ctx_t ctx = (ctx_t)malloc(sizeof(struct ctx));
+  ctx_get(ctx);
   return ctx;
 }
 
@@ -28,9 +38,8 @@ ctx_set_next(ctx_t ctx, ctx_t next_ctx)
   ctx->ctx.uc_link = &next_ctx->ctx;
 }
 
-volatile
 bool
-ctx_save(volatile ctx_t ctx)
+ctx_save(ctx_t ctx)
 {
   volatile int flag = true;
   assert (ctx_get(ctx) == 0);
@@ -43,12 +52,6 @@ ctx_save(volatile ctx_t ctx)
       flag = true;
     }
   return !flag;
-}
-
-uint32_t
-ctx_get(ctx_t ctx)
-{
-  return getcontext(&ctx->ctx);
 }
 
 uint32_t

@@ -16,12 +16,8 @@ ctx_make(ctx_t ctx, void (*func)(void*), void* ptr);
 void
 ctx_set_next(ctx_t ctx, ctx_t next_ctx);
 
-volatile
 bool
-ctx_save(volatile ctx_t ctx);
-
-uint32_t
-ctx_get(ctx_t ctx);
+ctx_save(ctx_t ctx);
 
 uint32_t
 ctx_set(ctx_t ctx);
