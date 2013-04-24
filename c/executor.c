@@ -72,11 +72,11 @@ executor_run(void* data)
 
   // volatile because we'll have to reload this after a
   // context switch by setcontext.
-  int volatile flag = 0;
+  volatile bool flag = true;
   ctx_get(loop_ctx);
-  if (flag == 0)
+  if (flag)
     {
-      flag = 1;
+      flag = false;
       ctx_set_next(exec->task->ctx, loop_ctx);
       task_set_func(exec->task, executor_loop, exec);
       task_run(exec->task);
