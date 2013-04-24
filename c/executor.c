@@ -59,6 +59,9 @@ executor_loop(void* data)
     {
       switch_to_next_processor(exec);
     }
+  printf("end exec loop\n");
+  notifier_done = 1;
+  pthread_exit(NULL);
 }
 
 static 
@@ -66,24 +69,10 @@ void*
 executor_run(void* data)
 {
   executor_t exec = data;
-  ctx_t loop_ctx = ctx_new();
-  
-  sync_data_use(exec->sync_data);
 
-  // volatile because we'll have to reload this after a
-  // context switch by setcontext.
-  volatile bool flag = true;
-  ctx_get(loop_ctx);
-  if (flag)
-    {
-      flag = false;
-      ctx_set_next(exec->task->ctx, loop_ctx);
-      task_set_func(exec->task, executor_loop, exec);
-      task_run(exec->task);
-    }
-  printf("end exec loop\n");
-  notifier_done = 1;
-  
+  task_set_func(exec->task, executor_loop, exec);
+  task_run(exec->task);
+  assert (false && "executor_run: should never reach this point");  
   return NULL;
 }
 
