@@ -1,5 +1,5 @@
 MODULES=executor list task processor notifier \
-        sync_ops task_mutex task_condition ctx
+        sync_ops task_mutex task_condition ctx bounded_queue
 SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 

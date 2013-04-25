@@ -1,0 +1,32 @@
+#ifndef _BOUNDED_QUEUE_H
+#define _BOUNDED_QUEUE_H
+
+#include <stdbool.h>
+#include <stdint.h>
+
+struct bounded_queue;
+typedef struct bounded_queue* bounded_queue_t;
+
+bounded_queue_t
+bqueue_new(uint32_t size);
+
+void
+bqueue_free(bounded_queue_t q);
+
+void
+bqueue_free_with(bounded_queue_t q, void (*del_func)(void*, void*), void *ptr);
+
+void
+bqueue_use(bounded_queue_t q);
+
+bool
+bqueue_enqueue(bounded_queue_t q, void *data);
+
+bool
+bqueue_dequeue(bounded_queue_t q, void **data);
+
+void
+bqueue_dequeue_wait(bounded_queue_t q, void **data);
+
+
+#endif // _BOUNDED_QUEUE_H
