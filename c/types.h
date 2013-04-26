@@ -64,6 +64,7 @@ struct task
   user_stack_t base;
   ctx_t ctx;  
   volatile task_state state;
+  sync_data_t sync_data;
   struct task* next;
 };
 
@@ -79,8 +80,6 @@ struct processor
 struct executor
 {
   task_t task;
-
-  sync_data_t sync_data;
   volatile bool done;
   processor_t current_proc;
   pthread_t thread;

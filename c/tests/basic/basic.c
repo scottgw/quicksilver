@@ -38,7 +38,7 @@ task2(void* data)
   x = fib(proc, N);
   printf("Result2: %d\n", x);
   printf("Thread2 finished\n");
-  sync_data_deregister_proc(proc->executor->sync_data);
+  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 void
@@ -50,15 +50,15 @@ task1(void* data)
   x = fib(proc, N);
   printf("Result1: %d\n", x);
   printf("Thread1 finished\n");
-  sync_data_deregister_proc(proc->executor->sync_data);
+  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 int
 main(int argc, char **argv)
 {
   sync_data_t sync_data = sync_data_new(MAX_TASKS);
-  processor_t proc1 = make_processor();
-  processor_t proc2 = make_processor();
+  processor_t proc1 = make_processor(sync_data);
+  processor_t proc2 = make_processor(sync_data);
 
   reset_stack_to (task1, proc1);
   reset_stack_to (task2, proc2);

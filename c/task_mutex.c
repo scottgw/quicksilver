@@ -66,7 +66,7 @@ task_mutex_unlock(task_mutex_t mutex, processor_t proc)
       __sync_synchronize();
       mutex->owner = other_proc;
       other_proc->task->state = TASK_RUNNABLE;
-      sync_data_enqueue_runnable(proc->executor->sync_data, other_proc);
+      sync_data_enqueue_runnable(proc->task->sync_data, other_proc);
     }
   else
     {

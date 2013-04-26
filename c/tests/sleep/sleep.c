@@ -32,6 +32,7 @@ task1(void* data)
   printf("post sleep 1\n");
   proc_sleep(proc, ts);
   printf("post sleep 1\n");
+  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 void
@@ -46,17 +47,21 @@ task2(void* data)
   printf("post sleep 2\n");
   proc_sleep(proc, ts);
   printf("post sleep 2\n");
+  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 int
 main(int argc, char **argv)
 {
   sync_data_t sync_data = sync_data_new(MAX_TASKS);
-  processor_t proc1 = make_processor();
-  processor_t proc2 = make_processor();
+  processor_t proc1 = make_processor(sync_data);
+  processor_t proc2 = make_processor(sync_data);
 
   reset_stack_to (task1, proc1);
   reset_stack_to (task2, proc2);
+
+  sync_data_register_proc(sync_data);
+  sync_data_register_proc(sync_data);
 
   sync_data_enqueue_runnable(sync_data, proc1);
   sync_data_enqueue_runnable(sync_data, proc2);

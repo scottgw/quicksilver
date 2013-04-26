@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "processor.h"
+
 struct bounded_queue;
 typedef struct bounded_queue* bounded_queue_t;
 
@@ -26,7 +28,7 @@ bool
 bqueue_dequeue(bounded_queue_t q, void **data);
 
 void
-bqueue_dequeue_wait(bounded_queue_t q, void **data);
+bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc);
 
 
 #endif // _BOUNDED_QUEUE_H

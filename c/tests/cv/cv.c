@@ -56,7 +56,7 @@ task2(void* data)
   
   task_mutex_unlock(mutex, proc);
   printf("Thread 2 finished\n");
-  sync_data_deregister_proc(proc->executor->sync_data);
+  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 void
@@ -89,15 +89,15 @@ task1(void* data)
 
   task_mutex_unlock(mutex, proc);
   printf("Thread 1 finished\n");
-  sync_data_deregister_proc(proc->executor->sync_data);
+  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 int
 main(int argc, char **argv)
 {
   sync_data_t sync_data = sync_data_new(MAX_TASKS);
-  processor_t proc1 = make_processor();
-  processor_t proc2 = make_processor();
+  processor_t proc1 = make_processor(sync_data);
+  processor_t proc2 = make_processor(sync_data);
   mutex = task_mutex_new();
   cv = task_condition_new();
 

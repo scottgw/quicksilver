@@ -21,11 +21,17 @@ maybe_yield(processor_t proc, int i)
 }
 
 void
+proc_loop(processor_t proc)
+{
+  
+}
+
+void
 proc_wake(processor_t proc)
 {
   assert(proc->task->state == TASK_WAITING);
   proc->task->state = TASK_RUNNABLE;
-  sync_data_enqueue_runnable(proc->executor->sync_data, proc);
+  sync_data_enqueue_runnable(proc->task->sync_data, proc);
 }
 
 void
@@ -37,20 +43,16 @@ yield_to_executor(processor_t proc)
 void
 proc_sleep(processor_t proc, struct timespec duration)
 {
-  sync_data_add_sleeper(proc->executor->sync_data,
-                        proc,
-                        duration);
+  sync_data_add_sleeper(proc->task->sync_data, proc, duration);
   yield_to(proc->task, proc->executor->task);
 }
 
-// The first thing that the argument 'f' should do
-// is call SWAPSTACK to switch back to this creation routine.
 processor_t
-make_processor()
+make_processor(sync_data_t sync_data)
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
-  proc->task = task_make();
+  proc->task = task_make(sync_data);
   proc->id = global_id++;
 
   return proc;

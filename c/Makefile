@@ -5,7 +5,7 @@ OBJS=$(MODULES:=.o)
 
 include common.mk
 INCLUDES=-I./liblfds6.1.1/liblfds611/inc
-CFLAGS=-O3 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES) -lqs -llfds -fPIC
+CFLAGS=-O3 -Wall -std=gnu99 -lrt -pthread -g $(INCLUDES) -lqs -llfds -fPIC -U_FORTIFY_SOURCE
 
 libqs.so: $(OBJS) liblfds.so
 	$(CC) $(OBJS) -L./ -lrt -llfds -shared -o libqs.so

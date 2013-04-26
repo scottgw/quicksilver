@@ -19,7 +19,7 @@ void
 switch_to_next_processor(executor_t exec)
 {
   // take a new piece of work.
-  processor_t proc = sync_data_dequeue_runnable(exec->sync_data);
+  processor_t proc = sync_data_dequeue_runnable(exec->task->sync_data);
   if (proc != NULL)
     {
       proc->executor = exec;
@@ -33,7 +33,7 @@ switch_to_next_processor(executor_t exec)
       // If the came back finished, then remove it from the
       // work list.
       if(proc->task->state == TASK_RUNNABLE)
-        sync_data_enqueue_runnable(exec->sync_data, proc);
+        sync_data_enqueue_runnable(exec->task->sync_data, proc);
     }
   else
     {
@@ -90,8 +90,7 @@ executor_t
 make_executor(sync_data_t sync_data)
 {
   executor_t exec = malloc(sizeof(executor_t));
-  exec->task = task_make();
-  exec->sync_data = sync_data;
+  exec->task = task_make(sync_data);
   exec->current_proc = NULL;
   return exec;
 }

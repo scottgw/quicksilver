@@ -4,7 +4,7 @@
 #include "types.h"
 
 task_t
-task_make();
+task_make(sync_data_t sync_data);
 
 void
 task_free(task_t task);
