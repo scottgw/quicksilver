@@ -2,7 +2,25 @@
 #include <time.h>
 
 #include "sync_ops.h"
+#include "processor.h"
+#include "task.h"
 #include "liblfds611.h"
+
+// global sync data
+struct sync_data
+{
+  lfds611_atom_t max_tasks;
+
+  volatile uint64_t num_processors;
+
+  conc_list_t sleep_list;
+
+  conc_queue_t runnable_queue;
+  volatile uint64_t run_queue_size;
+  pthread_mutex_t run_mutex;
+  pthread_cond_t not_empty;
+};
+
 
 struct sleeper
 {

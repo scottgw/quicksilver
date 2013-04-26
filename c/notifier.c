@@ -12,6 +12,13 @@
 // Notifier implementation 
 //
 
+struct notifier
+{
+  sync_data_t sync_data;
+  pthread_t thread;
+};
+
+
 volatile int time_is_up = 0;
 volatile int notifier_done = 0;
 

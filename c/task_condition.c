@@ -2,6 +2,7 @@
 
 #include "task_mutex.h"
 #include "task_condition.h"
+#include "task.h"
 
 #define INIT_WAIT_QUEUE_SIZE 16
 

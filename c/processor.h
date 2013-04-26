@@ -5,6 +5,22 @@
 
 #include "types.h"
 
+struct processor
+{
+  // Underlying task
+  task_t task;
+
+  // Current executor
+  executor_t executor;
+
+  // Queue of queues which the processor
+  // will take requests from.
+  bounded_queue_t qoq; 
+
+  // Identifier
+  int id;  
+};
+
 processor_t
 make_processor();
 

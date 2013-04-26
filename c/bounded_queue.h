@@ -4,10 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "processor.h"
-
-struct bounded_queue;
-typedef struct bounded_queue* bounded_queue_t;
+#include "types.h"
 
 bounded_queue_t
 bqueue_new(uint32_t size);

@@ -5,6 +5,14 @@
 
 #define LIST_SIZE 1024
 
+struct list
+{
+  void** data;
+  int start;
+  int end;
+  int size;
+};
+
 list_t
 list_make()
 {

@@ -2,6 +2,7 @@
 
 #include "sync_ops.h"
 #include "processor.h"
+#include "task.h"
 #include "types.h"
 
 #define INIT_WAIT_QUEUE_SIZE 16

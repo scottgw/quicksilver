@@ -3,10 +3,17 @@
 
 #include <pthread.h>
 
-#include "list.h"
 #include "processor.h"
 
 #include "sync_ops.h"
+
+struct executor
+{
+  task_t task;
+  volatile bool done;
+  processor_t current_proc;
+  pthread_t thread;
+};
 
 // Constructs the executor thread and adds the executor
 // To the list of executors.
