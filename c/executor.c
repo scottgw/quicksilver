@@ -44,8 +44,9 @@ switch_to_next_processor(executor_t exec)
 void
 executor_free(executor_t exec)
 {
-  task_free(exec->task);
-  free(exec);
+  /* FIXME: this leads to a double-free, it's totally unclear why */
+  /* task_free(exec->task); */
+  /* free(exec); */
 }
 
 static
@@ -58,6 +59,7 @@ executor_loop(void* data)
       switch_to_next_processor(exec);
     }
   notifier_done = 1;
+  /* executor_free(exec); */
   pthread_exit(NULL);
 }
 
@@ -77,12 +79,10 @@ static
 void
 join_executor(void* elem, void* user)
 {
+  printf("calling join_executor\n");
   executor_t exec = (executor_t)elem;
-  printf("joining\n");
   pthread_join(exec->thread, NULL);
-  printf("freeing\n");
   executor_free(exec);
-  printf("post free\n");
 }
 
 // Constructs the executor thread and adds the executor
@@ -101,7 +101,8 @@ void
 join_executors()
 {
   list_foreach(executors, join_executor, NULL);
-  list_free(executors);
+  /* FIXME: this leads to a double-free, no idea why */
+  /* list_free(executors); */
 }
 
 void
