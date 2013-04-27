@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <ffi.h>
 
 #include "bounded_queue.h"
 #include "executor.h"
@@ -34,10 +35,9 @@ fib(processor_t proc, int i)
 }
 
 void
-task2(void* data)
+task2(processor_t proc)
 {
   int x;
-  processor_t proc = (processor_t)data;
   printf("Thread2 on the go\n");
   x = fib(proc, N);
   printf("Result2: %d\n", x);
@@ -45,10 +45,9 @@ task2(void* data)
 }
 
 void
-task1(void* data)
+task1(processor_t proc)
 {
   int x;
-  processor_t proc = (processor_t)data;
   printf("Thread1 on the go\n");
   x = fib(proc, N);
   printf("Result1: %d\n", x);
@@ -57,18 +56,43 @@ task1(void* data)
 
 
 void
-proc_main(void* data)
+proc_main(processor_t proc)
 {
-  processor_t proc = (processor_t) data;
-
+  processor_t *proc1_ptr = malloc(sizeof(processor_t));
+  processor_t *proc2_ptr = malloc(sizeof(processor_t));
   processor_t proc1 = make_processor(proc->task->sync_data);
   processor_t proc2 = make_processor(proc->task->sync_data);
+
+  *proc1_ptr = proc1;
+  *proc2_ptr = proc2;
+
 
   bounded_queue_t q1 = proc_make_private_queue(proc1);
   bounded_queue_t q2 = proc_make_private_queue(proc2);
 
-  closure_t clos1 = closure_new(task1, proc1);
-  closure_t clos2 = closure_new(task2, proc2);
+  ffi_cif *cif1 = (ffi_cif*)malloc(sizeof(ffi_cif));
+  ffi_type **arg_types1 = (ffi_type**)malloc(sizeof(ffi_type*));
+  arg_types1[0] = &ffi_type_pointer;
+  assert
+    (ffi_prep_cif
+     (cif1, FFI_DEFAULT_ABI, 1, &ffi_type_void, arg_types1) ==
+     FFI_OK);
+
+  ffi_cif *cif2 = (ffi_cif*)malloc(sizeof(ffi_cif));
+  ffi_type **arg_types2 = (ffi_type**)malloc(sizeof(ffi_type*));
+  arg_types2[0] = &ffi_type_pointer;
+  assert
+    (ffi_prep_cif
+     (cif2, FFI_DEFAULT_ABI, 1, &ffi_type_void, arg_types2) ==
+     FFI_OK);
+
+  void **args1 = (void**)malloc(sizeof(processor_t*));
+  args1[0] = proc1_ptr;
+  void **args2 = (void**)malloc(sizeof(processor_t*));
+  args2[0] = proc2_ptr;
+
+  closure_t clos1 = closure_new(cif1, task1, args1);
+  closure_t clos2 = closure_new(cif2, task2, args2);
 
   enqueue_closure(q1, clos1);
   enqueue_closure(q1, NULL);
@@ -84,12 +108,23 @@ int
 main(int argc, char **argv)
 {
   sync_data_t sync_data = sync_data_new(MAX_TASKS);
+  processor_t *proc_ptr = malloc(sizeof(processor_t));
   processor_t proc = make_processor(sync_data);
+  *proc_ptr = proc;
 
   create_executors(sync_data, 2);
 
   bounded_queue_t q = proc_make_private_queue(proc);
-  closure_t clos = closure_new(proc_main, proc);
+
+  ffi_cif *cif = (ffi_cif*)malloc(sizeof(ffi_cif));
+  ffi_type **arg_types = (ffi_type**)malloc(sizeof(ffi_type*));
+  arg_types[0] = &ffi_type_pointer;
+  ffi_prep_cif(cif, FFI_DEFAULT_ABI, 1, &ffi_type_void, arg_types);
+
+  void **args = (void**)malloc(sizeof(processor_t*));
+  args[0] = proc_ptr;
+  closure_t clos = closure_new(cif, proc_main, args);
+
   enqueue_closure(q, clos);
   enqueue_closure(q, NULL);
   proc_shutdown(proc);
