@@ -2,8 +2,12 @@
 #define __PROCESSOR_H_
 
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "types.h"
+
+#include "task_mutex.h"
+#include "task_condition.h"
 
 struct processor
 {
@@ -17,6 +21,11 @@ struct processor
   // will take requests from.
   bounded_queue_t qoq; 
 
+  // Processor availability
+  bool available;
+  task_mutex_t mutex;
+  task_condition_t cv;
+
   // Identifier
   int id;  
 };
@@ -29,6 +38,9 @@ reset_stack_to(void (*)(void*), processor_t);
 
 void
 proc_wake(processor_t proc);
+
+bounded_queue_t
+proc_make_private_queue(processor_t proc);
 
 void
 yield_to_processor(executor_t, processor_t);
