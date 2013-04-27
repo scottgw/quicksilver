@@ -13,7 +13,7 @@ task_make(sync_data_t sync_data)
   task->sync_data = sync_data;
 
   task->ctx = ctx_new();
-  ctx_set_stack_ptr(task->ctx, task->base + STACKSIZE);
+  ctx_set_stack_ptr(task->ctx, task->base);
   ctx_set_stack_size(task->ctx, STACKSIZE);
   
   return task;
