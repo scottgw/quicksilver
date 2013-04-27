@@ -100,6 +100,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
 
       if (lfds611_queue_dequeue(sync_data->runnable_queue, (void**)&proc) == 1)
         {
+          __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
           assert(proc->task->state == TASK_RUNNABLE);
         }
       else
@@ -113,6 +114,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
               pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
             }
 
+          __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
           pthread_mutex_unlock(&sync_data->run_mutex);
         }
       if (sync_data->num_processors > 0)
