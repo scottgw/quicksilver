@@ -125,14 +125,12 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
       else
         {
           pthread_cond_broadcast(&sync_data->not_empty);
-          printf("sync_data_dequeue: no more processors\n");
           return NULL;
         }
     }
   else
     {
       pthread_cond_broadcast(&sync_data->not_empty);
-      printf("sync_data_dequeue: no more processors\n");
       return NULL;
     }
 }

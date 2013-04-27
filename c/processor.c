@@ -96,7 +96,6 @@ proc_loop(void* ptr)
 
       if (priv_queue == NULL)
         {
-          printf("end of queue\n");
           break;
         }
 

@@ -37,7 +37,6 @@ switch_to_next_processor(executor_t exec)
     }
   else
     {
-      printf("no workers\n");
       exec->done = true;
     }
 }

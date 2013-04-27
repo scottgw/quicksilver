@@ -42,7 +42,6 @@ task_wrapper(wrapper_data* data)
   data->task->state = TASK_FINISHED;
 
   if (data->task->next != NULL) {
-    printf("running next task\n");
     task_t next = data->task->next;
     free(data);
     task_run (next);
