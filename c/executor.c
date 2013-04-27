@@ -54,12 +54,10 @@ void
 executor_loop(void* data)
 {
   executor_t exec = (executor_t) data;
-  printf("Executor running\n");
   while(!exec->done)
     {
       switch_to_next_processor(exec);
     }
-  printf("end exec loop\n");
   notifier_done = 1;
   pthread_exit(NULL);
 }
