@@ -159,6 +159,10 @@ make_processor(sync_data_t sync_data)
   proc->task = task_make(sync_data);
   proc->id = global_id++;
 
+  proc->available = true;
+  proc->mutex = task_mutex_new();
+  proc->cv = task_condition_new();
+
   reset_stack_to(proc_loop, proc);
 
   sync_data_register_proc(sync_data);
