@@ -79,7 +79,7 @@ notifier_run(void* ptr)
   notifier_t notifier = (notifier_t)ptr;
   while(notifier_done == 0)
     {
-      usleep(1000);
+      usleep(10000);
       reschedule_awoken(notifier);
       time_is_up = 1;
     }
@@ -102,4 +102,10 @@ notifier_spawn(sync_data_t sync_data)
   notifier_t notifier = notifier_new(sync_data);
   pthread_create(&notifier->thread, NULL, notifier_run, notifier);
   return notifier;
+}
+
+void
+notifier_join(notifier_t notifier)
+{
+  pthread_join(notifier->thread, NULL);
 }
