@@ -33,7 +33,6 @@ fib(processor_t proc, int i)
     return fib(proc, i-1) + fib(proc, i-2);
 }
 
-
 void
 task2(void* data)
 {
@@ -43,7 +42,6 @@ task2(void* data)
   x = fib(proc, N);
   printf("Result2: %d\n", x);
   printf("Thread2 finished\n");
-  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 void
@@ -55,7 +53,6 @@ task1(void* data)
   x = fib(proc, N);
   printf("Result1: %d\n", x);
   printf("Thread1 finished\n");
-  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 
@@ -73,15 +70,14 @@ proc_main(void* data)
   closure_t clos1 = closure_new(task1, proc1);
   closure_t clos2 = closure_new(task2, proc2);
 
-  maybe_t m1 = (maybe_t) malloc(sizeof(struct maybe));
-  maybe_t m2 = (maybe_t) malloc(sizeof(struct maybe));
+  enqueue_closure(q1, clos1);
+  enqueue_closure(q1, NULL);
 
-  m1->load = clos1;
-  m2->load = clos2;
+  enqueue_closure(q2, clos2);
+  enqueue_closure(q2, NULL);
 
-  bqueue_enqueue(q1, m1);
-  bqueue_enqueue(q2, m2);
-
+  proc_shutdown(proc1);
+  proc_shutdown(proc2);
 }
 
 int
@@ -94,10 +90,9 @@ main(int argc, char **argv)
 
   bounded_queue_t q = proc_make_private_queue(proc);
   closure_t clos = closure_new(proc_main, proc);
-  maybe_t m = (maybe_t) malloc(sizeof(struct maybe));
-  m->load = clos;
-
-  bqueue_enqueue(q, m);
+  enqueue_closure(q, clos);
+  enqueue_closure(q, NULL);
+  proc_shutdown(proc);
 
   {
     notifier_t notifier = notifier_spawn(sync_data);
