@@ -6,6 +6,7 @@
 
 #include "types.h"
 
+#include "closure.h"
 #include "task_mutex.h"
 #include "task_condition.h"
 
@@ -39,6 +40,19 @@ reset_stack_to(void (*)(void*), processor_t);
 void
 proc_wake(processor_t proc);
 
+
+closure_t
+dequeue_closure(bounded_queue_t q, processor_t proc);
+
+void
+enqueue_closure(bounded_queue_t q, closure_t clos);
+
+bounded_queue_t
+dequeue_private_queue(processor_t proc);
+
+void
+enqueue_private_queue(processor_t proc, bounded_queue_t q);
+
 bounded_queue_t
 proc_make_private_queue(processor_t proc);
 
@@ -59,6 +73,9 @@ proc_running(processor_t);
 
 void
 proc_start(processor_t, executor_t);
+
+void
+proc_shutdown(processor_t);
 
 void
 maybe_yield(processor_t, int);

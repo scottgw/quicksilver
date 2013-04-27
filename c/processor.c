@@ -23,6 +23,52 @@ maybe_yield(processor_t proc, int i)
     }
 }
 
+
+static
+void*
+dequeue_wait_maybe(bounded_queue_t q, processor_t proc)
+{
+  maybe_t maybe;
+  bqueue_dequeue_wait(q, (void**)&maybe, proc);
+  void *ptr = maybe->load;
+  free(maybe);
+  return ptr;
+}
+
+static
+void
+enqueue_maybe(bounded_queue_t q, void *ptr)
+{
+  maybe_t m = (maybe_t) malloc(sizeof(struct maybe));
+  m->load = ptr;
+  bqueue_enqueue(q, m);
+}
+
+closure_t
+dequeue_closure(bounded_queue_t q, processor_t proc)
+{
+  return (closure_t) dequeue_wait_maybe(q, proc);
+}
+
+void
+enqueue_closure(bounded_queue_t q, closure_t clos)
+{
+  enqueue_maybe(q, clos);
+}
+
+bounded_queue_t
+dequeue_private_queue(processor_t proc)
+{
+  return (bounded_queue_t) dequeue_wait_maybe(proc->qoq, proc);
+}
+
+void
+enqueue_private_queue(processor_t proc, bounded_queue_t q)
+{
+  enqueue_maybe(proc->qoq, (void*) q);
+}
+
+
 static
 void
 notify_available(processor_t proc)
@@ -46,24 +92,18 @@ proc_loop(void* ptr)
   while (true)
     {
       // Dequeue a private queue from the queue of queues.
-      maybe_t maybe_q;
-      bqueue_dequeue_wait(proc->qoq, (void**)&maybe_q, proc);
+      bounded_queue_t priv_queue = dequeue_private_queue(proc);
 
-      // If its the end-signal, just break out of this loop and do the cleanup.
-      if (maybe_q->load == NULL)
-        break;
+      if (priv_queue == NULL)
+        {
+          printf("end of queue\n");
+          break;
+        }
 
-      bounded_queue_t local_queue = (bounded_queue_t) maybe_q->load;
-      free(maybe_q);
       while (true)
         {
           // Dequeue a closure to perform
-          maybe_t maybe_clos;
-          bqueue_dequeue_wait(local_queue, (void**)&maybe_clos, proc);
-
-          closure_t clos = maybe_clos->load;
-          free(maybe_clos);
-
+          closure_t clos = dequeue_closure(priv_queue, proc);
 
           // If its empty we set the processor to 'available' and notify
           // any processors performing wait-conditions to wake up and
@@ -78,15 +118,14 @@ proc_loop(void* ptr)
           free(clos);
         }
     }
+  sync_data_deregister_proc(proc->task->sync_data);
 }
 
 bounded_queue_t
 proc_make_private_queue(processor_t proc)
 {
   bounded_queue_t q = bqueue_new(1024);
-  maybe_t m = (maybe_t) malloc(sizeof(struct maybe));
-  m->load = q;
-  bqueue_enqueue(proc->qoq, m);
+  enqueue_private_queue(proc, q);
   return q;
 }
 
@@ -126,6 +165,12 @@ make_processor(sync_data_t sync_data)
   sync_data_enqueue_runnable(sync_data, proc);
 
   return proc;
+}
+
+void
+proc_shutdown(processor_t proc)
+{
+  enqueue_private_queue(proc, NULL);
 }
 
 void
