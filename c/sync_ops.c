@@ -150,7 +150,10 @@ sync_data_register_proc(sync_data_t sync_data)
 void
 sync_data_deregister_proc(sync_data_t sync_data)
 {
-  __sync_fetch_and_sub(&sync_data->num_processors, 1);
+  if (__sync_sub_and_fetch(&sync_data->num_processors, 1) == 0)
+    {
+      pthread_cond_broadcast(&sync_data->not_empty);
+    }
 }
 
 uint64_t
