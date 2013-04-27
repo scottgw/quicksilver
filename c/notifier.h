@@ -10,6 +10,9 @@ notifier_new(sync_data_t);
 notifier_t
 notifier_spawn(sync_data_t);
 
+void
+notifier_join(notifier_t notifier);
+
 extern volatile int time_is_up;
 extern volatile int notifier_done;
 
