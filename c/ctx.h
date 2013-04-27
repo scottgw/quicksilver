@@ -11,6 +11,9 @@ ctx_t
 ctx_new();
 
 void
+ctx_free(ctx_t ctx);
+
+void
 ctx_make(ctx_t ctx, void (*func)(void*), void* ptr);
 
 void

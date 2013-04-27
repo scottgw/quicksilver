@@ -42,6 +42,8 @@ bqueue_use(bounded_queue_t q)
 void
 bqueue_free_with(bounded_queue_t q, void (*del_func)(void*, void*), void *ptr)
 {
+  task_mutex_free(q->mutex);
+  task_condition_free(q->not_empty);
   lfds611_queue_delete(q->impl, del_func, ptr);
   free(q);
 }

@@ -62,6 +62,7 @@ sync_data_free(sync_data_t sync_data)
   pthread_mutex_destroy(&sync_data->run_mutex);
   lfds611_queue_delete(sync_data->runnable_queue, NULL, NULL);
   lfds611_slist_delete(sync_data->sleep_list);
+  free(sync_data);
 }
 
 void

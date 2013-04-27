@@ -9,6 +9,9 @@ sync_data_t
 sync_data_new(lfds611_atom_t max_tasks);
 
 void
+sync_data_free(sync_data_t sync_data);
+
+void
 sync_data_use(sync_data_t);
 
 void

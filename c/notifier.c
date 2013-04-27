@@ -108,4 +108,5 @@ void
 notifier_join(notifier_t notifier)
 {
   pthread_join(notifier->thread, NULL);
+  free(notifier);
 }

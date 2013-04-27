@@ -63,7 +63,7 @@ void
 yield_to_executor(processor_t);
 
 void
-free_processor(processor_t);
+proc_free(processor_t);
 
 void
 proc_sleep(processor_t, struct timespec);

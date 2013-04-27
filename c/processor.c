@@ -109,15 +109,16 @@ proc_loop(void* ptr)
           // retry their conditions.
           if (clos == NULL)
             {
+              bqueue_free(priv_queue);
               notify_available(proc);
               break;
             }
 
           closure_apply(clos);
-          free(clos);
         }
     }
   sync_data_deregister_proc(proc->task->sync_data);
+  proc_free(proc);
 }
 
 bounded_queue_t
@@ -177,9 +178,12 @@ proc_shutdown(processor_t proc)
 }
 
 void
-free_processor(processor_t proc)
+proc_free(processor_t proc)
 {
-  task_free (proc->task);
+  task_free(proc->task);
+  task_condition_free(proc->cv);
+  task_mutex_free(proc->mutex);
+  bqueue_free(proc->qoq);
   free (proc);
 }
 

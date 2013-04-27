@@ -22,6 +22,7 @@ task_make(sync_data_t sync_data)
 void
 task_free(task_t task)
 {
+  ctx_free(task->ctx);
   free(task->base);
   free(task);
 }
@@ -30,21 +31,24 @@ typedef struct
 {
   task_t task;
   void (*f)(void*);
-  void* data;
+  void* ptr;
 } wrapper_data;
 
 static
 void
 task_wrapper(wrapper_data* data)
 {
-  data->task->state = TASK_RUNNING;
-  data->f(data->data);
-  data->task->state = TASK_FINISHED;
+  task_t task = data->task;
+  void (*f)(void*) = data->f;
+  void* ptr = data->ptr;
+  free(data);
 
-  if (data->task->next != NULL) {
-    task_t next = data->task->next;
-    free(data);
-    task_run (next);
+  task->state = TASK_RUNNING;
+  f(ptr);
+  task->state = TASK_FINISHED;
+
+  if (task->next != NULL) {
+    task_run (task->next);
   }
 }
 
@@ -56,7 +60,7 @@ task_set_func(task_t task, void (*f)(void*), void* data)
 
   wrap_data->task = task;
   wrap_data->f = f;
-  wrap_data->data = data;
+  wrap_data->ptr = data;
   
   ctx_make(task->ctx, (void (*)(void*))task_wrapper, wrap_data);
   task->state = TASK_RUNNABLE;

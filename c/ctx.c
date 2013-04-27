@@ -29,6 +29,12 @@ ctx_new()
   return ctx;
 }
 
+void
+ctx_free(ctx_t ctx)
+{
+  free(ctx);
+}
+
 typedef struct
 {
   ctx_t ctx;
@@ -41,15 +47,21 @@ static
 void
 ctx_wrapper_f(ctx_wrapper_data* data)
 {
-  if (setjmp(data->ctx->jbuf) == 0)
+  ctx_t ctx = data->ctx;
+  ucontext_t next_uctx = data->next_uctx;
+  void (*func)(void*) = data->func;
+  void *ptr = data->ptr;
+
+  free(data);
+
+  if (setjmp(ctx->jbuf) == 0)
     {
       // First time through we want to jump back to
       // the setup routine that just made us.
       ucontext_t wrapper_uctx;
-      swapcontext(&wrapper_uctx, &data->next_uctx);
+      swapcontext(&wrapper_uctx, &next_uctx);
     }
-  data->func(data->ptr);
-  free(data);
+  func(ptr);
 }
 
 void

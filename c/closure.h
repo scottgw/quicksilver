@@ -6,7 +6,7 @@ struct closure;
 typedef struct closure* closure_t;
 
 closure_t
-closure_new(ffi_cif *cif, void *fn, void **args);
+closure_new(ffi_cif *cif, void *fn, int argc, void **args);
 
 void closure_apply(closure_t clos);
 
