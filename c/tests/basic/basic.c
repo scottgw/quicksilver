@@ -54,8 +54,6 @@ task1(processor_t proc)
   printf("Thread1 finished\n");
 }
 
-
-
 void
 proc_main(processor_t proc)
 {
@@ -103,8 +101,6 @@ proc_main(processor_t proc)
   proc_shutdown(proc1);
   proc_shutdown(proc2);
 }
-
-
 
 int
 main(int argc, char **argv)
