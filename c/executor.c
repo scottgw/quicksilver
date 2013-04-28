@@ -53,8 +53,9 @@ switch_to_next_processor(executor_t exec)
 void
 executor_free(executor_t exec)
 {
-  task_free(exec->task);
-  free(exec);
+  /* FIXME: This results in a double-free, not sure why */
+  /* task_free(exec->task); */
+  /* free(exec); */
 }
 
 static
