@@ -2,9 +2,11 @@
 
 module Main where
 
+import Control.Lens
 import Control.Monad
 
 import Data.Char (toLower)
+import qualified Data.Text as Text
 
 import System.Console.CmdArgs
 
@@ -49,7 +51,7 @@ data Args
     deriving (Show, Data, Typeable)
 
 clasFile :: Clas -> String
-clasFile = (++ ".bc") . map toLower . className
+clasFile = (++ ".bc") . map toLower . Text.unpack . view className
 
 compile :: String -> Bool -> Bool -> Bool -> Clas -> IO ()
 compile outFile debug genMain runMain clas = do
@@ -58,7 +60,7 @@ compile outFile debug genMain runMain clas = do
                     str -> str
 
     when debug $ putStrLn "Generating dependency interfaces"
-    envsE <- depGenInt (className clas)
+    envsE <- depGenInt (view className clas)
     case envsE of
       Left e -> putStrLn "Dependency Error:" >> error (show e)
       Right envs ->

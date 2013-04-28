@@ -1,6 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Statement where
 
 import Control.Monad
+
+import Data.Text (Text)
 
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
@@ -15,14 +18,14 @@ import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Types
 
-fetchCurrentAttr :: String -> Build ValueRef
+fetchCurrentAttr :: Text -> Build ValueRef
 fetchCurrentAttr ident = do
   curr <- lookupEnv  "Current"
   clas <- currentClass
   obj  <- load curr "lookupVarOrAttr load"
   getAttribute clas ident obj
 
-lookupVarOrAttr :: String -> Build ValueRef
+lookupVarOrAttr :: Text -> Build ValueRef
 lookupVarOrAttr ident =
   lookupEnvM ident >>= maybe (fetchCurrentAttr ident) return
 
@@ -142,7 +145,7 @@ genStmt s = error $ "genStmt: no pattern for: " ++ show s
 --   genBuiltin cName fName
 
 
-lookupMalloc :: Typ -> String -> [TExpr] -> Build ValueRef
+lookupMalloc :: Typ -> Text -> [TExpr] -> Build ValueRef
 lookupMalloc (ClassType cName _) fName args = do
   isCreate <- lookupCreate cName fName
   if isCreate
@@ -153,5 +156,5 @@ lookupMalloc (ClassType cName _) fName args = do
 lookupMalloc t _ _ = 
     error ("lookupMalloc: called on non-class type: " ++ show t)
 
-lookupCreate :: String -> String -> Build Bool
+lookupCreate :: Text -> Text -> Build Bool
 lookupCreate cName fName = isCreateName fName `fmap` lookupClas cName

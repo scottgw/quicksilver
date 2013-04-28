@@ -1,14 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Clas (genClass) where
 
 import Control.Applicative
+import Control.Lens
 import Control.Monad
 import Control.Monad.Reader
+
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 
-import Language.QuickSilver.Generate.Builtin.Builtins
+-- import Language.QuickSilver.Generate.Builtin.Builtins
 import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.Feature
 import Language.QuickSilver.Generate.Memory.Class
@@ -30,7 +35,7 @@ genClass' clas isMain = do
   debug "Generating Creation routines"
   genCreates (allCreates clas) 
   debug "Generating features"
-  genFeatures (allFeatures clas)
+  genRoutines (view routines clas)
   debug "Generating main routine (if required)"
   when isMain (genMain clas)
 
@@ -43,10 +48,10 @@ genMain clas = do
 
   call "GC_init" []
 
-  curr <- unClasRef <$> mallocClas (className clas)
+  curr <- unClasRef <$> mallocClas (view className clas)
   norm <- appendBasicBlock fRef "normal"
   lpad <- appendBasicBlock fRef "landing pad"
-  f <- getNamedFunction (fullNameStr (className clas) "make")
+  f <- getNamedFunction (fullNameStr (view className clas) "make")
   r <- invoke' f [curr] norm lpad "make"
   setInstructionCallConv r Fast
 
@@ -72,19 +77,20 @@ genMain clas = do
   positionAtEnd norm
   ret zero
 
-genCreates :: [String] -> Build ()
+genCreates :: [Text] -> Build ()
 genCreates = mapM_ genCreate
 
-genCreate :: String -> Build ()
+genCreate :: Text -> Build ()
 genCreate fName = do
-  cName <- className `fmap` currentClass
+  cName <- view className `fmap` currentClass
   let featCreat = featureAsCreate cName fName
   createFunc <- getNamedFunction featCreat
-  atNewBlock createFunc (featCreat ++ " start")
-  v <-  if needsBuiltinCreate cName fName
-    then genBuiltinCreate cName fName
-    else unClasRef <$> mallocClas cName
+  atNewBlock createFunc (featCreat `Text.append` " start")
+  -- v <- if needsBuiltinCreate cName fName
+  --   then genBuiltinCreate cName fName
+  --   else unClasRef <$> mallocClas cName
+  v <- unClasRef <$> mallocClas cName
   ret v
 
-atNewBlock :: ValueRef -> String -> Build ()
+atNewBlock :: ValueRef -> Text -> Build ()
 atNewBlock f str = appendBasicBlock f str >>= positionAtEnd

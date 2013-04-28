@@ -1,12 +1,15 @@
 {-# LANGUAGE ViewPatterns #-}
-module Language.QuickSilver.Generate.Feature (genFeatures) where
+{-# LANGUAGE OverloadedStrings #-}
+module Language.QuickSilver.Generate.Feature (genRoutines) where
 
 import Control.Applicative ((<$>))
 import Control.Monad
 import Control.Monad.Reader
 
 import Data.Maybe (listToMaybe)
-import Data.Map (unions, union, empty)
+import Data.HashMap.Strict (unions, union, empty)
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Language.QuickSilver.Position
 import Language.QuickSilver.Syntax hiding (ResultVar)
@@ -14,7 +17,7 @@ import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 
 import Language.QuickSilver.Generate.Eval
-import Language.QuickSilver.Generate.Builtin.Builtins
+-- import Language.QuickSilver.Generate.Builtin.Builtins
 import Language.QuickSilver.Generate.Memory.Attribute
 import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.Statement
@@ -43,65 +46,26 @@ allocP fRef d i = do
 allocPs :: ValueRef -> [Decl] -> Build Env
 allocPs fRef ds = unions `fmap` zipWithM (allocP fRef) ds [0..]
 
-featureEnv :: TRoutine -> ValueRef -> Build Env
-featureEnv feat func = unions <$> sequence [ featResult feat
-                                           , genDecls feat
-                                           , allocPs func (featureArgs feat)]
+routineEnv :: TRoutine -> ValueRef -> Build Env
+routineEnv rout func = unions <$> sequence [ routResult rout
+                                           , genDecls rout
+                                           , allocPs func (routineArgs rout)]
 
-lookupLocal :: String -> Build ValueRef
+lookupLocal :: Text -> Build ValueRef
 lookupLocal = (flip load) "" <=< lookupEnv
 
 firstArgTyp :: TRoutine -> Typ
-firstArgTyp = maybe (error "firstArgTyp") declType . listToMaybe . featureArgs
-
-start :: TRoutine -> Build ()
-start f = if routineFroz f 
-          then frozenStart f 
-          else virtualStart f
+firstArgTyp = maybe (error "firstArgTyp") declType . listToMaybe . routineArgs
 
 genBody :: TRoutine -> Build ()
 genBody r =
   case routineImpl r of
     RoutineBody _ _ body        -> genStmt (contents body)
-    RoutineExternal "built_in" _ -> genBuiltin r
+--    RoutineExternal "built_in" _ -> genBuiltin r
     b                           -> error ("genBody: " ++ show b)
 
-frozenStart :: TRoutine -> Build ()
-frozenStart r = getInsertBlock >>= positionAtEnd >> genBody r
-
-virtualStart :: TRoutine -> Build ()
-virtualStart feat = do
-  func     <- getInsertBlock >>= getBasicBlockParent
-  normalB  <- appendBasicBlock func "normal"
-  vtableB  <- appendBasicBlock func "vtable"
-  mergeB   <- appendBasicBlock func "merge"
-
-  let ClassType cName _ = firstArgTyp feat
-  vt     <- lookupVTable cName
-  clas   <- lookupClas cName
-  obj    <- lookupLocal "Current"
-
-  vtable <- getVTable cName obj 
-
-  i64    <- int64TypeM
-  vtPtr1 <- ptrToInt vt i64 ""
-  vtPtr2 <- ptrToInt vtable i64 ""
-
-  res  <- icmp IntEQ vtPtr1 vtPtr2 ""
-  condBr res normalB vtableB
-
-  positionAtEnd normalB
-  genBody feat
-  br mergeB
-  
-  positionAtEnd vtableB
-  f <- vtableFunc clas obj (featureName feat)
-  args <- mapM lookupLocal (map declName . featureArgs $ feat)
-  r <- call' f args "vtableBlockCall"
-  setInstructionCallConv r Fast
-  br mergeB
-
-  positionAtEnd mergeB
+start :: TRoutine -> Build ()
+start r = getInsertBlock >>= positionAtEnd >> genBody r
 
 evalClause :: Clause TExpr -> Build ValueRef
 evalClause (Clause _n e) = loadEval e
@@ -143,28 +107,32 @@ throw = do
 preCond :: TRoutine -> Build ()
 preCond = mapM_ clause . contractClauses . routineReq
 
-genFeature :: TRoutine -> Build ()
-genFeature feat = do
-  let ClassType cname _ = firstArgTyp feat
-  funcRef <- getNamedFunction (fullNameStr cname (featureName feat))
+genRoutine :: TRoutine -> Build ()
+genRoutine rout = do
+  let ClassType cname _ = firstArgTyp rout
+  funcRef <- getNamedFunction (fullNameStr cname (routineName rout))
   setFunctionCallConv funcRef Fast
 
-  featStartBlock feat funcRef
-  env <- featureEnv feat funcRef
-  debug $ "Starting to generate " ++ featureName feat ++ "," ++ show funcRef
-  withUpdEnv (union env) (local (setFeature (makeRoutineI $ untypeFeat feat))
-                              (preCond feat >> start feat >> featReturn feat))
+  routStartBlock rout funcRef
+  env <- routineEnv rout funcRef
+  debug $ concat [ "Starting to generate "
+                 , Text.unpack (routineName rout)
+                 , ","
+                 , show funcRef
+                 ]
+  withUpdEnv (union env) (local (setRoutine (makeRoutineI $ untypeRout rout))
+                              (preCond rout >> start rout >> routReturn rout))
 
-featStartBlock :: AbsRoutine body exp -> ValueRef -> Build ()
-featStartBlock (AbsRoutine {routineName = fName}) funcRef =
-  appendBasicBlock funcRef (fName ++ "StartB") >>= positionAtEnd
+routStartBlock :: AbsRoutine body exp -> ValueRef -> Build ()
+routStartBlock (AbsRoutine {routineName = fName}) funcRef =
+  appendBasicBlock funcRef (fName `Text.append` "StartB") >>= positionAtEnd
 
-featResult :: AbsRoutine body exp -> Build Env
-featResult (AbsRoutine {routineResult = NoType}) = return empty
-featResult f = allocDeclEnv . Decl "Result" . routineResult $ f
+routResult :: AbsRoutine body exp -> Build Env
+routResult (AbsRoutine {routineResult = NoType}) = return empty
+routResult f = allocDeclEnv . Decl "Result" . routineResult $ f
 
-featReturn :: TRoutine -> Build ()
-featReturn rout =
+routReturn :: TRoutine -> Build ()
+routReturn rout =
   case routineImpl rout of
     RoutineExternal _ _ -> return ()
     _                   -> 
@@ -172,6 +140,6 @@ featReturn rout =
         NoType -> retVoid
         t      -> evalUnPos (ResultVar t) >>= (`load` "") >>= ret
 
-genFeatures :: [TRoutine] -> Build ()
-genFeatures = mapM_ genFeature
+genRoutines :: [TRoutine] -> Build ()
+genRoutines = mapM_ genRoutine
 

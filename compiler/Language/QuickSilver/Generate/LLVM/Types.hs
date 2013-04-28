@@ -16,6 +16,9 @@ module Language.QuickSilver.Generate.LLVM.Types
      -- voidType
     ) where
 
+import           Data.Text (Text)
+import qualified Data.Text as Text
+
 import Foreign.C
 import Foreign.Ptr
 
@@ -35,10 +38,10 @@ pointer0 = (`pointerType` 0)
 typeOfVal :: ValueRef -> Build TypeRef
 typeOfVal = liftBuild1 L.typeOf
 
-structCreateNamed :: String -> Build TypeRef
+structCreateNamed :: Text -> Build TypeRef
 structCreateNamed str = do
   c <- askContext
-  lift $ withCString str (\cstr -> L.structCreateNamed c cstr)
+  lift $ withCString (Text.unpack str) (\cstr -> L.structCreateNamed c cstr)
 
 structSetBody :: TypeRef -> [TypeRef] -> Bool -> Build ()
 structSetBody struct elems packed =

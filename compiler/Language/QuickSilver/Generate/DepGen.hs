@@ -1,7 +1,11 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.DepGen (depGen, depGenInt) where
 
+import Control.Lens
 import Control.Monad
 import Control.Monad.Error
+
+import Data.Text (Text)
 
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
@@ -34,16 +38,13 @@ depGen' cn acc = do
 
 depClas :: Clas -> [Clas] -> DepM [Clas]
 depClas c acc = 
-    depFeats c (acc ++ genericStubs c) >>= depAttrs c >>= depInherit c
-
-depInherit :: Clas -> [Clas] -> DepM [Clas]
-depInherit c acc = foldM depTyp acc (map inheritClass $ allInherited c)
+    depFeats c (acc ++ genericStubs c) >>= depAttrs c
 
 depFeats :: Clas -> [Clas] -> DepM [Clas]
-depFeats c acc = foldM depFeat acc (allRoutines c)
+depFeats c acc = foldM depFeat acc (view routines c)
 
 depAttrs :: Clas -> [Clas] -> DepM [Clas]
-depAttrs c acc = depDecls (map attrDecl $ allAttributes c) acc
+depAttrs c acc = depDecls (map attrDecl $ view attributes c) acc
 
 depFeat :: [Clas] -> Routine -> DepM [Clas]
 depFeat acc f = 
@@ -56,7 +57,7 @@ depDecls :: [Decl] -> [Clas] -> DepM [Clas]
 depDecls ds acc = foldM depDecl acc ds
 
 hasClas :: ClassName -> [Clas] -> Bool
-hasClas cn = any ( (==) cn . className)
+hasClas cn = any ( (==) cn . view className)
 
 depDecl :: [Clas] -> Decl -> DepM [Clas]
 depDecl acc (Decl _ t) = depTyp acc t

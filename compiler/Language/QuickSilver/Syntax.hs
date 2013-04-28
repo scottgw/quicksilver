@@ -202,6 +202,10 @@ instance Show UnPosExpr where
     show LitVoid = "Void"
 
 data Typ = ClassType ClassName [Typ]
+         | IntType
+         | BoolType
+         | DoubleType
+         | CharType
          | TupleType (Either [Typ] [Decl])
          | Sep (Maybe Proc) [Proc] Text
          | VoidType

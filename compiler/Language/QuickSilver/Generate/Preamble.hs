@@ -1,11 +1,14 @@
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Preamble where
 
 import Control.Applicative
+import Control.Lens
 import Control.Monad
 import Control.Monad.Reader
     
-import Data.Map (union, fromList, Map)
+import Data.HashMap.Strict (union, fromList)
+import Data.Text (Text)
 
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
@@ -22,11 +25,11 @@ import Language.QuickSilver.TypeCheck.TypedExpr
 preamble :: TClass -> Build (BuildState -> BuildState)
 preamble clas = do
   vt <- vtables
-  declMap <- (liftM2 union) addConstDecls addConsts
+  declMap <- (liftM2 union) addConstDecls addStringConsts
   let declTrans = updEnv (union declMap)
   return (declTrans .  env vt)
       where
-        vtables = (lift . depGenInt . className) clas >>=
+        vtables = (lift . depGenInt . view className) clas >>=
                   either (error . show)  genClassStructs 
         env classEnv = setCurrent (clasInterface $ untype clas) . setClassEnv classEnv
 
@@ -43,7 +46,7 @@ funcTypeVar' rM aMs = do
   as <- sequence aMs
   funcTypeVar r as
 
-constDecls :: [(String, Build TypeRef)]
+constDecls :: [(Text, Build TypeRef)]
 constDecls = 
     [ ("printf",        funcTypeVar' int32TypeM [ptr])
     , ("exit",          funcType' voidTypeM [int32TypeM])
@@ -65,20 +68,20 @@ constDecls =
     , ("llvm.eh.typeid.for", funcType' int32TypeM [ptr])
     ]
 
-addConstDecls :: Build (Map String ValueRef)
+addConstDecls :: Build (Map Text ValueRef)
 addConstDecls = fromList `fmap` mapM addDecl constDecls
     where
       addDecl (str, t) = (str,) <$> (addFunc str =<< t)
 
-consts :: [(String, Build ValueRef, Int)]
-consts = 
+stringConsts :: [(Text, Build ValueRef, Int)]
+stringConsts = 
     [("intFmtString", string "%d\n", 4)
     ,("dblFmtString", string "%f\n", 4)
     ,("_ZTIi", stdTypeInfoExtern, 0)
     ]
 
-addConsts :: Build (Map String ValueRef)
-addConsts = fromList `fmap` mapM addConst consts
+addStringConsts :: Build (Map Text ValueRef)
+addStringConsts = fromList `fmap` mapM addConst stringConsts
     where addConst (str, vr, l) = do
             v <- vr
             setLinkage v l

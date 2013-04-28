@@ -67,7 +67,7 @@ $( derive makeBinary ''EqOp )
 $( derive makeBinary ''UnPosTExpr )
 
 untype :: TClass -> Clas
-untype = classMapExprs untypeFeat untypeClause untypeConstant
+untype = classMapExprs untypeRout untypeClause untypeConstant
 
 untypeClause :: Clause TExpr -> Clause Expr
 untypeClause (Clause label e) = Clause label (untypeExpr e)
@@ -78,8 +78,8 @@ untypeContract (Contract inhrt clauses) =
 untypeConstant (Constant decl expr) = 
   Constant decl (untypeExpr expr)
 
-untypeFeat :: TRoutine -> Routine
-untypeFeat tfeat = 
+untypeRout :: TRoutine -> Routine
+untypeRout tfeat = 
   tfeat { routineImpl = untypeImpl (routineImpl tfeat)
         , routineReq  = untypeContract (routineReq tfeat)
         , routineEns  = untypeContract (routineEns tfeat)

@@ -56,6 +56,8 @@ import Control.Applicative
 import Control.Monad.Reader
 
 import Data.Array.Storable
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
 import Foreign.C
 import Foreign.Marshal.Array
@@ -144,11 +146,11 @@ setLinkage v l = lift $ L.setLinkage v (fromEnum l)
 getParam :: ValueRef -> Int -> ValueRef
 getParam funcRef = L.getParam funcRef . toEnum
 
-getNamedFunction :: String -> Build ValueRef
+getNamedFunction :: Text -> Build ValueRef
 getNamedFunction s = do
   m <- askModule
-  debug $ "getNamedFunction: asking for: " ++ s
-  lift $ withCString s (L.getNamedFunction m)
+  debug $ "getNamedFunction: asking for: " ++ show s
+  lift $ withCString (Text.unpack s) (L.getNamedFunction m)
 
 nul :: TypeRef -> ValueRef
 nul = L.constNull
@@ -159,10 +161,10 @@ getFirstGlobal = askModule >>= lift . L.getFirstGlobal
 getNextGlobal :: ValueRef -> Build ValueRef
 getNextGlobal = lift . L.getNextGlobal 
 
-getNamedGlobal :: String -> Build ValueRef
+getNamedGlobal :: Text -> Build ValueRef
 getNamedGlobal str = do
   m <- askModule
-  lift $ withCString str (L.getNamedGlobal m)
+  lift $ withCString (Text.unpack str) (L.getNamedGlobal m)
 
 setValueName :: ValueRef -> String -> Build ()
 setValueName v str = lift $ withCString str $ L.setValueName v
@@ -216,32 +218,32 @@ load v str = askBuild >>= lift . withCString str . ($ v) . L.buildLoad
 store :: ValueRef -> ValueRef -> Build ValueRef
 store = withBuilder2 L.buildStore
 
-call :: String -> [ValueRef] -> Build ValueRef
+call :: Text -> [ValueRef] -> Build ValueRef
 call s args = do
   funcRef <- lookupEnv s
-  call' funcRef args s
+  call' funcRef args (Text.unpack s)
 
-callByName :: String -> [ValueRef] -> Build ValueRef
+callByName :: Text -> [ValueRef] -> Build ValueRef
 callByName f args = do
   fPtr <- getNamedFunction f
-  call' fPtr args ("callByName: " ++ f)
+  call' fPtr args ("callByName: " ++ show f)
 
 -- FIXME: return Void functions can't have a name 
 -- However, we can't even examine the return type of the functino value
 -- because it is reported as a pointer-type, not a function-type!
 call' :: ValueRef -> [ValueRef] -> String -> Build ValueRef
-call' f args str = 
+call' f args _str = 
     withBuilder0 (\b -> withCString "" =<< 
                          withArrayLenC args (\p -> return . L.buildCall b f p))
 
 withArrayLenC ::  Storable a => [a] -> (Ptr a -> CUInt -> IO b) -> IO b
 withArrayLenC xs f = withArrayLen xs (\ i p -> f p (fromIntegral i))
 
-invoke :: String -> [ValueRef] -> BasicBlockRef -> BasicBlockRef -> 
+invoke :: Text -> [ValueRef] -> BasicBlockRef -> BasicBlockRef -> 
           Build ValueRef
 invoke s args b1 b2 = do
   f <- lookupEnv s
-  invoke' f args b1 b2 s
+  invoke' f args b1 b2 (Text.unpack s)
 
 invoke' :: ValueRef -> [ValueRef] -> BasicBlockRef -> BasicBlockRef -> 
           String -> Build ValueRef
@@ -263,8 +265,9 @@ addClause = liftBuild2 L.addClause
 setCleanup :: ValueRef -> Bool -> Build ()
 setCleanup landingpad cleanup = lift $ L.setCleanup landingpad (fromIntegral $ fromEnum $ cleanup)
 
-alloca :: TypeRef -> String -> Build ValueRef
-alloca tr str = askBuild >>= lift . withCString str . ($ tr) . L.buildAlloca
+alloca :: TypeRef -> Text-> Build ValueRef
+alloca tr str = askBuild >>= 
+                lift . withCString (Text.unpack str) . ($ tr) . L.buildAlloca
 
 unreachable :: Build ()
 unreachable = withBuilder0 L.buildUnreachable >> return ()
@@ -296,10 +299,10 @@ bitcast v t str =
     withBuilder0 ( \ b -> withCString str (L.buildBitCast b v t))
 
 
-addFunc :: String -> TypeRef -> Build ValueRef
+addFunc :: Text -> TypeRef -> Build ValueRef
 addFunc str typ = do
   m <- askModule
-  lift (withCString str ( \ cstr -> L.addFunction m cstr typ))
+  lift (withCString (Text.unpack str) ( \ cstr -> L.addFunction m cstr typ))
 
 condBr :: ValueRef -> BasicBlockRef -> BasicBlockRef -> Build ()
 condBr c b1 b2 = withBuilder0 (\b -> L.buildCondBr b c b1 b2) >> return ()
@@ -344,9 +347,10 @@ sext val extendTo str =
 getEntryBasicBlock :: ValueRef -> Build BasicBlockRef
 getEntryBasicBlock = liftBuild1 L.getEntryBasicBlock
 
-appendBasicBlock :: ValueRef -> String -> Build BasicBlockRef
+appendBasicBlock :: ValueRef -> Text -> Build BasicBlockRef
 appendBasicBlock v str = 
-  withContext0 $ \c -> withCString str (L.appendBasicBlockInContext c v)
+  withContext0 $ \c -> 
+      withCString (Text.unpack str) (L.appendBasicBlockInContext c v)
 
 getBasicBlockParent :: BasicBlockRef ->  Build ValueRef
 getBasicBlockParent = liftBuild1 L.getBasicBlockParent

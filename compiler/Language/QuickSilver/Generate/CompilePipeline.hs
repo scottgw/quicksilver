@@ -1,8 +1,8 @@
 module Language.QuickSilver.Generate.CompilePipeline (compileIO, generateModule, compileToObject) where
 
-import Control.Monad.Reader
-
+import Control.Lens
 import Control.Monad
+import Control.Monad.Reader
 
 import Foreign.C.String
 
@@ -54,7 +54,6 @@ generateObject debug outFile genMain clas = do
 
   return ()
 
-
 generate :: Bool -> String -> Bool -> TClass -> IO ()
 generate debug outFile genMain clas = do
   when debug $ putStrLn "Compiling to bytecode"
@@ -67,5 +66,7 @@ generateModule :: Bool -> Bool -> TClass -> IO ModuleRef
 generateModule debug genMain clas =
   runBuild 
     debug 
-    (className clas) 
+    (view className clas) 
     (fromClass clas >> genClass clas genMain >> askModule)
+
+addEmitObjectPass = error "addEmitObjectPass: stub"

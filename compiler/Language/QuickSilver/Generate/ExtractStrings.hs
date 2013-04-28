@@ -1,12 +1,18 @@
 module Language.QuickSilver.Generate.ExtractStrings where
 
-import Language.QuickSilver.Syntax ( AbsStmt (..)
-                              , AbsRoutine (..)
-                              , RoutineBody (..)
-                              , Clause (..)
-                              , ElseIfPart (..)
-                              , contractClauses
-                              )
+import Control.Lens
+
+import qualified Data.Text as Text
+
+import Language.QuickSilver.Syntax 
+    ( AbsStmt (..)
+    , AbsRoutine (..)
+    , RoutineBody (..)
+    , Clause (..)
+    , ElseIfPart (..)
+    , contractClauses
+    , routines
+    )
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr
@@ -14,10 +20,10 @@ import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.LLVM.Simple
 
 fromClass :: TClass -> Build ()
-fromClass = mapM_ fromFeature . allRoutines
+fromClass = mapM_ fromRoutine . view routines
 
-fromFeature :: TRoutine -> Build ()
-fromFeature f = 
+fromRoutine :: TRoutine -> Build ()
+fromRoutine f = 
   fromClauses (concatMap contractClauses [routineReq f, routineEns f]) >>
   fromBody (routineImpl f)
 
@@ -49,7 +55,7 @@ fromStmt' (PrintD _) = return ()
 
 fromExpr = fromExpr' . contents
 
-fromExpr' (LitString str) = string str >> return ()
+fromExpr' (LitString str) = string (Text.unpack str) >> return ()
 fromExpr' (Call trg _ args _) = fromExpr trg >> mapM_ fromExpr args
 fromExpr' (Access trg _ _) = fromExpr trg
 fromExpr' (Var _ _) = return ()

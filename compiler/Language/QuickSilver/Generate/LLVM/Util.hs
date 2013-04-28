@@ -18,10 +18,10 @@ module Language.QuickSilver.Generate.LLVM.Util
      setClassEnv,
 
      currentClass, setCurrent,
-     currentFeature, setFeature,
+     currentRoutine, setRoutine,
 
-     lookupClas, lookupInherit, lookupValue,
-     lookupVTable, lookupClasLType,
+     lookupClas, lookupValue,
+     lookupClasLType,
 
      writeModuleToFile,
  
@@ -32,23 +32,25 @@ module Language.QuickSilver.Generate.LLVM.Util
     )
     where
 
-import Control.Applicative
-import Control.Monad.Reader
+import           Control.Applicative
+import           Control.Monad.Reader
 
-import Language.QuickSilver.Syntax
-import Language.QuickSilver.Util
+import           Language.QuickSilver.Syntax
+import           Language.QuickSilver.Util
 
-import Data.Array.Storable
-import qualified Data.Map as Map
-import Data.Map (Map)
+import           Data.Array.Storable
+import           Data.Hashable
+import qualified Data.HashMap.Strict as Map
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
-import Foreign.C
-import Foreign.Ptr
-import Foreign.Storable
+import           Foreign.C
+import           Foreign.Ptr
+import           Foreign.Storable
 
 import qualified LLVM.FFI.Core as L
 import qualified LLVM.FFI.BitWriter as L
-import LLVM.FFI.Core 
+import           LLVM.FFI.Core 
     (
      BuilderRef,
      ValueRef,
@@ -57,19 +59,18 @@ import LLVM.FFI.Core
      TypeRef
     )
 
-import Prelude hiding (lookup)
+import           Prelude hiding (lookup)
 
-type Env = Map String ValueRef
+type Env = Map Text ValueRef
 
 data ClassInfo = 
     ClassInfo
     {
       rtClass       :: ClasInterface,
-      rtClassStruct :: TypeRef,
-      rtVTable      :: ValueRef
+      rtClassStruct :: TypeRef
     } deriving Show
 
-type ClassEnv = Map String ClassInfo
+type ClassEnv = Map Text ClassInfo
 
 data BuildState = 
     BuildState
@@ -78,7 +79,7 @@ data BuildState =
       bsModule   :: ModuleRef,
       bsContext  :: ContextRef,
       bsEnv      :: Env,
-      bsFeature  :: RoutineI, 
+      bsRoutine  :: RoutineI, 
       bsCurrent  :: ClasInterface,
       bsClassEnv :: ClassEnv,
       bsDebug    :: Bool
@@ -125,17 +126,17 @@ askClassEnv = fmap bsClassEnv ask
 currentClass :: Build ClasInterface
 currentClass = fmap bsCurrent ask
 
-currentFeature :: Build RoutineI
-currentFeature = bsFeature `fmap` ask
+currentRoutine :: Build RoutineI
+currentRoutine = bsRoutine `fmap` ask
 
 writeModuleToFile :: ModuleRef -> String -> IO CInt
 writeModuleToFile = (flip withCString) . L.writeBitcodeToFile
 
-runBuild :: Bool -> String -> Build a -> IO a
+runBuild :: Bool -> Text -> Build a -> IO a
 runBuild debug moduleName b = do
   context <- L.contextCreate
   builder <- L.createBuilderInContext context
-  modul   <- withCString moduleName 
+  modul   <- withCString (Text.unpack moduleName)
                          (flip L.moduleCreateWithNameInContext context)
 
   runReaderT b (BuildState {
@@ -143,7 +144,7 @@ runBuild debug moduleName b = do
                 , bsModule   = modul 
                 , bsContext  = context
                 , bsCurrent  = error "Current class not set"
-                , bsFeature  = error "Current feature not set"
+                , bsRoutine  = error "Current routine not set"
                 , bsEnv      = Map.empty
                 , bsClassEnv = Map.empty
                 , bsDebug    = debug
@@ -156,16 +157,16 @@ updEnv f bs = bs { bsEnv = f (bsEnv bs) }
 updClassEnv :: (ClassEnv -> ClassEnv) -> BuildState -> BuildState
 updClassEnv f bs = bs { bsClassEnv = f (bsClassEnv bs)}
 
-insertClassEnv :: String -> ClassInfo -> ClassEnv -> ClassEnv
+insertClassEnv :: Text -> ClassInfo -> ClassEnv -> ClassEnv
 insertClassEnv = Map.insert
 
-fromListClassEnv :: [(String, ClassInfo)] -> ClassEnv -> ClassEnv
+fromListClassEnv :: [(Text, ClassInfo)] -> ClassEnv -> ClassEnv
 fromListClassEnv pairs bs = foldr (uncurry insertClassEnv) bs pairs
 
-insertEnv :: String -> ValueRef -> Env -> Env
+insertEnv :: Text -> ValueRef -> Env -> Env
 insertEnv s v = Map.insert s v
 
-fromListEnv :: [(String, ValueRef)] -> Env -> Env
+fromListEnv :: [(Text, ValueRef)] -> Env -> Env
 fromListEnv pairs bs = foldr (uncurry insertEnv) bs pairs
 
 setClassEnv :: ClassEnv -> (BuildState -> BuildState)
@@ -174,20 +175,25 @@ setClassEnv = updClassEnv . const
 setCurrent :: ClasInterface -> (BuildState -> BuildState)
 setCurrent c bs = bs {bsCurrent = c}
 
-setFeature :: RoutineI -> (BuildState -> BuildState)
-setFeature f bs = bs {bsFeature = f}
+setRoutine :: RoutineI -> (BuildState -> BuildState)
+setRoutine f bs = bs {bsRoutine = f}
 
-lookupClassEnv :: String -> Build ClassInfo
-lookupClassEnv s = fmap (lookupErr s s) askClassEnv
+lookupClassEnv :: Text -> Build ClassInfo
+lookupClassEnv t = fmap (lookupErr (Text.unpack t) t) askClassEnv
 
-lookupEnv :: String -> Build ValueRef
-lookupEnv s = fmap (\e -> lookupErr (s ++ " in " ++ show (Map.keys e)) s e) askEnv
+lookupEnv :: Text -> Build ValueRef
+lookupEnv t = 
+    fmap (\e -> 
+              lookupErr (unwords[s, "in"
+                                ,unlines (map Text.unpack (Map.keys e))
+                                ]) t e) askEnv
+          where s = Text.unpack t
 
 
-lookupEnvM :: String -> Build (Maybe ValueRef)
+lookupEnvM :: Text -> Build (Maybe ValueRef)
 lookupEnvM s = fmap (Map.lookup s) askEnv
 
-lookupErr :: Ord k => String -> k -> Map k v -> v
+lookupErr :: (Eq k, Hashable k) => String -> k -> Map k v -> v
 lookupErr err k m = maybe (error err) id (Map.lookup k m)
 
 lookupValue :: ClassName -> Build ValueRef
@@ -198,12 +204,6 @@ lookupClasLType = fmap rtClassStruct . lookupClassEnv
 
 lookupClas :: ClassName -> Build ClasInterface
 lookupClas  = fmap rtClass . lookupClassEnv
-
-lookupVTable :: ClassName -> Build ValueRef
-lookupVTable = fmap rtVTable . lookupClassEnv
-
-lookupInherit :: AbsClas body exp -> Build [ClasInterface]
-lookupInherit = mapM (lookupClas . classNameType . inheritClass) . allInherited
 
 {-
 building lifters, just in case

@@ -1,5 +1,9 @@
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Eval (eval, loadEval, evalUnPos, true, int) where
+
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Language.QuickSilver.Syntax (Typ (..))
 import Language.QuickSilver.Util
@@ -25,7 +29,7 @@ castType :: Typ -> ValueRef -> Build ValueRef
 castType (ClassType c _) v = do
   t <- lookupClasLType c
   let tp = (pointer0 . pointer0) t
-  bitcast v tp ("castTo" ++ c)
+  bitcast v tp ("castTo" ++ Text.unpack c)
 castType t _ = error $ "castType: not implemented for " ++ show t
 
 eval :: TExpr -> Build ValueRef
@@ -51,13 +55,13 @@ evalUnPos (Call trg fName args retVal) = do
   debug (show trg)
   f <- getNamedFunction (fullNameStr cName fName)
   debug (concat ["eval: call -> " 
-                ,fullNameStr cName fName 
+                ,Text.unpack $ fullNameStr cName fName 
                 ,",", show f, " with "
                 ,show (countParams f)
                 ," parameters " 
                 ,show (trg:args)])
   debugDump f
-  r <- call' f (trg':args') ("call: " ++ fName)
+  r <- call' f (trg':args') ("call: " ++ Text.unpack fName)
   debug "eval: call -> done"
   setInstructionCallConv r Fast
   
@@ -71,8 +75,7 @@ evalUnPos (Access trg attr _) = do
   trgV <- loadEval trg
   let (ClassType cname _) = texprTyp (contents trg)
   clas <- lookupClas cname
-  indexM <- attributeOffset clas attr
-  case indexM of
+  case attributeIndex clas attr of
     Just index -> gepInt trgV [0,index]
     Nothing -> error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
 evalUnPos (Var s _) = lookupEnv s
@@ -80,20 +83,20 @@ evalUnPos (CurrentVar _) = lookupEnv "Current"
 evalUnPos (ResultVar _) = lookupEnv "Result"
 evalUnPos (Box c e) = do
   v    <- loadEval e
-  vPtr <- mallocTyp =<< toLLVMType (texpr e)
+  vPtr <- mallocTyp =<< typeOfM (texpr e)
   _ <- store v vPtr
   vPtrPtr <- simpStore vPtr
   castType c vPtrPtr
 evalUnPos (Unbox t e) = do
   ePtr <- loadEval e
-  t' <- toLLVMType t
+  t' <- typeOfM t
   casted <- bitcast ePtr (pointer0 t') "unboxing cast"
   load casted "unboxing" >>= simpStore
 evalUnPos (LitVoid t) = nul `fmap` typeOfM t
 evalUnPos (LitString s) = do
   -- we rely that the strings are stored internally as char8*
-  rawStr <- getNamedGlobal (s ++ "_global")
-  n <- int (length s)
+  rawStr <- getNamedGlobal (s `Text.append` "_global")
+  n <- int (Text.length s)
   f <- getNamedFunction (featureAsCreate "STRING_8" "make")
   charType <- int8TypeM
   rawStrPtr <- bitcast rawStr (pointer0 charType) "char8 cast"
