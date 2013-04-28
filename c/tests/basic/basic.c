@@ -55,6 +55,7 @@ task1(processor_t proc)
 }
 
 
+
 void
 proc_main(processor_t proc)
 {
@@ -65,7 +66,6 @@ proc_main(processor_t proc)
 
   *proc1_ptr = proc1;
   *proc2_ptr = proc2;
-
 
   bounded_queue_t q1 = proc_make_private_queue(proc1);
   bounded_queue_t q2 = proc_make_private_queue(proc2);
@@ -91,8 +91,8 @@ proc_main(processor_t proc)
   void **args2 = (void**)malloc(sizeof(processor_t*));
   args2[0] = proc2_ptr;
 
-  closure_t clos1 = closure_new(cif1, task1, args1);
-  closure_t clos2 = closure_new(cif2, task2, args2);
+  closure_t clos1 = closure_new(cif1, task1, 1, args1);
+  closure_t clos2 = closure_new(cif2, task2, 1, args2);
 
   enqueue_closure(q1, clos1);
   enqueue_closure(q1, NULL);
@@ -103,6 +103,8 @@ proc_main(processor_t proc)
   proc_shutdown(proc1);
   proc_shutdown(proc2);
 }
+
+
 
 int
 main(int argc, char **argv)
@@ -120,10 +122,9 @@ main(int argc, char **argv)
   ffi_type **arg_types = (ffi_type**)malloc(sizeof(ffi_type*));
   arg_types[0] = &ffi_type_pointer;
   ffi_prep_cif(cif, FFI_DEFAULT_ABI, 1, &ffi_type_void, arg_types);
-
   void **args = (void**)malloc(sizeof(processor_t*));
   args[0] = proc_ptr;
-  closure_t clos = closure_new(cif, proc_main, args);
+  closure_t clos = closure_new(cif, proc_main, 1, args);
 
   enqueue_closure(q, clos);
   enqueue_closure(q, NULL);
@@ -136,5 +137,6 @@ main(int argc, char **argv)
 
   join_executors();
 
+  sync_data_free(sync_data);
   return 0;
 }
