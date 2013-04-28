@@ -117,7 +117,6 @@ proc_loop(void* ptr)
           closure_apply(clos, NULL);
         }
     }
-  proc_free(proc);
 }
 
 bounded_queue_t
