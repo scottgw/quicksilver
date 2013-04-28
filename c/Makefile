@@ -1,6 +1,6 @@
 MODULES=executor list task processor notifier \
         sync_ops task_mutex task_condition ctx bounded_queue \
-	closure
+	closure private_queue
 SRCS=$(MODULES:=.c)
 OBJS=$(MODULES:=.o)
 LIBS=rt qs lfds ffi

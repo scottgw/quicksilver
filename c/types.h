@@ -20,6 +20,10 @@ typedef struct list* list_t;
 struct bounded_queue;
 typedef struct bounded_queue* bounded_queue_t;
 
+// private queues
+struct priv_queue;
+typedef struct priv_queue* priv_queue_t;
+
 // some shorter type names for the LFDS structures
 typedef struct lfds611_queue_state* conc_queue_t;
 typedef struct lfds611_slist_state* conc_list_t;
