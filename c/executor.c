@@ -108,7 +108,7 @@ join_executors()
 void
 create_executors(sync_data_t sync_data, int n)
 {
-  executors = list_make();
+  executors = list_make(n);
   for(int i = 0; i < n; i++)
     {
       executor_t exec = make_executor(sync_data);

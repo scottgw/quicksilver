@@ -3,24 +3,24 @@
 
 #include "list.h"
 
-#define LIST_SIZE 1024
-
 struct list
 {
   void** data;
-  int start;
-  int end;
-  int size;
+  uint32_t start;
+  uint32_t end;
+  uint32_t size;
+  uint32_t max_size;
 };
 
 list_t
-list_make()
+list_make(uint32_t max_size)
 {
   list_t list = (list_t)malloc(sizeof(struct list));
-  list->data = malloc(LIST_SIZE*sizeof(void*));
+  list->data = malloc(max_size*sizeof(void*));
   list->start = 0;
   list->end = 0;
   list->size = 0;
+  list->max_size = max_size;
   return list;
 }
 
@@ -30,7 +30,7 @@ list_take(list_t list)
   void* data;
   assert (list->size != 0);
   data = list->data[list->start];
-  list->start = (list->start + 1) % LIST_SIZE;
+  list->start = (list->start + 1) % list->max_size;
   list->size--;
   return data;
 }
@@ -50,7 +50,7 @@ list_add(list_t list, void* data)
 {
   *(list->data + list->end) = data;
   list->size++;
-  list->end = (list->end + 1) % LIST_SIZE;
+  list->end = (list->end + 1) % list->max_size;
 }
 
 int

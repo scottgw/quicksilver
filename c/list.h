@@ -4,7 +4,7 @@
 #include "types.h"
 
 list_t
-list_make();
+list_make(uint32_t);
 
 void*
 list_take(list_t);
