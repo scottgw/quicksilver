@@ -114,7 +114,7 @@ proc_loop(void* ptr)
               break;
             }
 
-          closure_apply(clos);
+          closure_apply(clos, NULL);
         }
     }
   sync_data_deregister_proc(proc->task->sync_data);

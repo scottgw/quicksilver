@@ -22,9 +22,9 @@ closure_new(ffi_cif *cif, void *fn, int argc, void **args)
 }
 
 void
-closure_apply(closure_t clos)
+closure_apply(closure_t clos, void* res)
 {
-  ffi_call(clos->cif, clos->fn, NULL, clos->args);
+  ffi_call(clos->cif, clos->fn, res, clos->args);
   free(clos->cif->arg_types);
   free(clos->cif);
 
