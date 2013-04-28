@@ -120,7 +120,7 @@ proc_loop(void* ptr)
   proc_free(proc);
 }
 
-bounded_queue_to
+bounded_queue_t
 proc_make_private_queue(processor_t proc)
 {
   bounded_queue_t q = bqueue_new(1024);
