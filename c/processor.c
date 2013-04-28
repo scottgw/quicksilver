@@ -117,11 +117,10 @@ proc_loop(void* ptr)
           closure_apply(clos, NULL);
         }
     }
-  sync_data_deregister_proc(proc->task->sync_data);
   proc_free(proc);
 }
 
-bounded_queue_t
+bounded_queue_to
 proc_make_private_queue(processor_t proc)
 {
   bounded_queue_t q = bqueue_new(1024);
@@ -180,10 +179,14 @@ proc_shutdown(processor_t proc)
 void
 proc_free(processor_t proc)
 {
+  sync_data_deregister_proc(proc->task->sync_data);
+
   task_free(proc->task);
   task_condition_free(proc->cv);
   task_mutex_free(proc->mutex);
+
   bqueue_free(proc->qoq);
+
   free (proc);
 }
 
