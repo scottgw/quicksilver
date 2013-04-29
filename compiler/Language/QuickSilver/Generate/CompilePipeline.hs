@@ -68,5 +68,3 @@ generateModule debug genMain clas =
     debug 
     (view className clas) 
     (fromClass clas >> genClass clas genMain >> askModule)
-
-addEmitObjectPass = error "addEmitObjectPass: stub"

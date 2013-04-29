@@ -129,7 +129,7 @@ currentClass = fmap bsCurrent ask
 currentRoutine :: Build RoutineI
 currentRoutine = bsRoutine `fmap` ask
 
-writeModuleToFile :: ModuleRef -> String -> IO CInt
+writeModuleToFile :: ModuleRef -> String -> IO Bool
 writeModuleToFile = (flip withCString) . L.writeBitcodeToFile
 
 runBuild :: Bool -> Text -> Build a -> IO a

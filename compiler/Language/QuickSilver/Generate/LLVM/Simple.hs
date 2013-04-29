@@ -81,7 +81,7 @@ import Language.QuickSilver.Generate.LLVM.Util
 
 
 setGlobalConstant :: ValueRef -> Bool -> Build ()
-setGlobalConstant v b = lift (L.setGlobalConstant v (fromIntegral $ fromEnum b))
+setGlobalConstant v b = lift (L.setGlobalConstant v b)
 
 setVisibility :: ValueRef -> Int -> Build ()
 setVisibility v i = lift $ L.setVisibility v (fromIntegral i)
@@ -185,7 +185,7 @@ string origStr =
        strGlob = origStr ++ "_global"
        l = fromIntegral (length str)
    in do
-     fmt <- lift $ withCString str ( \ cstr -> return $ L.constString cstr l 0)
+     fmt <- lift $ withCString str ( \ cstr -> return $ L.constString cstr l False)
      t <- typeOfVal fmt
      m <- askModule
      strArrType <- L.arrayType <$> int8TypeM <*> pure l
@@ -196,8 +196,7 @@ string origStr =
 
 struct :: Bool -> [ValueRef] -> Build ValueRef
 struct packed elems =
-    let cStruct ar = L.constStruct ar (fromIntegral $ length elems)
-                     (fromIntegral $ fromEnum packed)
+    let cStruct ar = L.constStruct ar (fromIntegral $ length elems) packed
     in lift $ withPtrArray elems (return . cStruct)
 
 extractValue :: ValueRef -> Int -> Build ValueRef
@@ -387,7 +386,7 @@ gep v idxs =
 gepInt :: ValueRef -> [Int] -> Build ValueRef
 gepInt v is = do
   i32 <- int32TypeM
-  gep v $ map (\ i -> constInt i32 (fromIntegral i) 0) is
+  gep v $ map (\ i -> constInt i32 (fromIntegral i) False) is
 
 data IntPredicate =
     IntEQ                       -- ^ equal

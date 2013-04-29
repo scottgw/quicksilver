@@ -8,14 +8,14 @@ import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 
 true, false :: Build ValueRef
-true  = constInt <$> int1TypeM <*> pure 1 <*> pure 0
-false = constInt <$> int1TypeM <*> pure 0 <*> pure 0
+true  = constInt <$> int1TypeM <*> pure 1 <*> pure False
+false = constInt <$> int1TypeM <*> pure 0 <*> pure False
 
 char :: Char -> Build ValueRef
-char c = constInt <$> int8TypeM <*> pure (fromIntegral $ ord c) <*> pure 0
+char c = constInt <$> int8TypeM <*> pure (fromIntegral $ ord c) <*> pure False
 
 int :: Int -> Build ValueRef
-int i = constInt <$> int32TypeM <*> pure (fromIntegral i) <*> pure 0
+int i = constInt <$> int32TypeM <*> pure (fromIntegral i) <*> pure False
 
 dbl :: Double -> Build ValueRef
 dbl d = 

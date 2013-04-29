@@ -46,8 +46,7 @@ structCreateNamed str = do
 structSetBody :: TypeRef -> [TypeRef] -> Bool -> Build ()
 structSetBody struct elems packed =
     let len = fromIntegral $ length elems
-        packedInt = fromIntegral $ fromEnum packed
-    in lift $ withPtrArray elems (\ptr -> L.structSetBody struct ptr len packedInt)
+    in lift $ withPtrArray elems (\ptr -> L.structSetBody struct ptr len packed)
 
 getTypeKind :: TypeRef -> Build TypeKind
 getTypeKind = lift .  L.getTypeKind
@@ -60,7 +59,7 @@ structType ts packed =
                              cont
                              arr 
                              (fromIntegral . length   $ ts)
-                             (fromIntegral . fromEnum $ packed)
+                             packed
   in withContext0 (\c -> withPtrArray ts (strct c))
 
 countStructElementTypes :: TypeRef -> Int
