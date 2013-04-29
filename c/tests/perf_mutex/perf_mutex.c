@@ -17,8 +17,8 @@
 #include "sync_ops.h"
 
 #define MAX_TASKS 20000
-#define N 4
-#define ITERS 20
+#define N 32
+#define ITERS 20000
 
 int x = 0;
 volatile int num_finished = 0;
