@@ -44,7 +44,7 @@ void
 task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
 {
   proc->task->state = TASK_WAITING;
-  assert (lfds611_queue_enqueue(cv->wait_queue, proc) == 1);
+  assert (lfds611_queue_guaranteed_enqueue(cv->wait_queue, proc) == 1);
 
   task_mutex_unlock(mutex, proc);
   yield_to_executor(proc);

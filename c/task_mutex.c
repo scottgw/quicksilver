@@ -40,7 +40,7 @@ task_mutex_lock(task_mutex_t mutex, processor_t proc)
       // if the owner is already set then we add to the wait list 
       // and yield to the executor.
       proc->task->state = TASK_WAITING;
-      lfds611_queue_enqueue(mutex->wait_queue, proc);
+      lfds611_queue_guaranteed_enqueue(mutex->wait_queue, proc);
       yield_to_executor(proc);
     }
  else

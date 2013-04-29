@@ -83,7 +83,7 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   assert(proc != NULL);
   assert(proc->task != NULL);
   assert(proc->task->state == TASK_RUNNABLE);
-  assert(lfds611_queue_enqueue(sync_data->runnable_queue, proc) == 1);
+  assert(lfds611_queue_guaranteed_enqueue(sync_data->runnable_queue, proc) == 1);
 
   if (__sync_fetch_and_add(&sync_data->run_queue_size, 1) == 0)
     {
