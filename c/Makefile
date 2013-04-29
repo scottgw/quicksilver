@@ -11,7 +11,7 @@ INCLUDES=-I./liblfds6.1.1/liblfds611/inc
 CFLAGS=-O3 -Wall -std=gnu99 -pthread -g $(INCLUDES) $(LLIBS) -fPIC -U_FORTIFY_SOURCE
 
 libqs.so: $(OBJS) liblfds.so
-	$(CC) $(OBJS) -L./ -lrt -llfds -shared -o libqs.so
+	$(CC) $(OBJS) -L./ -lrt -llfds -lffi -shared -o libqs.so
 
 depend: .depend
 
