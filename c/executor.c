@@ -97,9 +97,10 @@ join_executor(void* elem, void* user)
 executor_t
 make_executor(sync_data_t sync_data)
 {
-  executor_t exec = malloc(sizeof(executor_t));
+  executor_t exec = malloc(sizeof(struct executor));
   exec->task = task_make(sync_data);
   exec->current_proc = NULL;
+  exec->done = false;
   return exec;
 }
 
