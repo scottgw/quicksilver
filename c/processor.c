@@ -152,8 +152,7 @@ processor_t
 make_processor(sync_data_t sync_data)
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
-
-  proc->qoq = bqueue_new(1024);
+  proc->qoq = bqueue_new(25000);
   proc->task = task_make(sync_data);
   proc->id = global_id++;
 
