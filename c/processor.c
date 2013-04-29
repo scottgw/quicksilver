@@ -23,15 +23,12 @@ maybe_yield(processor_t proc, int i)
     }
 }
 
-
 static
 void*
 dequeue_wait_maybe(bounded_queue_t q, processor_t proc)
 {
-  maybe_t maybe;
-  bqueue_dequeue_wait(q, (void**)&maybe, proc);
-  void *ptr = maybe->load;
-  free(maybe);
+  void* ptr;
+  bqueue_dequeue_wait(q, (void**)&ptr, proc);
   return ptr;
 }
 
@@ -39,9 +36,7 @@ static
 void
 enqueue_maybe(bounded_queue_t q, void *ptr)
 {
-  maybe_t m = (maybe_t) malloc(sizeof(struct maybe));
-  m->load = ptr;
-  bqueue_enqueue(q, m);
+  bqueue_enqueue(q, ptr);
 }
 
 closure_t
@@ -109,7 +104,7 @@ proc_loop(void* ptr)
           // retry their conditions.
           if (clos == NULL)
             {
-              bqueue_free(priv_queue);
+              /* bqueue_free(priv_queue); */
               notify_available(proc);
               break;
             }
