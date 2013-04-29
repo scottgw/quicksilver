@@ -24,40 +24,41 @@
 #define N 100
 
 int
-query(processor_t proc)
+query(processor_t proc, int x)
 {
-  return 42;
+  return 42 + x;
 }
 
 void
 proc_main(processor_t proc)
 {
-  int x;
-  
-  processor_t *proc1_ptr = malloc(sizeof(processor_t));
   processor_t proc1 = make_processor(proc->task->sync_data);
-
-  *proc1_ptr = proc1;
-
   priv_queue_t q1 = priv_queue_new(proc1);
 
-  ffi_cif *cif1 = (ffi_cif*)malloc(sizeof(ffi_cif));
-  ffi_type **arg_types1 = (ffi_type**)malloc(sizeof(ffi_type*));
-  arg_types1[0] = &ffi_type_pointer;
-  assert
-    (ffi_prep_cif
-     (cif1, FFI_DEFAULT_ABI, 1, &ffi_type_sint, arg_types1) ==
-     FFI_OK);
-
-  void **args1 = (void**)malloc(sizeof(processor_t*));
-  args1[0] = proc1_ptr;
-
-  closure_t clos1 = closure_new(cif1, query, 1, args1);
-
-  priv_queue_function(q1, clos1, &x, proc);
+  void ***args;
+  clos_type_t *arg_types;
   
-  printf("wait value: %d\n", x);
+  int x = 0;
+  for (int i = 0; i < 1000000; i++)
+    {
+      closure_t clos1 =
+        closure_new(query,
+                    closure_sint_type(),
+                    2,
+                    &args,
+                    &arg_types);
 
+      arg_types[0] = closure_pointer_type();
+      arg_types[1] = closure_sint_type();
+
+      *args[0] = proc1;
+      *args[1] = 10;
+
+      int old_x = x;
+      priv_queue_function(q1, clos1, &x, proc);
+      x += old_x;
+    }
+  printf("wait value: %d\n", x);
   priv_queue_unlock(q1);
   proc_shutdown(proc1);
   priv_queue_free(q1);
@@ -67,26 +68,30 @@ int
 main(int argc, char **argv)
 {
   sync_data_t sync_data = sync_data_new(MAX_TASKS);
-  processor_t *proc_ptr = malloc(sizeof(processor_t));
   processor_t proc = make_processor(sync_data);
-  *proc_ptr = proc;
 
   create_executors(sync_data, 1);
 
-  bounded_queue_t q = proc_make_private_queue(proc);
+  priv_queue_t q = priv_queue_new(proc);
 
-  ffi_cif *cif = (ffi_cif*)malloc(sizeof(ffi_cif));
-  ffi_type **arg_types = (ffi_type**)malloc(sizeof(ffi_type*));
-  arg_types[0] = &ffi_type_pointer;
-  ffi_prep_cif(cif, FFI_DEFAULT_ABI, 1, &ffi_type_void, arg_types);
+  void ***args;
+  clos_type_t *arg_types;
 
-  void **args = (void**)malloc(sizeof(processor_t*));
-  args[0] = proc_ptr;
-  closure_t clos = closure_new(cif, proc_main, 1, args);
+  closure_t clos =
+    closure_new(proc_main,
+                closure_void_type(),
+                1,
+                &args,
+                &arg_types);
 
-  enqueue_closure(q, clos);
-  enqueue_closure(q, NULL);
+  arg_types[0] = closure_pointer_type();
+  *args[0] = proc;
+
+  priv_queue_routine(q, clos);
+  priv_queue_unlock(q);
+
   proc_shutdown(proc);
+  priv_queue_free(q);
 
   {
     notifier_t notifier = notifier_spawn(sync_data);
