@@ -53,9 +53,6 @@ dequeue_private_queue(processor_t proc);
 void
 enqueue_private_queue(processor_t proc, bounded_queue_t q);
 
-bounded_queue_t
-proc_make_private_queue(processor_t proc);
-
 void
 yield_to_processor(executor_t, processor_t);
 

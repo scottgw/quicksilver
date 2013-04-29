@@ -119,13 +119,6 @@ proc_loop(void* ptr)
     }
 }
 
-bounded_queue_t
-proc_make_private_queue(processor_t proc)
-{
-  bounded_queue_t q = bqueue_new(1024);
-  enqueue_private_queue(proc, q);
-  return q;
-}
 
 void
 proc_wake(processor_t proc)
