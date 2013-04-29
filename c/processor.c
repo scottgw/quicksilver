@@ -24,7 +24,6 @@ maybe_yield(processor_t proc, int i)
     }
 }
 
-static
 void*
 dequeue_wait_maybe(bounded_queue_t q, processor_t proc)
 {
@@ -33,7 +32,6 @@ dequeue_wait_maybe(bounded_queue_t q, processor_t proc)
   return ptr;
 }
 
-static
 void
 enqueue_maybe(bounded_queue_t q, void *ptr)
 {
@@ -63,7 +61,6 @@ enqueue_private_queue(processor_t proc, priv_queue_t q)
 {
   enqueue_maybe(proc->qoq, (void*) q);
 }
-
 
 static
 void
@@ -111,7 +108,6 @@ proc_loop(void* ptr)
 
           if (closure_is_end(clos))
             {
-              printf("freeing private queue\n");
               free(clos);
               priv_queue_free(priv_queue);
               notify_available(proc);

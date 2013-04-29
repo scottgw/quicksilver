@@ -40,6 +40,11 @@ reset_stack_to(void (*)(void*), processor_t);
 void
 proc_wake(processor_t proc);
 
+void*
+dequeue_wait_maybe(bounded_queue_t q, processor_t proc);
+
+void
+enqueue_maybe(bounded_queue_t q, void *ptr);
 
 closure_t
 dequeue_closure(bounded_queue_t q, processor_t proc);

@@ -15,7 +15,7 @@ priv_queue_new(processor_t proc)
 {
   priv_queue_t pq = (priv_queue_t) malloc(sizeof(struct priv_queue));
   pq->last_was_func = false;
-  pq->q = bqueue_new(25000);
+  pq->q = bqueue_new(2048);
   return pq;
 }
 
@@ -30,7 +30,7 @@ void
 priv_queue_shutdown(priv_queue_t pq, processor_t proc)
 {
   priv_queue_lock(pq, proc);
-  bqueue_enqueue(pq->q, closure_new_end());
+  enqueue_closure(pq->q, closure_new_end());
   priv_queue_unlock(pq);
 }
 
@@ -50,9 +50,7 @@ priv_queue_unlock(priv_queue_t pq)
 closure_t
 priv_dequeue(priv_queue_t pq, processor_t proc)
 {
-  closure_t clos;
-  bqueue_dequeue_wait(pq->q, (void**)&clos, proc);
-  return clos;
+  return dequeue_closure(pq->q, proc);
 }
 
 
@@ -60,7 +58,7 @@ void
 priv_queue_routine(priv_queue_t pq, closure_t clos)
 {
   pq->last_was_func = false;
-  bqueue_enqueue(pq->q, clos);
+  enqueue_closure(pq->q, clos);
 }
 
 static
