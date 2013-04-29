@@ -59,7 +59,6 @@ bqueue_enqueue(bounded_queue_t q, void *data)
   else
     {
       lfds611_queue_guaranteed_enqueue(q->impl, data);
-      task_condition_signal(q->not_empty);
     }
   return true;
 }
@@ -86,4 +85,6 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
     }
 
   __sync_fetch_and_sub(&q->n, 1);
+  task_condition_signal(q->not_empty);
+
 }
