@@ -15,7 +15,7 @@ priv_queue_new(processor_t proc)
 {
   priv_queue_t pq = (priv_queue_t) malloc(sizeof(struct priv_queue));
   pq->last_was_func = false;
-  pq->q = proc_make_private_queue(proc);
+  pq->q = bqueue_new(25000);
   return pq;
 }
 
@@ -23,6 +23,12 @@ void
 priv_queue_free(priv_queue_t pq)
 {
   free(pq);
+}
+
+void
+priv_queue_lock(priv_queue_t pq, processor_t proc)
+{
+  enqueue_private_queue(proc, pq->q);
 }
 
 void
@@ -56,30 +62,25 @@ priv_queue_function(priv_queue_t pq,
     {
       pq->last_was_func = true;
       bounded_queue_t future = bqueue_new(1);
-      ffi_cif *cif = (ffi_cif*)malloc(sizeof(ffi_cif));
-      ffi_type **arg_types = (ffi_type**)malloc(3*sizeof(ffi_type*));
-      arg_types[0] = &ffi_type_pointer;
-      arg_types[1] = &ffi_type_pointer;
-      arg_types[2] = &ffi_type_pointer;
-      assert
-        (ffi_prep_cif
-         (cif, FFI_DEFAULT_ABI, 3, &ffi_type_void, arg_types) ==
-         FFI_OK);
 
-      void **args = (void**)malloc(3*sizeof(void*));
-      bounded_queue_t *future_ptr = malloc(sizeof(bounded_queue_t));
-      closure_t *clos_ptr = malloc(sizeof(closure_t));
-      void **res_ptr = malloc(sizeof(void*));
+      void ***args;
+      clos_type_t *arg_types;
 
-      *future_ptr = future;
-      *clos_ptr = clos;
-      *res_ptr = res;
+      closure_t promise_clos =
+        closure_new(function_wrapper,
+                    closure_void_type(),
+                    3,
+                    &args,
+                    &arg_types);
 
-      args[0] = future_ptr;
-      args[1] = clos_ptr;
-      args[2] = res_ptr;
+      arg_types[0] = closure_pointer_type();
+      arg_types[1] = closure_pointer_type();
+      arg_types[2] = closure_pointer_type();
 
-      closure_t promise_clos = closure_new(cif, function_wrapper, 3, args);
+      *args[0] = future;
+      *args[1] = clos;
+      *args[2] = res;
+
       enqueue_closure(pq->q, promise_clos);
 
       // Wait for the other thread to get a value back to us.
