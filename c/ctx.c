@@ -38,17 +38,15 @@ ctx_free(ctx_t ctx)
 typedef struct
 {
   ctx_t ctx;
-  ucontext_t next_uctx;
   void (*func)(void*);
   void *ptr;
 } ctx_wrapper_data;
 
 static
 void
-ctx_wrapper_f(ctx_wrapper_data* data)
+ctx_wrapper_f(ctx_wrapper_data* data, ucontext_t *next_uctx)
 {
   ctx_t ctx = data->ctx;
-  ucontext_t next_uctx = data->next_uctx;
   void (*func)(void*) = data->func;
   void *ptr = data->ptr;
 
@@ -59,7 +57,7 @@ ctx_wrapper_f(ctx_wrapper_data* data)
       // First time through we want to jump back to
       // the setup routine that just made us.
       ucontext_t wrapper_uctx;
-      swapcontext(&wrapper_uctx, &next_uctx);
+      swapcontext(&wrapper_uctx, next_uctx);
     }
   func(ptr);
 }
@@ -67,12 +65,14 @@ ctx_wrapper_f(ctx_wrapper_data* data)
 void
 ctx_make(ctx_t ctx, void (*func)(void*), void* ptr)
 {
-  ctx_wrapper_data* data = (ctx_wrapper_data*)malloc(sizeof(ctx_wrapper_data));
+  ucontext_t next_uctx;
+  ctx_wrapper_data* data =
+    (ctx_wrapper_data*)malloc(sizeof(ctx_wrapper_data));
   data->ctx = ctx;
   data->func = func;
   data->ptr = ptr;
-  makecontext(&ctx->uctx, (void (*)())ctx_wrapper_f, 1, data);
-  swapcontext(&data->next_uctx, &ctx->uctx);
+  makecontext(&ctx->uctx, (void (*)())ctx_wrapper_f, 2, data, &next_uctx);
+  swapcontext(&next_uctx, &ctx->uctx);
 }
 
 void
