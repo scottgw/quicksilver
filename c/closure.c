@@ -18,8 +18,17 @@ struct closure
   void ***args;
   clos_type_t *arg_types;
   
-  bool is_setup;
+  bool is_end;
 };
+
+
+closure_t
+closure_new_end()
+{
+  closure_t clos = (closure_t) malloc(sizeof(struct closure));
+  clos->is_end = true;
+  return clos;
+}
 
 closure_t
 closure_new(void *fn,
@@ -45,9 +54,15 @@ closure_new(void *fn,
   clos->argc = argc;
   clos->args = *args;
   clos->arg_types = *arg_types;
-  clos->is_setup = false;
+  clos->is_end = false;
 
   return clos;
+}
+
+bool
+closure_is_end(closure_t clos)
+{
+  return clos->is_end;
 }
 
 void
@@ -61,7 +76,6 @@ closure_setup(closure_t clos)
                       clos->argc,
                       ffi_res_type,
                       ffi_arg_types) == FFI_OK);
-  clos->is_setup = true;
 }
 
 clos_type_t
@@ -86,7 +100,6 @@ void
 closure_apply(closure_t clos, void* res)
 {
   closure_setup(clos);
-  assert (clos->is_setup);
   ffi_call(&clos->cif, clos->fn, res, (void**)clos->args);
 
   free(clos->arg_types);

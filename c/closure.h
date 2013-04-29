@@ -8,6 +8,8 @@ typedef struct closure* closure_t;
 struct clos_type;
 typedef struct clos_type* clos_type_t;
 
+closure_t
+closure_new_end();
 
 closure_t
 closure_new(void *fn,
@@ -15,6 +17,9 @@ closure_new(void *fn,
             int argc,
             void ****args,
             clos_type_t **arg_types);
+
+bool
+closure_is_end(closure_t clos);
 
 void
 closure_setup(closure_t clos);
