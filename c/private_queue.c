@@ -22,13 +22,22 @@ priv_queue_new(processor_t proc)
 void
 priv_queue_free(priv_queue_t pq)
 {
+  bqueue_free(pq->q);
   free(pq);
+}
+
+void
+priv_queue_shutdown(priv_queue_t pq, processor_t proc)
+{
+  priv_queue_lock(pq, proc);
+  bqueue_enqueue(pq->q, closure_new_end());
+  priv_queue_unlock(pq);
 }
 
 void
 priv_queue_lock(priv_queue_t pq, processor_t proc)
 {
-  enqueue_private_queue(proc, pq->q);
+  enqueue_private_queue(proc, pq);
 }
 
 void
@@ -37,11 +46,21 @@ priv_queue_unlock(priv_queue_t pq)
   enqueue_closure(pq->q, NULL);
 }
 
+
+closure_t
+priv_dequeue(priv_queue_t pq, processor_t proc)
+{
+  closure_t clos;
+  bqueue_dequeue_wait(pq->q, (void**)&clos, proc);
+  return clos;
+}
+
+
 void
 priv_queue_routine(priv_queue_t pq, closure_t clos)
 {
   pq->last_was_func = false;
-  enqueue_closure(pq->q, clos);
+  bqueue_enqueue(pq->q, clos);
 }
 
 static

@@ -9,6 +9,7 @@
 #include "maybe.h"
 #include "notifier.h"
 #include "processor.h"
+#include "private_queue.h"
 #include "task.h"
 
 int global_id = 0;
@@ -51,14 +52,14 @@ enqueue_closure(bounded_queue_t q, closure_t clos)
   enqueue_maybe(q, clos);
 }
 
-bounded_queue_t
+priv_queue_t
 dequeue_private_queue(processor_t proc)
 {
-  return (bounded_queue_t) dequeue_wait_maybe(proc->qoq, proc);
+  return (priv_queue_t) dequeue_wait_maybe(proc->qoq, proc);
 }
 
 void
-enqueue_private_queue(processor_t proc, bounded_queue_t q)
+enqueue_private_queue(processor_t proc, priv_queue_t q)
 {
   enqueue_maybe(proc->qoq, (void*) q);
 }
@@ -87,7 +88,7 @@ proc_loop(void* ptr)
   while (true)
     {
       // Dequeue a private queue from the queue of queues.
-      bounded_queue_t priv_queue = dequeue_private_queue(proc);
+      priv_queue_t priv_queue = dequeue_private_queue(proc);
 
       if (priv_queue == NULL)
         {
@@ -97,14 +98,22 @@ proc_loop(void* ptr)
       while (true)
         {
           // Dequeue a closure to perform
-          closure_t clos = dequeue_closure(priv_queue, proc);
+          closure_t clos = priv_dequeue(priv_queue, proc);
 
           // If its empty we set the processor to 'available' and notify
           // any processors performing wait-conditions to wake up and
           // retry their conditions.
           if (clos == NULL)
             {
-              /* bqueue_free(priv_queue); */
+              notify_available(proc);
+              break;
+            }
+
+          if (closure_is_end(clos))
+            {
+              printf("freeing private queue\n");
+              free(clos);
+              priv_queue_free(priv_queue);
               notify_available(proc);
               break;
             }

@@ -12,10 +12,16 @@ void
 priv_queue_free(priv_queue_t q);
 
 void
+priv_queue_shutdown(priv_queue_t q, processor_t proc);
+
+void
 priv_queue_lock(priv_queue_t q, processor_t proc);
 
 void
 priv_queue_unlock(priv_queue_t q);
+
+closure_t
+priv_dequeue(priv_queue_t q, processor_t proc);
 
 void
 priv_queue_routine(priv_queue_t q, closure_t clos);

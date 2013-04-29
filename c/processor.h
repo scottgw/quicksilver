@@ -47,11 +47,11 @@ dequeue_closure(bounded_queue_t q, processor_t proc);
 void
 enqueue_closure(bounded_queue_t q, closure_t clos);
 
-bounded_queue_t
+priv_queue_t
 dequeue_private_queue(processor_t proc);
 
 void
-enqueue_private_queue(processor_t proc, bounded_queue_t q);
+enqueue_private_queue(processor_t proc, priv_queue_t q);
 
 void
 yield_to_processor(executor_t, processor_t);
