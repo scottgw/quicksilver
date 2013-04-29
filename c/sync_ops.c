@@ -14,6 +14,7 @@ struct sync_data
   volatile uint64_t num_processors;
 
   conc_list_t sleep_list;
+  volatile uint64_t num_sleepers;
 
   conc_queue_t runnable_queue;
   volatile uint64_t run_queue_size;
@@ -50,6 +51,7 @@ sync_data_new(lfds611_atom_t max_tasks)
   pthread_mutex_init(&result->run_mutex, NULL);
   pthread_cond_init(&result->not_empty, NULL);
 
+  result->num_sleepers = 0;
   assert(lfds611_slist_new(&result->sleep_list, sleep_free, NULL) == 1);
 
   return result;
@@ -103,19 +105,18 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
         {
           __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
           assert(proc->task->state == TASK_RUNNABLE);
+          assert(proc != NULL);
+          return proc;
         }
       else
         {
           pthread_mutex_lock(&sync_data->run_mutex);
-
           while (lfds611_queue_dequeue
                  (sync_data->runnable_queue, (void**)&proc) != 1 && 
                  sync_data->num_processors > 0)
             {
               pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
             }
-
-          __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
           pthread_mutex_unlock(&sync_data->run_mutex);
         }
       if (sync_data->num_processors > 0)
@@ -125,12 +126,14 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
         }
       else
         {
+          __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
           pthread_cond_broadcast(&sync_data->not_empty);
           return NULL;
         }
     }
   else
     {
+      __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
       pthread_cond_broadcast(&sync_data->not_empty);
       return NULL;
     }
@@ -178,6 +181,8 @@ sync_data_add_sleeper(sync_data_t sync_data,
   conc_list_elem_t item;
   conc_list_t sleepers = sync_data->sleep_list;
   sleeper_t sleeper = (sleeper_t) malloc(sizeof(struct sleeper));
+
+  __sync_fetch_and_add(&sync_data->num_sleepers, 1);
 
   struct timespec current_time;
   clock_gettime(CLOCK_REALTIME, &current_time);
@@ -237,5 +242,6 @@ sync_data_get_sleepers(sync_data_t sync_data,
     }
 
   *num_awoken = n;
+  __sync_fetch_and_sub(&sync_data->num_sleepers, n);
 }
 
