@@ -30,4 +30,4 @@ liblfds.so: liblfds6.1.1/liblfds611/bin/liblfds611.so
 	cp $< $@
 
 liblfds6.1.1/liblfds611/bin/liblfds611.so: liblfds6.1.1/liblfds611/makefile.linux
-	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ sodbg
+	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ sorel
