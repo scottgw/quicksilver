@@ -4,11 +4,15 @@
 #include "ctx.h"
 #include "types.h"
 
-typedef enum {TASK_UNINIT,
-              TASK_RUNNING,
-              TASK_RUNNABLE,
-              TASK_FINISHED,
-              TASK_WAITING}
+typedef enum 
+  {
+    TASK_UNINIT,
+    TASK_RUNNING,
+    TASK_RUNNABLE,
+    TASK_FINISHED,
+    TASK_WAITING,
+    TASK_TRANSITION_TO_WAITING
+  }
   task_state;
 
 struct task

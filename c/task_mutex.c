@@ -40,7 +40,7 @@ task_mutex_lock(task_mutex_t mutex, processor_t proc)
     {
       // if the owner is already set then we add to the wait list 
       // and yield to the executor.
-      proc->task->state = TASK_WAITING;
+      proc->task->state = TASK_TRANSITION_TO_WAITING;
       assert(queue_impl_enqueue(mutex->wait_queue, proc));
       yield_to_executor(proc);
     }
@@ -66,6 +66,7 @@ task_mutex_unlock(task_mutex_t mutex, processor_t proc)
       // is a finite amount of time.
       while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
       __sync_synchronize();
+      while(other_proc->task->state != TASK_WAITING);
       mutex->owner = other_proc;
       other_proc->task->state = TASK_RUNNABLE;
       sync_data_enqueue_runnable(proc->task->sync_data, other_proc);

@@ -37,6 +37,7 @@ task_condition_signal(task_condition_t cv)
 
   if(queue_impl_dequeue(cv->wait_queue, (void**)&proc))
     {
+      while(proc->task->state != TASK_WAITING);
       proc_wake(proc);
     }
 }
@@ -44,7 +45,7 @@ task_condition_signal(task_condition_t cv)
 void
 task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
 {
-  proc->task->state = TASK_WAITING;
+  proc->task->state = TASK_TRANSITION_TO_WAITING;
   assert (queue_impl_enqueue(cv->wait_queue, proc));
 
   task_mutex_unlock(mutex, proc);

@@ -37,6 +37,9 @@ switch_to_next_processor(executor_t exec)
         case TASK_RUNNABLE:
           sync_data_enqueue_runnable(exec->task->sync_data, proc);
           break;
+        case TASK_TRANSITION_TO_WAITING:
+          proc->task->state = TASK_WAITING;
+          break;
         case TASK_FINISHED:
           proc_free(proc);
           break;

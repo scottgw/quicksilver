@@ -80,7 +80,8 @@ task_run(task_t task)
 void
 yield_to(task_t from_task, task_t to_task)
 {
-  assert (from_task->state == TASK_RUNNING || from_task->state == TASK_WAITING);
+  assert (from_task->state == TASK_RUNNING ||
+          from_task->state == TASK_TRANSITION_TO_WAITING);
   volatile bool flag = ctx_save(from_task->ctx);
   if (flag)
     {
