@@ -13,13 +13,13 @@ void
 bqueue_free(bounded_queue_t q);
 
 void
-bqueue_free_with(bounded_queue_t q, void (*del_func)(void*, void*), void *ptr);
-
-void
 bqueue_use(bounded_queue_t q);
 
 bool
 bqueue_enqueue(bounded_queue_t q, void *data);
+
+void
+bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc);
 
 bool
 bqueue_dequeue(bounded_queue_t q, void **data);

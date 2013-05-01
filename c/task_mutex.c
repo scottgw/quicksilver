@@ -2,16 +2,17 @@
 
 #include "sync_ops.h"
 #include "processor.h"
+#include "queue_impl.h"
 #include "task.h"
 #include "types.h"
 
-#define INIT_WAIT_QUEUE_SIZE 16
+#define INIT_WAIT_QUEUE_SIZE 16000
 
 struct task_mutex 
 {
   volatile uint32_t count;
   volatile processor_t owner;
-  conc_queue_t wait_queue;
+  queue_impl_t wait_queue;
 };
 
 task_mutex_t
@@ -20,7 +21,7 @@ task_mutex_new()
   task_mutex_t mutex = (task_mutex_t)malloc(sizeof(struct task_mutex));
   mutex->count = 0;
   mutex->owner = NULL;
-  assert(lfds611_queue_new(&mutex->wait_queue, INIT_WAIT_QUEUE_SIZE) == 1);
+  mutex->wait_queue = queue_impl_new(INIT_WAIT_QUEUE_SIZE);
 
   return mutex;
 }
@@ -28,7 +29,7 @@ task_mutex_new()
 void
 task_mutex_free(task_mutex_t mutex)
 {
-  lfds611_queue_delete(mutex->wait_queue, NULL, NULL);
+  queue_impl_free(mutex->wait_queue);
   free (mutex);
 }
 
@@ -40,7 +41,7 @@ task_mutex_lock(task_mutex_t mutex, processor_t proc)
       // if the owner is already set then we add to the wait list 
       // and yield to the executor.
       proc->task->state = TASK_WAITING;
-      lfds611_queue_guaranteed_enqueue(mutex->wait_queue, proc);
+      assert(queue_impl_enqueue(mutex->wait_queue, proc));
       yield_to_executor(proc);
     }
  else
@@ -63,7 +64,7 @@ task_mutex_unlock(task_mutex_t mutex, processor_t proc)
       // spinning is OK here because we only have to wait between when they
       // increased the counter and when the enqueue themselves which
       // is a finite amount of time.
-      while(lfds611_queue_dequeue(mutex->wait_queue, (void**)&other_proc) != 1);
+      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
       __sync_synchronize();
       mutex->owner = other_proc;
       other_proc->task->state = TASK_RUNNABLE;

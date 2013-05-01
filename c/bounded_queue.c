@@ -1,16 +1,17 @@
 #include "liblfds611.h"
 
+#include "bounded_queue.h"
+#include "queue_impl.h"
 #include "task_mutex.h"
 #include "task_condition.h"
-#include "bounded_queue.h"
 
 
 struct bounded_queue
 {
   volatile uint32_t n;
   task_mutex_t mutex;
-  task_condition_t not_empty;
-  struct lfds611_queue_state *impl;
+  task_condition_t event;
+  queue_impl_t impl;
 };
 
 bounded_queue_t
@@ -20,9 +21,8 @@ bqueue_new(uint32_t size)
 
   q->n = 0;
   q->mutex = task_mutex_new();
-  q->not_empty = task_condition_new();
-
-  assert(lfds611_queue_new(&q->impl, size) == 1);
+  q->event = task_condition_new();
+  q->impl = queue_impl_new(size);
 
   return q;
 }
@@ -30,61 +30,92 @@ bqueue_new(uint32_t size)
 void
 bqueue_free(bounded_queue_t q)
 {
-  bqueue_free_with(q, NULL, NULL);
+  task_mutex_free(q->mutex);
+  task_condition_free(q->event);
+  queue_impl_free(q->impl);
+  free(q);
 }
 
 void
 bqueue_use(bounded_queue_t q)
 {
-  lfds611_queue_use(q->impl);
-}
-
-void
-bqueue_free_with(bounded_queue_t q, void (*del_func)(void*, void*), void *ptr)
-{
-  task_mutex_free(q->mutex);
-  task_condition_free(q->not_empty);
-  lfds611_queue_delete(q->impl, del_func, ptr);
-  free(q);
+  queue_impl_use(q->impl);
 }
 
 bool
 bqueue_enqueue(bounded_queue_t q, void *data)
 {
-  if (__sync_fetch_and_add(&q->n, 1) == 0)
+  if (queue_impl_enqueue(q->impl, data))
     {
-      lfds611_queue_guaranteed_enqueue(q->impl, data);
-      task_condition_signal(q->not_empty);
+      __sync_fetch_and_add(&q->n, 1);
+      task_condition_signal(q->event);
+      return true;
     }
   else
     {
-      lfds611_queue_guaranteed_enqueue(q->impl, data);
+      return false;
     }
-  return true;
+}
+
+
+void
+bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
+{
+  for (int i = 0; i < 1024; i++)
+    {
+      if (queue_impl_enqueue(q->impl, data))
+        {
+          __sync_fetch_and_add(&q->n, 1);
+          task_condition_signal(q->event);
+          return;
+        }
+    }
+
+  if (!queue_impl_enqueue(q->impl, data))
+    {
+      task_mutex_lock(q->mutex, proc);
+      while (!queue_impl_enqueue(q->impl, data))
+        {
+          task_condition_wait(q->event, q->mutex, proc);
+        }
+      task_mutex_unlock(q->mutex, proc);
+    }
+
+  __sync_fetch_and_add(&q->n, 1);
+  task_condition_signal(q->event);
 }
 
 
 bool
 bqueue_dequeue(bounded_queue_t q, void **data)
 {
-  return lfds611_queue_dequeue(q->impl, data);
+  return queue_impl_dequeue(q->impl, data);
 }
 
 
 void
 bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
 {
-  if (!lfds611_queue_dequeue(q->impl, data))
+  for (int i = 0; i < 1024; i++)
+    {
+      if (queue_impl_dequeue(q->impl, data))
+        {
+          __sync_fetch_and_sub(&q->n, 1);
+          task_condition_signal(q->event);
+          return;
+        }
+    }
+
+  if (!queue_impl_dequeue(q->impl, data))
     {
       task_mutex_lock(q->mutex, proc);
-      while (!lfds611_queue_dequeue(q->impl, data))
+      while (!queue_impl_dequeue(q->impl, data))
         {
-          task_condition_wait(q->not_empty, q->mutex, proc);
+          task_condition_wait(q->event, q->mutex, proc);
         }
       task_mutex_unlock(q->mutex, proc);
     }
 
   __sync_fetch_and_sub(&q->n, 1);
-  task_condition_signal(q->not_empty);
-
+  task_condition_signal(q->event);
 }

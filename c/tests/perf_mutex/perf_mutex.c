@@ -50,19 +50,19 @@ worker(processor_t proc, processor_t shared)
       
       *args[0] = shared;
 
-      priv_queue_lock(q, shared);
-      priv_queue_routine(q, clos);
-      priv_queue_unlock(q);
+      priv_queue_lock(q, shared, proc);
+      priv_queue_routine(q, clos, proc);
+      priv_queue_unlock(q, proc);
     }
 
-  priv_queue_shutdown(q, shared);
-  proc_shutdown(proc);
+  priv_queue_shutdown(q, shared, proc);
+  proc_shutdown(proc, proc);
 
   printf("worker shutdown\n");
   if( __sync_add_and_fetch(&num_finished, 1) == N)
     {
       printf("shared shutdown %p\n", shared);
-      proc_shutdown(shared);
+      proc_shutdown(shared, proc);
     }
 }
 
@@ -92,12 +92,11 @@ proc_main(processor_t proc)
       *args[0] = worker_proc;
       *args[1] = shared;
 
-      priv_queue_lock(q, worker_proc);
-      priv_queue_routine(q, clos);
-      priv_queue_unlock(q);
+      priv_queue_lock(q, worker_proc, proc);
+      priv_queue_routine(q, clos, proc);
+      priv_queue_unlock(q, proc);
 
-      priv_queue_shutdown(q, worker_proc);
-
+      priv_queue_shutdown(q, worker_proc, proc);
     }
 }
 
@@ -124,12 +123,12 @@ main(int argc, char **argv)
   arg_types[0] = closure_pointer_type();
   *args[0] = proc;
 
-  priv_queue_lock(q, proc);
-  priv_queue_routine(q, clos);
-  priv_queue_unlock(q);
+  priv_queue_lock(q, proc, proc);
+  priv_queue_routine(q, clos, proc);
+  priv_queue_unlock(q, proc);
 
   printf("main shutdown\n");
-  proc_shutdown(proc);
+  proc_shutdown(proc, proc);
 
   {
     notifier_t notifier = notifier_spawn(sync_data);

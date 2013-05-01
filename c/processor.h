@@ -44,19 +44,19 @@ void*
 dequeue_wait_maybe(bounded_queue_t q, processor_t proc);
 
 void
-enqueue_maybe(bounded_queue_t q, void *ptr);
+enqueue_maybe(bounded_queue_t q, void *ptr, processor_t proc);
 
 closure_t
 dequeue_closure(bounded_queue_t q, processor_t proc);
 
 void
-enqueue_closure(bounded_queue_t q, closure_t clos);
+enqueue_closure(bounded_queue_t q, closure_t clos, processor_t proc);
 
 priv_queue_t
 dequeue_private_queue(processor_t proc);
 
 void
-enqueue_private_queue(processor_t proc, priv_queue_t q);
+enqueue_private_queue(processor_t proc, priv_queue_t q, processor_t wait_proc);
 
 void
 yield_to_processor(executor_t, processor_t);
@@ -77,7 +77,7 @@ void
 proc_start(processor_t, executor_t);
 
 void
-proc_shutdown(processor_t);
+proc_shutdown(processor_t, processor_t);
 
 void
 maybe_yield(processor_t, int);

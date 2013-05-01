@@ -1,23 +1,27 @@
 MODULES=executor list task processor notifier \
         sync_ops task_mutex task_condition ctx bounded_queue \
 	closure private_queue
+CXX_MODULES=queue_impl
 SRCS=$(MODULES:=.c)
-OBJS=$(MODULES:=.o)
-LIBS=rt qs lfds ffi
+CXX_SRCS=$(CXX_MODULES:=.cpp)
+OBJS=$(MODULES:=.o) $(CXX_MODULES:=.o)
+LIBS=rt qs lfds ffi tbb
 LLIBS=$(addprefix -l, $(LIBS))
 
 include common.mk
 INCLUDES=-I./liblfds6.1.1/liblfds611/inc
-CFLAGS=-O3 -Wall -std=gnu99 -pthread -g $(INCLUDES) $(LLIBS) -fPIC -U_FORTIFY_SOURCE
+FLAGS=-O3 -Wall -pthread -g $(INCLUDES) $(LLIBS) -fPIC -U_FORTIFY_SOURCE
+CFLAGS=-std=gnu99 $(FLAGS)
+CXXFLAGS=$(FLAGS)
 
 libqs.so: $(OBJS) liblfds.so
 	$(CC) $(OBJS) -L./ -lrt -llfds -lffi -shared -o libqs.so
 
 depend: .depend
 
-.depend: $(SRCS)
+.depend: $(SRCS) $(CXX_SRCS)
 	rm -f ./.depend
-	$(CC) -MM $^ $(CFLAGS) > ./.depend;
+	$(CXX) -MM $^ $(CXXFLAGS) > ./.depend;
 
 include .depend
 

@@ -27,23 +27,23 @@ priv_queue_free(priv_queue_t pq)
 }
 
 void
-priv_queue_shutdown(priv_queue_t pq, processor_t proc)
+priv_queue_shutdown(priv_queue_t pq, processor_t proc, processor_t wait_proc)
 {
-  priv_queue_lock(pq, proc);
-  enqueue_closure(pq->q, closure_new_end());
-  priv_queue_unlock(pq);
+  priv_queue_lock(pq, proc, wait_proc);
+  enqueue_closure(pq->q, closure_new_end(), proc);
+  priv_queue_unlock(pq, proc);
 }
 
 void
-priv_queue_lock(priv_queue_t pq, processor_t proc)
+priv_queue_lock(priv_queue_t pq, processor_t proc, processor_t wait_proc)
 {
-  enqueue_private_queue(proc, pq);
+  enqueue_private_queue(proc, pq, wait_proc);
 }
 
 void
-priv_queue_unlock(priv_queue_t pq)
+priv_queue_unlock(priv_queue_t pq, processor_t proc)
 {
-  enqueue_closure(pq->q, NULL);
+  enqueue_closure(pq->q, NULL, proc);
 }
 
 
@@ -55,18 +55,18 @@ priv_dequeue(priv_queue_t pq, processor_t proc)
 
 
 void
-priv_queue_routine(priv_queue_t pq, closure_t clos)
+priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
   pq->last_was_func = false;
-  enqueue_closure(pq->q, clos);
+  enqueue_closure(pq->q, clos, wait_proc);
 }
 
 static
 void
-function_wrapper(bounded_queue_t future, closure_t clos, void* res)
+function_wrapper(bounded_queue_t future, closure_t clos, void* res, processor_t proc)
 {
   closure_apply(clos, res);
-  bqueue_enqueue(future, res);
+  bqueue_enqueue_wait(future, res, proc);
 }
 
 void
@@ -86,19 +86,21 @@ priv_queue_function(priv_queue_t pq,
       closure_t promise_clos =
         closure_new(function_wrapper,
                     closure_void_type(),
-                    3,
+                    4,
                     &args,
                     &arg_types);
 
       arg_types[0] = closure_pointer_type();
       arg_types[1] = closure_pointer_type();
       arg_types[2] = closure_pointer_type();
+      arg_types[3] = closure_pointer_type();
 
       *args[0] = future;
       *args[1] = clos;
       *args[2] = res;
+      *args[3] = proc;
 
-      enqueue_closure(pq->q, promise_clos);
+      enqueue_closure(pq->q, promise_clos, proc);
 
       // Wait for the other thread to get a value back to us.
       bqueue_dequeue_wait(future, &res, proc);

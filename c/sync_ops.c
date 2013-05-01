@@ -5,6 +5,7 @@
 #include "processor.h"
 #include "task.h"
 #include "liblfds611.h"
+#include "queue_impl.h"
 
 // global sync data
 struct sync_data
@@ -16,7 +17,7 @@ struct sync_data
   conc_list_t sleep_list;
   volatile uint64_t num_sleepers;
 
-  conc_queue_t runnable_queue;
+  queue_impl_t runnable_queue;
   volatile uint64_t run_queue_size;
   pthread_mutex_t run_mutex;
   pthread_cond_t not_empty;
@@ -46,7 +47,7 @@ sync_data_new(lfds611_atom_t max_tasks)
   result->num_processors = 0;
   result->max_tasks = max_tasks;
 
-  assert(lfds611_queue_new(&result->runnable_queue, max_tasks) == 1);
+  result->runnable_queue = queue_impl_new(max_tasks);
   result->run_queue_size = 0;
   pthread_mutex_init(&result->run_mutex, NULL);
   pthread_cond_init(&result->not_empty, NULL);
@@ -62,7 +63,7 @@ sync_data_free(sync_data_t sync_data)
 {
   pthread_cond_destroy(&sync_data->not_empty);
   pthread_mutex_destroy(&sync_data->run_mutex);
-  lfds611_queue_delete(sync_data->runnable_queue, NULL, NULL);
+  queue_impl_free(sync_data->runnable_queue);
   lfds611_slist_delete(sync_data->sleep_list);
   free(sync_data);
 }
@@ -70,7 +71,7 @@ sync_data_free(sync_data_t sync_data)
 void
 sync_data_use(sync_data_t sync_data)
 {  
-  lfds611_queue_use(sync_data->runnable_queue);
+  queue_impl_use(sync_data->runnable_queue);
   lfds611_slist_use(sync_data->sleep_list);
 }
 
@@ -85,7 +86,7 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   assert(proc != NULL);
   assert(proc->task != NULL);
   assert(proc->task->state == TASK_RUNNABLE);
-  assert(lfds611_queue_guaranteed_enqueue(sync_data->runnable_queue, proc) == 1);
+  assert(queue_impl_enqueue(sync_data->runnable_queue, proc));
 
   if (__sync_fetch_and_add(&sync_data->run_queue_size, 1) == 0)
     {
@@ -101,7 +102,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
     {
       processor_t proc;
 
-      if (lfds611_queue_dequeue(sync_data->runnable_queue, (void**)&proc) == 1)
+      if (queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
         {
           __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
           assert(proc->task->state == TASK_RUNNABLE);
@@ -111,8 +112,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
       else
         {
           pthread_mutex_lock(&sync_data->run_mutex);
-          while (lfds611_queue_dequeue
-                 (sync_data->runnable_queue, (void**)&proc) != 1 && 
+          while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
                  sync_data->num_processors > 0)
             {
               pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);

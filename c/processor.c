@@ -33,9 +33,9 @@ dequeue_wait_maybe(bounded_queue_t q, processor_t proc)
 }
 
 void
-enqueue_maybe(bounded_queue_t q, void *ptr)
+enqueue_maybe(bounded_queue_t q, void *ptr, processor_t proc)
 {
-  bqueue_enqueue(q, ptr);
+  bqueue_enqueue_wait(q, ptr, proc);
 }
 
 closure_t
@@ -45,9 +45,9 @@ dequeue_closure(bounded_queue_t q, processor_t proc)
 }
 
 void
-enqueue_closure(bounded_queue_t q, closure_t clos)
+enqueue_closure(bounded_queue_t q, closure_t clos, processor_t proc)
 {
-  enqueue_maybe(q, clos);
+  enqueue_maybe(q, clos, proc);
 }
 
 priv_queue_t
@@ -57,9 +57,9 @@ dequeue_private_queue(processor_t proc)
 }
 
 void
-enqueue_private_queue(processor_t proc, priv_queue_t q)
+enqueue_private_queue(processor_t proc, priv_queue_t q, processor_t wait_proc)
 {
-  enqueue_maybe(proc->qoq, (void*) q);
+  enqueue_maybe(proc->qoq, (void*) q, wait_proc);
 }
 
 static
@@ -162,9 +162,9 @@ make_processor(sync_data_t sync_data)
 }
 
 void
-proc_shutdown(processor_t proc)
+proc_shutdown(processor_t proc, processor_t wait_proc)
 {
-  enqueue_private_queue(proc, NULL);
+  enqueue_private_queue(proc, NULL, wait_proc);
 }
 
 void
