@@ -5,7 +5,7 @@ CXX_MODULES=queue_impl
 SRCS=$(MODULES:=.c)
 CXX_SRCS=$(CXX_MODULES:=.cpp)
 OBJS=$(MODULES:=.o) $(CXX_MODULES:=.o)
-LIBS=rt qs lfds ffi tbb
+LIBS=rt qs lfds :libffi.so.6 tbb
 LLIBS=$(addprefix -l, $(LIBS))
 
 include common.mk
@@ -15,7 +15,7 @@ CFLAGS=-std=gnu99 $(FLAGS)
 CXXFLAGS=$(FLAGS)
 
 libqs.so: $(OBJS) liblfds.so
-	$(CC) $(OBJS) -L./ -lrt -llfds -lffi -shared -o libqs.so
+	$(CC) $(OBJS) -L./ -lrt -llfds -l:libffi.so.6 -shared -o libqs.so
 
 depend: .depend
 
