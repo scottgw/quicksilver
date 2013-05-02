@@ -9,18 +9,6 @@ struct clos_type
   ffi_type type;
 };
 
-struct closure
-{
-  ffi_cif cif;
-  void *fn;
-  clos_type_t res_type;
-  int argc;
-  void ***args;
-  clos_type_t *arg_types;
-  
-  bool is_end;
-};
-
 
 closure_t
 closure_new_end()
@@ -55,6 +43,7 @@ closure_new(void *fn,
   clos->args = *args;
   clos->arg_types = *arg_types;
   clos->is_end = false;
+  clos->next = NULL;
 
   return clos;
 }
@@ -101,7 +90,11 @@ closure_apply(closure_t clos, void* res)
 {
   closure_setup(clos);
   ffi_call(&clos->cif, clos->fn, res, (void**)clos->args);
+}
 
+void
+closure_free(closure_t clos)
+{  
   free(clos->arg_types);
 
   for (int i = 0; i < clos->argc; i++)

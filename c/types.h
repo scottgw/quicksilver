@@ -49,4 +49,13 @@ typedef struct task* task_t;
 struct notifier;
 typedef struct notifier* notifier_t;
 
+
+// closure types
+struct closure;
+typedef struct closure* closure_t;
+
+struct clos_type;
+typedef struct clos_type* clos_type_t;
+
+
 #endif // _TYPES_H

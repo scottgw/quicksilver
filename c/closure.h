@@ -2,11 +2,21 @@
 #define _CLOSURE_H
 #include <ffi.h>
 
-struct closure;
-typedef struct closure* closure_t;
+#include "types.h"
 
-struct clos_type;
-typedef struct clos_type* clos_type_t;
+struct closure
+{
+  ffi_cif cif;
+  void *fn;
+  clos_type_t res_type;
+  int argc;
+  void ***args;
+  clos_type_t *arg_types;
+  
+  bool is_end;
+
+  void* next;
+};
 
 closure_t
 closure_new_end();
@@ -17,6 +27,9 @@ closure_new(void *fn,
             int argc,
             void ****args,
             clos_type_t **arg_types);
+
+void
+closure_free(closure_t clos);
 
 bool
 closure_is_end(closure_t clos);

@@ -7,6 +7,8 @@
 struct priv_queue
 {
   bounded_queue_t q;
+  closure_t last;
+
   bool last_was_func;
 };
 
@@ -15,6 +17,7 @@ priv_queue_new(processor_t proc)
 {
   priv_queue_t pq = (priv_queue_t) malloc(sizeof(struct priv_queue));
   pq->last_was_func = false;
+  pq->last = NULL;
   pq->q = bqueue_new(2048);
   return pq;
 }
@@ -57,8 +60,27 @@ priv_dequeue(priv_queue_t pq, processor_t proc)
 void
 priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
+  closure_t last = pq->last;
   pq->last_was_func = false;
-  enqueue_closure(pq->q, clos, wait_proc);
+  pq->last = clos;
+
+  if (last != NULL)
+    {
+      if (__sync_bool_compare_and_swap(&last->next, NULL, clos))
+        {
+          // If the other closure hasn't finished yet, we don't do anything.
+        }
+      else
+        {
+          // If we couldn't swap this closure in, queue it up.
+          closure_free(last);
+          enqueue_closure(pq->q, clos, wait_proc);
+        }
+    }
+  else
+    {
+      enqueue_closure(pq->q, clos, wait_proc);  
+    }
 }
 
 static
