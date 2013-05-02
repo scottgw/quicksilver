@@ -25,6 +25,8 @@ priv_queue_new(processor_t proc)
 void
 priv_queue_free(priv_queue_t pq)
 {
+  if (pq->last != NULL)
+    closure_free(pq->last);
   bqueue_free(pq->q);
   free(pq);
 }
