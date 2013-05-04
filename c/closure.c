@@ -25,17 +25,29 @@ closure_new(void *fn,
             void ****args,
             clos_type_t **arg_types)
 {
-  closure_t clos = (closure_t) malloc(sizeof(struct closure));
+  size_t total_size = 
+    sizeof(struct closure) + 
+    argc*(sizeof(void**) +
+          sizeof(void*) +
+          sizeof(clos_type_t));
+  void* mem = malloc(total_size);
+  closure_t clos = mem;
+
+  mem += sizeof(*clos);
+
+
 
   // Arguments
-  *args = malloc(argc*sizeof(void**));
+  *args = mem;
+  mem += argc * sizeof(void**);
   for (int i = 0; i < argc; i++)
     {
-      (*args)[i] = malloc(sizeof(void*));
+      (*args)[i] = mem;
+      mem += sizeof(void*);
     }
 
   // Argument types
-  *arg_types = (clos_type_t*)malloc(argc*sizeof(clos_type_t));
+  *arg_types = mem;
 
   clos->fn = fn;
   clos->res_type = res_type;
@@ -94,14 +106,6 @@ closure_apply(closure_t clos, void* res)
 
 void
 closure_free(closure_t clos)
-{  
-  free(clos->arg_types);
-
-  for (int i = 0; i < clos->argc; i++)
-    {
-      free(clos->args[i]);
-    }
-
-  free(clos->args);
+{
   free(clos);
 }
