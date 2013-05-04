@@ -8,7 +8,6 @@
 
 struct bounded_queue
 {
-  volatile uint32_t n;
   task_mutex_t mutex;
   task_condition_t event;
   queue_impl_t impl;
@@ -19,7 +18,6 @@ bqueue_new(uint32_t size)
 {
   bounded_queue_t q = (bounded_queue_t)malloc(sizeof(struct bounded_queue));
 
-  q->n = 0;
   q->mutex = task_mutex_new();
   q->event = task_condition_new();
   q->impl = queue_impl_new(size);
@@ -47,7 +45,6 @@ bqueue_enqueue(bounded_queue_t q, void *data)
 {
   if (queue_impl_enqueue(q->impl, data))
     {
-      __sync_fetch_and_add(&q->n, 1);
       task_condition_signal(q->event);
       return true;
     }
@@ -61,16 +58,6 @@ bqueue_enqueue(bounded_queue_t q, void *data)
 void
 bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
 {
-  for (int i = 0; i < 1024; i++)
-    {
-      if (queue_impl_enqueue(q->impl, data))
-        {
-          __sync_fetch_and_add(&q->n, 1);
-          task_condition_signal(q->event);
-          return;
-        }
-    }
-
   if (!queue_impl_enqueue(q->impl, data))
     {
       task_mutex_lock(q->mutex, proc);
@@ -81,7 +68,6 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
       task_mutex_unlock(q->mutex, proc);
     }
 
-  __sync_fetch_and_add(&q->n, 1);
   task_condition_signal(q->event);
 }
 
@@ -96,16 +82,6 @@ bqueue_dequeue(bounded_queue_t q, void **data)
 void
 bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
 {
-  for (int i = 0; i < 1024; i++)
-    {
-      if (queue_impl_dequeue(q->impl, data))
-        {
-          __sync_fetch_and_sub(&q->n, 1);
-          task_condition_signal(q->event);
-          return;
-        }
-    }
-
   if (!queue_impl_dequeue(q->impl, data))
     {
       task_mutex_lock(q->mutex, proc);
@@ -116,6 +92,5 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
       task_mutex_unlock(q->mutex, proc);
     }
 
-  __sync_fetch_and_sub(&q->n, 1);
   task_condition_signal(q->event);
 }
