@@ -3,10 +3,20 @@
 
 #include <stdint.h>
 
+#include "queue_impl.h"
 #include "types.h"
 
+struct sleeper
+{
+  processor_t proc;
+  struct timespec end_time;
+};
+
+typedef struct sleeper* sleeper_t;
+
+
 sync_data_t
-sync_data_new(lfds611_atom_t max_tasks);
+sync_data_new(uint32_t max_tasks);
 
 void
 sync_data_free(sync_data_t sync_data);
@@ -34,10 +44,8 @@ sync_data_add_sleeper(sync_data_t sync_data,
                       processor_t proc,
                       struct timespec duration);
 
-void
-sync_data_get_sleepers(sync_data_t sync_data,
-                       processor_t **procs,
-                       uint64_t *num_awoken);
+queue_impl_t
+sync_data_get_sleepers(sync_data_t sync_data);
 
 
 #endif // _SYNC_OPS_H

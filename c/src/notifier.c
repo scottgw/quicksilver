@@ -1,7 +1,8 @@
-#include <stdio.h>
 #include <pthread.h>
 #include <sys/time.h>
 #include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "executor.h"
@@ -59,15 +60,16 @@ reschedule_awoken(notifier_t notifier)
 {
   uint64_t num_awoken;
   processor_t *procs;
+  queue_impl_t awakened = sync_data_get_sleepers(notifier->sync_data);
 
-  sync_data_get_sleepers(notifier->sync_data, &procs, &num_awoken);
-
-  for(int i = 0; i < num_awoken; i++)
+  sleeper_t sleeper;
+  while (queue_impl_dequeue(awakened, (void**)&sleeper))
     {
-      sync_data_enqueue_runnable(notifier->sync_data, procs[i]);
+      sync_data_enqueue_runnable(notifier->sync_data, sleeper->proc);
+      free(sleeper);
     }
 
-  free(procs);
+  queue_impl_free(awakened);
 }
 
 // This thread continually waits on the

@@ -5,8 +5,6 @@
 #include <stdint.h>
 #include <pthread.h>
 
-#include "liblfds611.h"
-
 #define STACKSIZE 4*1024*sizeof(int)
 
 // user stacks
@@ -23,11 +21,6 @@ typedef struct bounded_queue* bounded_queue_t;
 // private queues
 struct priv_queue;
 typedef struct priv_queue* priv_queue_t;
-
-// some shorter type names for the LFDS structures
-typedef struct lfds611_queue_state* conc_queue_t;
-typedef struct lfds611_slist_state* conc_list_t;
-typedef struct lfds611_slist_element* conc_list_elem_t;
 
 // global sync data
 struct sync_data;

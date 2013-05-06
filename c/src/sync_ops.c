@@ -1,20 +1,20 @@
 #include <assert.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "sync_ops.h"
 #include "processor.h"
 #include "task.h"
-#include "liblfds611.h"
 #include "queue_impl.h"
 
 // global sync data
 struct sync_data
 {
-  lfds611_atom_t max_tasks;
+  uint32_t max_tasks;
 
   volatile uint64_t num_processors;
 
-  conc_list_t sleep_list;
+  queue_impl_t sleep_list;
   volatile uint64_t num_sleepers;
 
   queue_impl_t runnable_queue;
@@ -24,14 +24,6 @@ struct sync_data
 };
 
 
-struct sleeper
-{
-  processor_t proc;
-  struct timespec end_time;
-};
-
-typedef struct sleeper* sleeper_t;
-
 static
 void
 sleep_free(void *item, void *user_data)
@@ -40,7 +32,7 @@ sleep_free(void *item, void *user_data)
 }
 
 sync_data_t
-sync_data_new(lfds611_atom_t max_tasks)
+sync_data_new(uint32_t max_tasks)
 {
   sync_data_t result = (sync_data_t)malloc(sizeof(struct sync_data));
 
@@ -53,7 +45,8 @@ sync_data_new(lfds611_atom_t max_tasks)
   pthread_cond_init(&result->not_empty, NULL);
 
   result->num_sleepers = 0;
-  assert(lfds611_slist_new(&result->sleep_list, sleep_free, NULL) == 1);
+
+  result->sleep_list = queue_impl_new(max_tasks);
 
   return result;
 }
@@ -64,7 +57,7 @@ sync_data_free(sync_data_t sync_data)
   pthread_cond_destroy(&sync_data->not_empty);
   pthread_mutex_destroy(&sync_data->run_mutex);
   queue_impl_free(sync_data->runnable_queue);
-  lfds611_slist_delete(sync_data->sleep_list);
+  queue_impl_free(sync_data->sleep_list);
   free(sync_data);
 }
 
@@ -72,7 +65,7 @@ void
 sync_data_use(sync_data_t sync_data)
 {  
   queue_impl_use(sync_data->runnable_queue);
-  lfds611_slist_use(sync_data->sleep_list);
+  queue_impl_use(sync_data->sleep_list);
 }
 
 
@@ -178,8 +171,7 @@ sync_data_add_sleeper(sync_data_t sync_data,
   assert (proc->task != NULL);
   assert (proc->task->state == TASK_RUNNING);
 
-  conc_list_elem_t item;
-  conc_list_t sleepers = sync_data->sleep_list;
+  queue_impl_t sleepers = sync_data->sleep_list;
   sleeper_t sleeper = (sleeper_t) malloc(sizeof(struct sleeper));
 
   __sync_fetch_and_add(&sync_data->num_sleepers, 1);
@@ -192,56 +184,37 @@ sync_data_add_sleeper(sync_data_t sync_data,
   sleeper->end_time.tv_sec = current_time.tv_sec + duration.tv_sec;
   sleeper->end_time.tv_nsec = current_time.tv_nsec + duration.tv_nsec;
 
-  item = lfds611_slist_new_head (sleepers, sleeper);
+  bool success = queue_impl_enqueue(sleepers, sleeper);
 
-  assert (item != NULL && "Insertion failed");
+  assert (success && "Insertion failed");
 }
 
-void
-sync_data_get_sleepers(sync_data_t sync_data,
-                       processor_t **procs,
-                       uint64_t *num_awoken)
+
+static
+bool
+keep_sleeping(void *elem, void *user)
 {
-  conc_list_t sleepers = sync_data->sleep_list;
+  sleeper_t sleeper = (sleeper_t) elem;
+  struct timespec *current_time = (struct timespec*) user;
+  
+  return
+    sleeper->end_time.tv_sec >= current_time->tv_sec ||
+    (sleeper->end_time.tv_sec == current_time->tv_sec && 
+     sleeper->end_time.tv_nsec >= current_time->tv_nsec);
+}
+
+queue_impl_t
+sync_data_get_sleepers(sync_data_t sync_data)
+{
+  queue_impl_t sleepers = sync_data->sleep_list;
 
   struct timespec current_time;
   clock_gettime(CLOCK_REALTIME, &current_time);
-  
-  conc_list_elem_t item = NULL;
 
-  // Count the number of tasks to wake up.
-  uint64_t n = 0;
-  while( lfds611_slist_get_head_and_then_next(sleepers, &item))
-    {
-      sleeper_t sleeper;
-      lfds611_slist_get_user_data_from_element(item, (void**)&sleeper);
-      if (sleeper->end_time.tv_sec >= current_time.tv_sec &&
-          sleeper->end_time.tv_nsec >= current_time.tv_nsec)
-        {
-          n++;
-        }
-    }
+  queue_impl_t awakened = 
+    queue_impl_filter_out(sleepers, keep_sleeping, &current_time);
 
-  *procs = (processor_t*) malloc(sizeof(struct processor)*n);
+  int n = queue_impl_size(awakened);
 
-  n = 0;
-  // Put the tasks in an array.
-  while( lfds611_slist_get_head_and_then_next(sleepers, &item))
-    {
-      sleeper_t sleeper;
-      lfds611_slist_get_user_data_from_element(item, (void**)&sleeper);
-      if (sleeper->end_time.tv_sec >= current_time.tv_sec &&
-          sleeper->end_time.tv_nsec >= current_time.tv_nsec)
-        {
-          assert (sleeper->proc != NULL);
-          (*procs)[n] = sleeper->proc;
-          sleeper->proc->task->state = TASK_RUNNABLE;
-          n++;
-          lfds611_slist_logically_delete_element(sleepers, item);
-        }
-    }
-
-  *num_awoken = n;
   __sync_fetch_and_sub(&sync_data->num_sleepers, n);
 }
-

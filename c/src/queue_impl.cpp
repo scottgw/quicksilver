@@ -32,6 +32,12 @@ extern "C"
     return;
   }
 
+  int
+  queue_impl_size(queue_impl_t q)
+  {
+    return q->impl->size();
+  }
+
   bool
   queue_impl_enqueue(queue_impl_t q, void* data)
   {
@@ -47,7 +53,6 @@ extern "C"
     return success;
   }
 
-
   void
   queue_impl_enqueue_wait(queue_impl_t q, void* data)
   {
@@ -61,6 +66,36 @@ extern "C"
     q->impl->pop(data);
     *data_out = data;
   }
-  
+
+  queue_impl_t
+  queue_impl_filter_out(queue_impl_t q, bool (*pred)(void*, void*), void *user)
+  {
+    auto sat_pred = tbb::concurrent_queue<void*>();
+    auto unsat_pred = tbb::concurrent_queue<void*>();
+
+    void* elem;
+
+    while (queue_impl_dequeue(q, &elem))
+      {
+        if (pred(elem, user))
+          {
+            sat_pred.push(elem);
+          }
+        else
+          {
+            unsat_pred.push(elem);
+          }
+      }
+
+    auto filtered = queue_impl_new(unsat_pred.unsafe_size());
+    
+    while (unsat_pred.try_pop(elem))
+      queue_impl_enqueue(filtered, elem);
+
+    while (sat_pred.try_pop(elem))
+      queue_impl_enqueue(q, elem);
+
+    return filtered;
+  }  
 }
 

@@ -1,3 +1,5 @@
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,6 +16,9 @@ extern "C" {
   void
   queue_impl_use(queue_impl_t q);
 
+  int
+  queue_impl_size(queue_impl_t q);
+
   bool
   queue_impl_enqueue(queue_impl_t q, void* data);
 
@@ -25,6 +30,9 @@ extern "C" {
 
   void
   queue_impl_dequeue_wait(queue_impl_t q, void** data_out);
+
+  queue_impl_t
+  queue_impl_filter_out(queue_impl_t q, bool (*pred)(void*, void*), void *user);
 
 #ifdef __cplusplus
 }

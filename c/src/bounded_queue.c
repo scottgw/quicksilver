@@ -1,5 +1,3 @@
-#include "liblfds611.h"
-
 #include "bounded_queue.h"
 #include "queue_impl.h"
 #include "task_mutex.h"
