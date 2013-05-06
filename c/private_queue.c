@@ -59,11 +59,11 @@ priv_dequeue(priv_queue_t pq, processor_t proc)
 }
 
 
+static
 void
-priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
+priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
   closure_t last = pq->last;
-  pq->last_was_func = false;
   pq->last = clos;
 
   if (last != NULL)
@@ -85,11 +85,19 @@ priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
     }
 }
 
+void
+priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
+{
+  pq->last_was_func = false;
+  priv_queue_link_enqueue(pq, clos, wait_proc);
+}
+
 static
 void
 function_wrapper(bounded_queue_t future, closure_t clos, void* res, processor_t proc)
 {
   closure_apply(clos, res);
+  closure_free(clos);
   bqueue_enqueue_wait(future, res, proc);
 }
 
@@ -124,7 +132,7 @@ priv_queue_function(priv_queue_t pq,
       *args[2] = res;
       *args[3] = proc;
 
-      enqueue_closure(pq->q, promise_clos, proc);
+      priv_queue_link_enqueue(pq, promise_clos, proc);
 
       // Wait for the other thread to get a value back to us.
       bqueue_dequeue_wait(future, &res, proc);
@@ -134,5 +142,6 @@ priv_queue_function(priv_queue_t pq,
   else
     {
       closure_apply(clos, res);
+      closure_free(clos);
     }
 }
