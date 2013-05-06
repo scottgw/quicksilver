@@ -35,8 +35,6 @@ closure_new(void *fn,
 
   mem += sizeof(*clos);
 
-
-
   // Arguments
   *args = mem;
   mem += argc * sizeof(void**);
