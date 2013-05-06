@@ -3,6 +3,7 @@
 #include "closure.h"
 #include "private_queue.h"
 #include "processor.h"
+#include "task.h"
 
 struct priv_queue
 {
@@ -105,7 +106,7 @@ function_wrapper(bounded_queue_t future, closure_t clos, void* res, processor_t 
 {
   closure_apply(clos, res);
   closure_free(clos);
-  bqueue_enqueue_wait(future, res, proc);
+  proc_wake(proc);
 }
 
 void
@@ -140,8 +141,8 @@ priv_queue_function(priv_queue_t pq,
 
       priv_queue_link_enqueue(pq, promise_clos, proc);
 
-      // Wait for the other thread to get a value back to us.
-      bqueue_dequeue_wait(pq->future, &res, proc);
+      proc->task->state = TASK_TRANSITION_TO_WAITING;
+      yield_to_executor(proc);
     }
   else
     {
