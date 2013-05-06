@@ -9,6 +9,7 @@ struct priv_queue
   bounded_queue_t q;
   closure_t last;
 
+  bounded_queue_t future;
   bool last_was_func;
 };
 
@@ -19,6 +20,7 @@ priv_queue_new(processor_t proc)
   pq->last_was_func = false;
   pq->last = NULL;
   pq->q = bqueue_new(2048);
+  pq->future = bqueue_new(1);
   return pq;
 }
 
@@ -26,8 +28,12 @@ void
 priv_queue_free(priv_queue_t pq)
 {
   if (pq->last != NULL)
-    closure_free(pq->last);
+    {
+      closure_free(pq->last);
+    }
+
   bqueue_free(pq->q);
+  bqueue_free(pq->future);
   free(pq);
 }
 
@@ -111,7 +117,6 @@ priv_queue_function(priv_queue_t pq,
   if (!pq->last_was_func)
     {
       pq->last_was_func = true;
-      bounded_queue_t future = bqueue_new(1);
 
       void ***args;
       clos_type_t *arg_types;
@@ -128,7 +133,7 @@ priv_queue_function(priv_queue_t pq,
       arg_types[2] = closure_pointer_type();
       arg_types[3] = closure_pointer_type();
 
-      *args[0] = future;
+      *args[0] = pq->future;
       *args[1] = clos;
       *args[2] = res;
       *args[3] = proc;
@@ -136,9 +141,7 @@ priv_queue_function(priv_queue_t pq,
       priv_queue_link_enqueue(pq, promise_clos, proc);
 
       // Wait for the other thread to get a value back to us.
-      bqueue_dequeue_wait(future, &res, proc);
-
-      bqueue_free(future);
+      bqueue_dequeue_wait(pq->future, &res, proc);
     }
   else
     {
