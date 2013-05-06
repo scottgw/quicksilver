@@ -11,3 +11,7 @@ c/conc_queue/test
 *.data.old
 *.data
 *.out.*
+*oprofile*
+ms_print*
+gmon.out
+Lex.hs
