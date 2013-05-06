@@ -25,6 +25,9 @@ depend: .depend
 
 include .depend
 
+ctags:
+	ctags -e *.c *.h *.cpp
+
 clean:
 	@rm -f *.o main .depend libqs.so liblfds.so
 	$(MAKE) -f makefile.linux -C liblfds6.1.1/liblfds611/ clean
