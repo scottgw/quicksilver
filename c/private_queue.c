@@ -42,6 +42,7 @@ priv_queue_shutdown(priv_queue_t pq, processor_t proc, processor_t wait_proc)
 void
 priv_queue_lock(priv_queue_t pq, processor_t proc, processor_t wait_proc)
 {
+  pq->last_was_func = false;
   enqueue_private_queue(proc, pq, wait_proc);
 }
 
