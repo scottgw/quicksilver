@@ -65,6 +65,9 @@ void
 yield_to_executor(processor_t);
 
 void
+proc_wait_for_available(processor_t waitee, processor_t waiter);
+
+void
 proc_free(processor_t);
 
 void
