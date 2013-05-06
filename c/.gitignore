@@ -1,0 +1,13 @@
+# autoconf generated files
+*.m4
+*.in
+m4/
+missing
+config.*
+configure
+autom4te.cache/
+Makefile
+depcomp
+install-sh
+ltmain.sh
+libtool
