@@ -10,7 +10,6 @@ struct priv_queue
   bounded_queue_t q;
   closure_t last;
 
-  bounded_queue_t future;
   bool last_was_func;
 };
 
@@ -18,10 +17,11 @@ priv_queue_t
 priv_queue_new(processor_t proc)
 {
   priv_queue_t pq = (priv_queue_t) malloc(sizeof(struct priv_queue));
+
   pq->last_was_func = false;
   pq->last = NULL;
   pq->q = bqueue_new(2048);
-  pq->future = bqueue_new(1);
+
   return pq;
 }
 
@@ -34,7 +34,7 @@ priv_queue_free(priv_queue_t pq)
     }
 
   bqueue_free(pq->q);
-  bqueue_free(pq->future);
+
   free(pq);
 }
 
@@ -102,10 +102,11 @@ priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 
 static
 void
-function_wrapper(bounded_queue_t future, closure_t clos, void* res, processor_t proc)
+function_wrapper(closure_t clos, void* res, processor_t proc)
 {
   closure_apply(clos, res);
   closure_free(clos);
+  while (proc->task->state != TASK_WAITING);
   proc_wake(proc);
 }
 
@@ -125,19 +126,17 @@ priv_queue_function(priv_queue_t pq,
       closure_t promise_clos =
         closure_new(function_wrapper,
                     closure_void_type(),
-                    4,
+                    3,
                     &args,
                     &arg_types);
 
       arg_types[0] = closure_pointer_type();
       arg_types[1] = closure_pointer_type();
       arg_types[2] = closure_pointer_type();
-      arg_types[3] = closure_pointer_type();
 
-      *args[0] = pq->future;
-      *args[1] = clos;
-      *args[2] = res;
-      *args[3] = proc;
+      *args[0] = clos;
+      *args[1] = res;
+      *args[2] = proc;
 
       priv_queue_link_enqueue(pq, promise_clos, proc);
 
