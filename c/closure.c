@@ -66,19 +66,6 @@ closure_is_end(closure_t clos)
   return clos->is_end;
 }
 
-void
-closure_setup(closure_t clos)
-{
-  ffi_type *ffi_res_type = (ffi_type *)clos->res_type;
-  ffi_type **ffi_arg_types = (ffi_type **)clos->arg_types;
-
-  assert(ffi_prep_cif(&clos->cif,
-                      FFI_DEFAULT_ABI,
-                      clos->argc,
-                      ffi_res_type,
-                      ffi_arg_types) == FFI_OK);
-}
-
 clos_type_t
 closure_void_type ()
 {
@@ -100,8 +87,16 @@ closure_pointer_type ()
 void
 closure_apply(closure_t clos, void* res)
 {
-  closure_setup(clos);
-  ffi_call(&clos->cif, clos->fn, res, (void**)clos->args);
+  ffi_type *ffi_res_type = (ffi_type *)clos->res_type;
+  ffi_type **ffi_arg_types = (ffi_type **)clos->arg_types;
+  ffi_cif cif;
+
+  assert(ffi_prep_cif(&cif,
+                      FFI_DEFAULT_ABI,
+                      clos->argc,
+                      ffi_res_type,
+                      ffi_arg_types) == FFI_OK);
+  ffi_call(&cif, clos->fn, res, (void**)clos->args);
 }
 
 void

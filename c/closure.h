@@ -6,7 +6,6 @@
 
 struct closure
 {
-  ffi_cif cif;
   void *fn;
   clos_type_t res_type;
   int argc;
@@ -33,9 +32,6 @@ closure_free(closure_t clos);
 
 bool
 closure_is_end(closure_t clos);
-
-void
-closure_setup(closure_t clos);
 
 clos_type_t
 closure_void_type ();
