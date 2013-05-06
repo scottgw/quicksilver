@@ -100,7 +100,6 @@ priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
   priv_queue_link_enqueue(pq, clos, wait_proc);
 }
 
-static
 void
 function_wrapper(closure_t clos, void* res, processor_t proc)
 {

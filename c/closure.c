@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "closure.h"
+#include "private_queue.h"
 
 struct clos_type
 {
@@ -85,16 +86,27 @@ closure_pointer_type ()
 void
 closure_apply(closure_t clos, void* res)
 {
-  ffi_type *ffi_res_type = (ffi_type *)clos->res_type;
-  ffi_type **ffi_arg_types = (ffi_type **)clos->arg_types;
-  ffi_cif cif;
+  if (clos->fn == function_wrapper)
+    {
+      void (*fn)(closure_t, void*, processor_t);
+      fn = clos->fn;
+      fn(*((closure_t*)clos->args[0]),
+         *(clos->args[1]),
+         *((processor_t*)clos->args[2]));
+    }
+  else
+    {
+      ffi_type *ffi_res_type = (ffi_type *)clos->res_type;
+      ffi_type **ffi_arg_types = (ffi_type **)clos->arg_types;
+      ffi_cif cif;
 
-  assert(ffi_prep_cif(&cif,
-                      FFI_DEFAULT_ABI,
-                      clos->argc,
-                      ffi_res_type,
-                      ffi_arg_types) == FFI_OK);
-  ffi_call(&cif, clos->fn, res, (void**)clos->args);
+      assert(ffi_prep_cif(&cif,
+                          FFI_DEFAULT_ABI,
+                          clos->argc,
+                          ffi_res_type,
+                          ffi_arg_types) == FFI_OK);
+      ffi_call(&cif, clos->fn, res, (void**)clos->args);
+    }
 }
 
 void

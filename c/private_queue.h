@@ -24,6 +24,9 @@ closure_t
 priv_dequeue(priv_queue_t q, processor_t proc);
 
 void
+function_wrapper(closure_t clos, void* res, processor_t proc);
+
+void
 priv_queue_routine(priv_queue_t q, closure_t clos, processor_t wait_proc);
 
 void
