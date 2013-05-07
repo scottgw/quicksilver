@@ -5,16 +5,16 @@
 #include <stdint.h>
 #include <ffi.h>
 
-#include "bounded_queue.h"
-#include "executor.h"
-#include "notifier.h"
-#include "processor.h"
-#include "task.h"
-#include "list.h"
-#include "task_mutex.h"
-#include "private_queue.h"
+#include "libqs/bounded_queue.h"
+#include "libqs/executor.h"
+#include "libqs/notifier.h"
+#include "libqs/processor.h"
+#include "libqs/task.h"
+#include "libqs/list.h"
+#include "libqs/task_mutex.h"
+#include "libqs/private_queue.h"
 
-#include "sync_ops.h"
+#include "libqs/sync_ops.h"
 
 #define MAX_TASKS 20000
 #define N 32

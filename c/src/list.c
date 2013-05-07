@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "list.h"
+#include "libqs/list.h"
 
 struct list
 {

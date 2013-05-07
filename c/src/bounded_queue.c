@@ -1,7 +1,9 @@
-#include "bounded_queue.h"
-#include "queue_impl.h"
-#include "task_mutex.h"
-#include "task_condition.h"
+#include <stdlib.h>
+
+#include "libqs/bounded_queue.h"
+#include "libqs/queue_impl.h"
+#include "libqs/task_mutex.h"
+#include "libqs/task_condition.h"
 
 
 struct bounded_queue
@@ -39,11 +41,13 @@ bqueue_use(bounded_queue_t q)
 }
 
 bool
-bqueue_enqueue(bounded_queue_t q, void *data)
+bqueue_enqueue(bounded_queue_t q, void *data, processor_t proc)
 {
   if (queue_impl_enqueue(q->impl, data))
     {
+      task_mutex_lock(q->mutex, proc);
       task_condition_signal(q->event);
+      task_mutex_unlock(q->mutex, proc);
       return true;
     }
   else
@@ -52,21 +56,16 @@ bqueue_enqueue(bounded_queue_t q, void *data)
     }
 }
 
-
 void
 bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
 {
-  if (!queue_impl_enqueue(q->impl, data))
+  task_mutex_lock(q->mutex, proc);
+  while (!queue_impl_enqueue(q->impl, data))
     {
-      task_mutex_lock(q->mutex, proc);
-      while (!queue_impl_enqueue(q->impl, data))
-        {
-          task_condition_wait(q->event, q->mutex, proc);
-        }
-      task_mutex_unlock(q->mutex, proc);
+      task_condition_wait(q->event, q->mutex, proc);
     }
-
   task_condition_signal(q->event);
+  task_mutex_unlock(q->mutex, proc);
 }
 
 
@@ -80,15 +79,11 @@ bqueue_dequeue(bounded_queue_t q, void **data)
 void
 bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
 {
-  if (!queue_impl_dequeue(q->impl, data))
+  task_mutex_lock(q->mutex, proc);
+  while (!queue_impl_dequeue(q->impl, data))
     {
-      task_mutex_lock(q->mutex, proc);
-      while (!queue_impl_dequeue(q->impl, data))
-        {
-          task_condition_wait(q->event, q->mutex, proc);
-        }
-      task_mutex_unlock(q->mutex, proc);
+      task_condition_wait(q->event, q->mutex, proc);
     }
-
   task_condition_signal(q->event);
+  task_mutex_unlock(q->mutex, proc);
 }

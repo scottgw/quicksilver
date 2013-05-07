@@ -1,9 +1,11 @@
 #include <ffi.h>
-#include "bounded_queue.h"
-#include "closure.h"
-#include "private_queue.h"
-#include "processor.h"
-#include "task.h"
+#include <stdlib.h>
+
+#include "libqs/bounded_queue.h"
+#include "libqs/closure.h"
+#include "libqs/private_queue.h"
+#include "libqs/processor.h"
+#include "libqs/task.h"
 
 struct priv_queue
 {

@@ -1,9 +1,12 @@
-#include "processor.h"
+#include <assert.h>
+#include <stdlib.h>
 
-#include "queue_impl.h"
-#include "task_mutex.h"
-#include "task_condition.h"
-#include "task.h"
+#include "libqs/processor.h"
+
+#include "libqs/queue_impl.h"
+#include "libqs/task_mutex.h"
+#include "libqs/task_condition.h"
+#include "libqs/task.h"
 
 #define INIT_WAIT_QUEUE_SIZE 16000
 
@@ -37,7 +40,6 @@ task_condition_signal(task_condition_t cv)
 
   if(queue_impl_dequeue(cv->wait_queue, (void**)&proc))
     {
-      while(proc->task->state != TASK_WAITING);
       proc_wake(proc);
     }
 }
@@ -45,11 +47,14 @@ task_condition_signal(task_condition_t cv)
 void
 task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
 {
-  proc->task->state = TASK_TRANSITION_TO_WAITING;
-  assert (queue_impl_enqueue(cv->wait_queue, proc));
+  volatile processor_t vproc = proc;
+  assert(task_mutex_owner(mutex) == vproc);
 
-  task_mutex_unlock(mutex, proc);
-  yield_to_executor(proc);
+  task_set_state(vproc->task, TASK_TRANSITION_TO_WAITING);
+  bool success = queue_impl_enqueue(cv->wait_queue, vproc);
+  assert(success);
 
-  task_mutex_lock(mutex, proc);
+  task_mutex_unlock(mutex, vproc);
+  yield_to_executor(vproc);
+  task_mutex_lock(mutex, vproc);
 }

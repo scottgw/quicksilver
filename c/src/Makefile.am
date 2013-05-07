@@ -6,11 +6,13 @@ libqs_la_SOURCES = executor.c list.c task.c processor.c notifier.c \
 
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).
-pkginclude_HEADERS = executor.h list.h task.h processor.h notifier.h \
+HEADER_FILES = executor.h list.h task.h processor.h notifier.h \
 	sync_ops.h task_mutex.h task_condition.h ctx.h bounded_queue.h \
-	closure.h private_queue.h queue_impl.h
+	closure.h private_queue.h queue_impl.h types.h
 
-FLAGS = -pthread -O3 -U_FORTIFY_SOURC
+pkginclude_HEADERS = $(addprefix libqs/, $(HEADER_FILES))
+
+FLAGS = -pthread -U_FORTIFY_SOURC -Wall -Werror
 libqs_la_CFLAGS = -std=gnu99 $(FLAGS)
 libqs_la_CXXFLAGS = -std=c++11 $(FLAGS)
 

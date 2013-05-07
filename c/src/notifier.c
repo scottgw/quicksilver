@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "executor.h"
-#include "notifier.h"
-#include "sync_ops.h"
+#include "libqs/executor.h"
+#include "libqs/notifier.h"
+#include "libqs/sync_ops.h"
 
 //
 // Notifier implementation 
@@ -58,8 +58,6 @@ static
 void
 reschedule_awoken(notifier_t notifier)
 {
-  uint64_t num_awoken;
-  processor_t *procs;
   queue_impl_t awakened = sync_data_get_sleepers(notifier->sync_data);
 
   sleeper_t sleeper;

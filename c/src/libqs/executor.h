@@ -13,6 +13,7 @@ struct executor
   volatile bool done;
   processor_t current_proc;
   pthread_t thread;
+  int id;
 };
 
 // Constructs the executor thread and adds the executor

@@ -83,6 +83,6 @@ void
 proc_shutdown(processor_t, processor_t);
 
 void
-maybe_yield(processor_t, int);
+maybe_yield(processor_t);
 
 #endif // __PROCESSOR_H_

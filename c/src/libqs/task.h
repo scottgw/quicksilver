@@ -11,7 +11,9 @@ typedef enum
     TASK_RUNNABLE,
     TASK_FINISHED,
     TASK_WAITING,
-    TASK_TRANSITION_TO_WAITING
+    TASK_TRANSITION_TO_WAITING,
+    TASK_TRANSITION_TO_RUNNABLE,
+    TASK_TRANSITION_TO_FINISHED
   }
   task_state;
 
@@ -30,6 +32,12 @@ task_make(sync_data_t sync_data);
 
 void
 task_free(task_t task);
+
+task_state
+task_get_state(task_t task);
+
+void
+task_set_state(task_t task, task_state state);
 
 void
 task_set_func(task_t task, void (*f)(void*), void* data);

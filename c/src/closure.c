@@ -2,8 +2,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "closure.h"
-#include "private_queue.h"
+#include "libqs/closure.h"
+#include "libqs/private_queue.h"
 
 struct clos_type
 {

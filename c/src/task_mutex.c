@@ -1,10 +1,13 @@
-#include "task_mutex.h"
+#include <assert.h>
+#include <stdlib.h>
 
-#include "sync_ops.h"
-#include "processor.h"
-#include "queue_impl.h"
-#include "task.h"
-#include "types.h"
+#include "libqs/task_mutex.h"
+
+#include "libqs/sync_ops.h"
+#include "libqs/processor.h"
+#include "libqs/queue_impl.h"
+#include "libqs/task.h"
+#include "libqs/types.h"
 
 #define INIT_WAIT_QUEUE_SIZE 16000
 
@@ -12,7 +15,7 @@ struct task_mutex
 {
   volatile uint32_t count;
   volatile processor_t owner;
-  queue_impl_t wait_queue;
+  volatile queue_impl_t wait_queue;
 };
 
 task_mutex_t
@@ -33,48 +36,67 @@ task_mutex_free(task_mutex_t mutex)
   free (mutex);
 }
 
-void
-task_mutex_lock(task_mutex_t mutex, processor_t proc)
+processor_t
+task_mutex_owner(task_mutex_t mutex)
 {
- if (__sync_fetch_and_add(&mutex->count, 1) > 0)
+  return mutex->owner;
+}
+
+
+/* void */
+/* task_mutex_lock(task_mutex_t mutex, processor_t proc) */
+/* { */
+/*   if (__sync_fetch_and_add(&mutex->count, 1) == 0) */
+/*     { */
+      
+/*     } */
+/* } */
+
+/* void */
+/* task_mutex_unlock(task_mutex_t mutex, processor_t proc) */
+/* { */
+
+/* } */
+
+
+void
+task_mutex_lock(volatile task_mutex_t mutex, volatile processor_t proc)
+{
+  __atomic_add_fetch(&mutex->count, 1, __ATOMIC_SEQ_CST);
+
+  while (!__sync_bool_compare_and_swap(&mutex->owner, NULL, proc))
     {
-      // if the owner is already set then we add to the wait list 
+      // if the owner is already set then we add to the wait list
       // and yield to the executor.
-      proc->task->state = TASK_TRANSITION_TO_WAITING;
-      assert(queue_impl_enqueue(mutex->wait_queue, proc));
+
+      bool success = queue_impl_enqueue(mutex->wait_queue, proc);
+      assert(success);
+
+      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
       yield_to_executor(proc);
     }
- else
-   {
-     // if not, set the owner.
-     __sync_synchronize();
-     mutex->owner = proc;
-   }
 }
 
 void
-task_mutex_unlock(task_mutex_t mutex, processor_t proc)
+task_mutex_unlock(volatile task_mutex_t mutex, volatile processor_t proc)
 {
-  processor_t other_proc = NULL;
   assert(mutex->owner == proc);
+  assert(mutex->count > 0);
   
-  if (__sync_fetch_and_sub(&mutex->count, 1) > 1)
+  /* __atomic_clear(&mutex->owner, __ATOMIC_SEQ_CST); */
+  /* mutex->owner = NULL; */
+  __atomic_store_8(&mutex->owner, 0, __ATOMIC_SEQ_CST);
+
+  if(  __atomic_sub_fetch(&mutex->count, 1, __ATOMIC_SEQ_CST) > 0)
     {
-      // if there's someone in the loop, spin to dequeue them from the wait-queue.
-      // spinning is OK here because we only have to wait between when they
+      processor_t other_proc = NULL;
+      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
+      // If there's someone in the loop, spin to dequeue them from the
+      // wait-queue.
+      //
+      // Spinning is OK here because we only have to wait between when they
       // increased the counter and when the enqueue themselves which
       // is a finite amount of time.
-      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
-      __sync_synchronize();
-      while(other_proc->task->state != TASK_WAITING);
-      mutex->owner = other_proc;
-      other_proc->task->state = TASK_RUNNABLE;
-      sync_data_enqueue_runnable(proc->task->sync_data, other_proc);
-    }
-  else
-    {
-      // If there were zero people here, then just set the owner to NULL
-      __sync_synchronize();
-      mutex->owner = NULL;
+      proc_wake(other_proc);
     }
 }

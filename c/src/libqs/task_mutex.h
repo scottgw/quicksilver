@@ -12,6 +12,9 @@ task_mutex_new();
 void
 task_mutex_free();
 
+processor_t
+task_mutex_owner(task_mutex_t mutex);
+
 void
 task_mutex_lock(task_mutex_t mutex, processor_t proc);
 

@@ -2,16 +2,19 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "task.h"
-#include "valgrind.h"
+#include "libqs/task.h"
+#include "libqs/valgrind.h"
 
 task_t
 task_make(sync_data_t sync_data)
 {
   task_t task = (task_t) malloc(sizeof(struct task));
+
+  task->next = NULL;
+
   task->base = malloc(STACKSIZE);
 
-  VALGRIND_STACK_REGISTER(task->base, task->base + STACKSIZE);
+  (void) VALGRIND_STACK_REGISTER(task->base, task->base + STACKSIZE);
 
   task->state = TASK_UNINIT;
   task->sync_data = sync_data;
@@ -19,7 +22,7 @@ task_make(sync_data_t sync_data)
   task->ctx = ctx_new();
   ctx_set_stack_ptr(task->ctx, task->base);
   ctx_set_stack_size(task->ctx, STACKSIZE);
-  
+
   return task;
 }
 
@@ -49,12 +52,26 @@ task_wrapper(wrapper_data* data)
 
   task->state = TASK_RUNNING;
   f(ptr);
-  task->state = TASK_FINISHED;
+  task->state = TASK_TRANSITION_TO_FINISHED;
 
   if (task->next != NULL) {
     task_run (task->next);
   }
 }
+
+task_state
+task_get_state(task_t task)
+{
+  return __atomic_load_4(&task->state, __ATOMIC_SEQ_CST);
+}
+
+
+void
+task_set_state(task_t task, task_state state)
+{
+  return __atomic_store_4(&task->state, state, __ATOMIC_SEQ_CST);
+}
+
 
 void
 task_set_func(task_t task, void (*f)(void*), void* data)
@@ -80,13 +97,11 @@ task_run(task_t task)
 void
 yield_to(task_t from_task, task_t to_task)
 {
-  assert (from_task->state == TASK_RUNNING ||
-          from_task->state == TASK_TRANSITION_TO_WAITING);
+  assert(from_task->state == TASK_TRANSITION_TO_RUNNABLE ||
+         from_task->state == TASK_TRANSITION_TO_WAITING);
   volatile bool flag = ctx_save(from_task->ctx);
   if (flag)
     {
-      if (from_task->state == TASK_RUNNING)
-        from_task->state = TASK_RUNNABLE;
       task_run(to_task);
     }
 }

@@ -6,11 +6,11 @@
 
 #include <ucontext.h>
 
-#include "executor.h"
-#include "processor.h"
-#include "list.h"
-#include "notifier.h"
-#include "task.h"
+#include "libqs/executor.h"
+#include "libqs/processor.h"
+#include "libqs/list.h"
+#include "libqs/notifier.h"
+#include "libqs/task.h"
 
 list_t executors;
 
@@ -19,7 +19,7 @@ void
 switch_to_next_processor(executor_t exec)
 {
   // take a new piece of work.
-  processor_t proc = sync_data_dequeue_runnable(exec->task->sync_data);
+  volatile processor_t proc = sync_data_dequeue_runnable(exec->task->sync_data);
   if (proc != NULL)
     {
       proc->executor = exec;
@@ -27,20 +27,24 @@ switch_to_next_processor(executor_t exec)
 
       // If this task is to finish, it should restore this executors context.
       proc->task->next = exec->task;
-
+      exec->task->state = TASK_TRANSITION_TO_RUNNABLE;
       yield_to(exec->task, proc->task);
 
+      assert(proc->task->state >= TASK_TRANSITION_TO_WAITING);
       // If the came back finished, then remove it from the
       // work list.
       switch (proc->task->state)
         {
-        case TASK_RUNNABLE:
+        case TASK_TRANSITION_TO_RUNNABLE:
+          proc->task->state = TASK_RUNNABLE;
           sync_data_enqueue_runnable(exec->task->sync_data, proc);
           break;
         case TASK_TRANSITION_TO_WAITING:
+          /* fprintf(stderr, "exec: putting proc to sleep\n"); */
           proc->task->state = TASK_WAITING;
           break;
-        case TASK_FINISHED:
+        case TASK_TRANSITION_TO_FINISHED:
+          proc->task->state = TASK_FINISHED;
           proc_free(proc);
           break;
         default:
@@ -94,15 +98,20 @@ join_executor(void* elem, void* user)
   executor_free(exec);
 }
 
+int exec_count = 0;
+
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t
 make_executor(sync_data_t sync_data)
 {
   executor_t exec = malloc(sizeof(struct executor));
+
   exec->task = task_make(sync_data);
   exec->current_proc = NULL;
   exec->done = false;
+  exec->id = exec_count++;
+
   return exec;
 }
 

@@ -3,24 +3,26 @@
 #include <ucontext.h>
 #include <assert.h>
 
-#include "bounded_queue.h"
-#include "closure.h"
-#include "executor.h"
-#include "maybe.h"
-#include "notifier.h"
-#include "processor.h"
-#include "private_queue.h"
-#include "task.h"
+#include "libqs/bounded_queue.h"
+#include "libqs/closure.h"
+#include "libqs/executor.h"
+#include "libqs/maybe.h"
+#include "libqs/notifier.h"
+#include "libqs/processor.h"
+#include "libqs/private_queue.h"
+#include "libqs/task.h"
 
 int global_id = 0;
 
 void
-maybe_yield(processor_t proc, int i)
+maybe_yield(processor_t proc)
 {
   if (time_is_up == 1)
     {
       time_is_up = 0;
-      yield_to(proc->task, proc->executor->task);
+      /* fprintf(stderr, "yielding (from maybe)\n"); */
+      task_set_state(proc->task, TASK_TRANSITION_TO_RUNNABLE);
+      yield_to_executor(proc);
     }
 }
 
@@ -28,7 +30,9 @@ void*
 dequeue_wait_maybe(bounded_queue_t q, processor_t proc)
 {
   void* ptr;
+  /* printf("deq %p wait enter\n", proc); */
   bqueue_dequeue_wait(q, (void**)&ptr, proc);
+  /* printf("deq wait leave\n"); */
   return ptr;
 }
 
@@ -81,9 +85,12 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
 void
 proc_loop(void* ptr)
 {
+  fprintf(stderr, "proc_loop start\n");
   processor_t proc = (processor_t)ptr;
   while (true)
     {
+      maybe_yield(proc);
+
       // Dequeue a private queue from the queue of queues.
       priv_queue_t priv_queue = dequeue_private_queue(proc);
 
@@ -137,14 +144,15 @@ proc_loop(void* ptr)
             }
         }
     }
+  fprintf(stderr, "proc_loop end\n");
 }
 
 
 void
 proc_wake(processor_t proc)
-{
-  assert(proc->task->state == TASK_WAITING);
-  proc->task->state = TASK_RUNNABLE;
+{ 
+  while(task_get_state(proc->task) != TASK_WAITING);
+  task_set_state(proc->task, TASK_RUNNABLE);
   sync_data_enqueue_runnable(proc->task->sync_data, proc);
 }
 

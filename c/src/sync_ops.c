@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "sync_ops.h"
-#include "processor.h"
-#include "task.h"
-#include "queue_impl.h"
+#include "libqs/sync_ops.h"
+#include "libqs/processor.h"
+#include "libqs/task.h"
+#include "libqs/queue_impl.h"
 
 // global sync data
 struct sync_data
@@ -18,37 +18,29 @@ struct sync_data
   volatile uint64_t num_sleepers;
 
   queue_impl_t runnable_queue;
-  volatile uint64_t run_queue_size;
+  volatile uint64_t num_runnable;
   pthread_mutex_t run_mutex;
   pthread_cond_t not_empty;
 };
 
-
-static
-void
-sleep_free(void *item, void *user_data)
-{
-  free(item);
-}
-
 sync_data_t
 sync_data_new(uint32_t max_tasks)
 {
-  sync_data_t result = (sync_data_t)malloc(sizeof(struct sync_data));
+  sync_data_t sync_data = (sync_data_t)malloc(sizeof(struct sync_data));
 
-  result->num_processors = 0;
-  result->max_tasks = max_tasks;
+  sync_data->num_processors = 0;
+  sync_data->max_tasks = max_tasks;
 
-  result->runnable_queue = queue_impl_new(max_tasks);
-  result->run_queue_size = 0;
-  pthread_mutex_init(&result->run_mutex, NULL);
-  pthread_cond_init(&result->not_empty, NULL);
+  sync_data->runnable_queue = queue_impl_new(max_tasks);
+  sync_data->num_runnable = 0;
+  pthread_mutex_init(&sync_data->run_mutex, NULL);
+  pthread_cond_init(&sync_data->not_empty, NULL);
 
-  result->num_sleepers = 0;
+  sync_data->num_sleepers = 0;
 
-  result->sleep_list = queue_impl_new(max_tasks);
+  sync_data->sleep_list = queue_impl_new(max_tasks);
 
-  return result;
+  return sync_data;
 }
 
 void
@@ -79,57 +71,45 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   assert(proc != NULL);
   assert(proc->task != NULL);
   assert(proc->task->state == TASK_RUNNABLE);
-  assert(queue_impl_enqueue(sync_data->runnable_queue, proc));
+  
+  bool success = queue_impl_enqueue(sync_data->runnable_queue, proc);
+  assert(success);
 
-  if (__sync_fetch_and_add(&sync_data->run_queue_size, 1) == 0)
-    {
-      // if this enqueue makes the queue not empty then broadcast
-      pthread_cond_broadcast(&sync_data->not_empty);
-    }
+  __sync_fetch_and_add(&sync_data->num_runnable, 1);
+
+  pthread_cond_broadcast(&sync_data->not_empty);
 }
 
 processor_t
 sync_data_dequeue_runnable(sync_data_t sync_data)
 {
-  if (sync_data->num_processors > 0)
-    {
-      processor_t proc;
+  volatile processor_t proc;
+  proc = NULL;
 
-      if (queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
+  if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
+    {
+      pthread_mutex_lock(&sync_data->run_mutex);
+      while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
+             sync_data->num_processors > 0)
         {
-          __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
-          assert(proc->task->state == TASK_RUNNABLE);
-          assert(proc != NULL);
-          return proc;
+          pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
         }
-      else
-        {
-          pthread_mutex_lock(&sync_data->run_mutex);
-          while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
-                 sync_data->num_processors > 0)
-            {
-              pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
-            }
-          pthread_mutex_unlock(&sync_data->run_mutex);
-        }
-      if (sync_data->num_processors > 0)
-        {
-          assert (proc != NULL);
-          return proc;
-        }
-      else
-        {
-          __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
-          pthread_cond_broadcast(&sync_data->not_empty);
-          return NULL;
-        }
+      pthread_mutex_unlock(&sync_data->run_mutex);
+    }
+
+  if (sync_data->num_processors > 0 &&
+      proc != NULL)
+    {
+      assert(proc->task->state == TASK_RUNNABLE);
+      __sync_fetch_and_sub(&sync_data->num_runnable, 1);
     }
   else
     {
-      __sync_fetch_and_sub(&sync_data->run_queue_size, 1);
-      pthread_cond_broadcast(&sync_data->not_empty);
-      return NULL;
+      proc = NULL;
+      pthread_cond_broadcast(&sync_data->not_empty);    
     }
+
+  return proc;
 }
 
 
@@ -217,4 +197,5 @@ sync_data_get_sleepers(sync_data_t sync_data)
   int n = queue_impl_size(awakened);
 
   __sync_fetch_and_sub(&sync_data->num_sleepers, n);
+  return awakened;
 }

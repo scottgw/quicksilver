@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <tbb/concurrent_queue.h>
 
-#include "queue_impl.h"
+#include "libqs/queue_impl.h"
 
 extern "C"
 {
@@ -87,7 +87,7 @@ extern "C"
           }
       }
 
-    auto filtered = queue_impl_new(unsat_pred.unsafe_size());
+    auto filtered = queue_impl_new(unsat_pred.unsafe_size()+1);
     
     while (unsat_pred.try_pop(elem))
       queue_impl_enqueue(filtered, elem);

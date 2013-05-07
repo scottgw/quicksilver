@@ -16,7 +16,7 @@ void
 bqueue_use(bounded_queue_t q);
 
 bool
-bqueue_enqueue(bounded_queue_t q, void *data);
+bqueue_enqueue(bounded_queue_t q, void *data, processor_t proc);
 
 void
 bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc);
