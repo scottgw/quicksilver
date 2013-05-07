@@ -1,6 +1,7 @@
 # autoconf generated files
 *.m4
-*.in
+Makefile.in
+configure.in
 m4/
 missing
 config.*
