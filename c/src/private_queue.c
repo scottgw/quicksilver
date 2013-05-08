@@ -3,6 +3,7 @@
 
 #include "libqs/bounded_queue.h"
 #include "libqs/closure.h"
+#include "libqs/debug_log.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
 #include "libqs/task.h"
@@ -41,24 +42,28 @@ priv_queue_free(priv_queue_t pq)
 }
 
 void
-priv_queue_shutdown(priv_queue_t pq, processor_t proc, processor_t wait_proc)
+priv_queue_shutdown(priv_queue_t pq,
+                    processor_t supplier,
+                    processor_t client)
 {
-  priv_queue_lock(pq, proc, wait_proc);
-  bqueue_enqueue_wait(pq->q, closure_new_end(), proc);
-  priv_queue_unlock(pq, proc);
+  priv_queue_lock(pq, supplier, client);
+  bqueue_enqueue_wait(pq->q, closure_new_end(), client);
+  priv_queue_unlock(pq, client);
 }
 
 void
-priv_queue_lock(priv_queue_t pq, processor_t proc, processor_t wait_proc)
+priv_queue_lock(priv_queue_t pq,
+                processor_t supplier,
+                processor_t client)
 {
   pq->last_was_func = false;
-  bqueue_enqueue_wait(proc->qoq, pq, wait_proc);
+  bqueue_enqueue_wait(supplier->qoq, pq, client);
 }
 
 void
-priv_queue_unlock(priv_queue_t pq, processor_t proc)
+priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
-  bqueue_enqueue_wait(pq->q, NULL, proc);
+  bqueue_enqueue_wait(pq->q, NULL, client);
 }
 
 
@@ -93,6 +98,7 @@ priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
     }
   else
     {
+      logs("%p enqueueing work\n", wait_proc);
       bqueue_enqueue_wait(pq->q, clos, wait_proc);
     }
 }

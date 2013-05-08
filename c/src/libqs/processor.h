@@ -24,6 +24,7 @@ struct processor
 
   // Processor availability
   bool available;
+  volatile processor_t last_waiter;
   task_mutex_t mutex;
   task_condition_t cv;
 

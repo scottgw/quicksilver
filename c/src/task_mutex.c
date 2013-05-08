@@ -122,7 +122,7 @@ task_mutex_unlock(volatile task_mutex_t mutex, volatile processor_t proc)
       logs("%p found another waiting on mutex %p\n", proc, mutex);
       processor_t other_proc = NULL;
       while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
-      logs("%p is awoken out of mutex %p\n", proc, mutex);
+      logs("%p is awoken out of mutex %p\n", other_proc, mutex);
       // If there's someone in the loop, spin to dequeue them from the
       // wait-queue.
       //

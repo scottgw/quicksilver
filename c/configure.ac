@@ -1,5 +1,8 @@
 AC_INIT([libqs], [1.0], [scott.west@inf.ethz.ch])
-AM_INIT_AUTOMAKE([foreign -Wall])
+
+AM_INIT_AUTOMAKE([foreign silent-rules -Wall])
+AM_SILENT_RULES([yes])
+
 AC_CONFIG_MACRO_DIR([m4])
 LT_INIT
 AC_PROG_CC
