@@ -20,7 +20,7 @@ bqueue_new(uint32_t size)
 
   q->mutex = task_mutex_new();
   q->event = task_condition_new();
-  q->impl = queue_impl_new(size);
+  q->impl  = queue_impl_new(size);
 
   return q;
 }
@@ -40,9 +40,11 @@ bqueue_use(bounded_queue_t q)
   queue_impl_use(q->impl);
 }
 
+// FIXME: unused, remove?
 bool
 bqueue_enqueue(bounded_queue_t q, void *data, processor_t proc)
 {
+  
   if (queue_impl_enqueue(q->impl, data))
     {
       task_mutex_lock(q->mutex, proc);
@@ -56,34 +58,42 @@ bqueue_enqueue(bounded_queue_t q, void *data, processor_t proc)
     }
 }
 
-void
-bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
-{
-  task_mutex_lock(q->mutex, proc);
-  while (!queue_impl_enqueue(q->impl, data))
-    {
-      task_condition_wait(q->event, q->mutex, proc);
-    }
-  task_condition_signal(q->event);
-  task_mutex_unlock(q->mutex, proc);
-}
-
-
+// FIXME: unused, remove?
 bool
 bqueue_dequeue(bounded_queue_t q, void **data)
 {
   return queue_impl_dequeue(q->impl, data);
 }
 
+void
+bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
+{
+  if (!queue_impl_enqueue(q->impl, data))
+    {
+      task_mutex_lock(q->mutex, proc);
+      while (!queue_impl_enqueue(q->impl, data))
+        {
+          task_condition_wait(q->event, q->mutex, proc);
+        }
+      task_mutex_unlock(q->mutex, proc);
+    }
+
+  task_condition_signal(q->event);
+}
+
 
 void
 bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
 {
-  task_mutex_lock(q->mutex, proc);
-  while (!queue_impl_dequeue(q->impl, data))
+  if (!queue_impl_dequeue(q->impl, data))
     {
-      task_condition_wait(q->event, q->mutex, proc);
+      task_mutex_lock(q->mutex, proc);
+      while (!queue_impl_dequeue(q->impl, data))
+        {
+          task_condition_wait(q->event, q->mutex, proc);
+        }
+      task_mutex_unlock(q->mutex, proc);
     }
+  
   task_condition_signal(q->event);
-  task_mutex_unlock(q->mutex, proc);
 }

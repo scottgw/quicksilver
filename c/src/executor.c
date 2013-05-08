@@ -6,6 +6,7 @@
 
 #include <ucontext.h>
 
+#include "libqs/debug_log.h"
 #include "libqs/executor.h"
 #include "libqs/processor.h"
 #include "libqs/list.h"
@@ -22,6 +23,7 @@ switch_to_next_processor(executor_t exec)
   volatile processor_t proc = sync_data_dequeue_runnable(exec->task->sync_data);
   if (proc != NULL)
     {
+      logs("%p is dequeued by executor %p\n", proc, exec);
       proc->executor = exec;
       exec->current_proc = proc;
 
@@ -37,13 +39,15 @@ switch_to_next_processor(executor_t exec)
         {
         case TASK_TRANSITION_TO_RUNNABLE:
           proc->task->state = TASK_RUNNABLE;
+          logs("%p is descheduled by executor %p\n", proc, exec);
           sync_data_enqueue_runnable(exec->task->sync_data, proc);
           break;
         case TASK_TRANSITION_TO_WAITING:
-          /* fprintf(stderr, "exec: putting proc to sleep\n"); */
+          logs("%p is set to wait by executor %p\n", proc, exec);
           proc->task->state = TASK_WAITING;
           break;
         case TASK_TRANSITION_TO_FINISHED:
+          logs("%p is set to finished by executor %p\n", proc, exec);
           proc->task->state = TASK_FINISHED;
           proc_free(proc);
           break;

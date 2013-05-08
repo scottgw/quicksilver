@@ -5,6 +5,7 @@
 
 #include "libqs/bounded_queue.h"
 #include "libqs/closure.h"
+#include "libqs/debug_log.h"
 #include "libqs/executor.h"
 #include "libqs/maybe.h"
 #include "libqs/notifier.h"
@@ -20,50 +21,9 @@ maybe_yield(processor_t proc)
   if (time_is_up == 1)
     {
       time_is_up = 0;
-      /* fprintf(stderr, "yielding (from maybe)\n"); */
       task_set_state(proc->task, TASK_TRANSITION_TO_RUNNABLE);
       yield_to_executor(proc);
     }
-}
-
-void*
-dequeue_wait_maybe(bounded_queue_t q, processor_t proc)
-{
-  void* ptr;
-  /* printf("deq %p wait enter\n", proc); */
-  bqueue_dequeue_wait(q, (void**)&ptr, proc);
-  /* printf("deq wait leave\n"); */
-  return ptr;
-}
-
-void
-enqueue_maybe(bounded_queue_t q, void *ptr, processor_t proc)
-{
-  bqueue_enqueue_wait(q, ptr, proc);
-}
-
-closure_t
-dequeue_closure(bounded_queue_t q, processor_t proc)
-{
-  return (closure_t) dequeue_wait_maybe(q, proc);
-}
-
-void
-enqueue_closure(bounded_queue_t q, closure_t clos, processor_t proc)
-{
-  enqueue_maybe(q, clos, proc);
-}
-
-priv_queue_t
-dequeue_private_queue(processor_t proc)
-{
-  return (priv_queue_t) dequeue_wait_maybe(proc->qoq, proc);
-}
-
-void
-enqueue_private_queue(processor_t proc, priv_queue_t q, processor_t wait_proc)
-{
-  enqueue_maybe(proc->qoq, (void*) q, wait_proc);
 }
 
 static
@@ -85,14 +45,15 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
 void
 proc_loop(void* ptr)
 {
-  fprintf(stderr, "proc_loop start\n");
   processor_t proc = (processor_t)ptr;
+  logs("%p starting\n", proc);
   while (true)
     {
       maybe_yield(proc);
 
       // Dequeue a private queue from the queue of queues.
-      priv_queue_t priv_queue = dequeue_private_queue(proc);
+      priv_queue_t priv_queue;
+      bqueue_dequeue_wait(proc->qoq, (void**)&priv_queue, proc);
 
       if (priv_queue == NULL)
         {
@@ -144,7 +105,6 @@ proc_loop(void* ptr)
             }
         }
     }
-  fprintf(stderr, "proc_loop end\n");
 }
 
 
@@ -189,10 +149,31 @@ make_processor(sync_data_t sync_data)
   return proc;
 }
 
+processor_t
+make_root_processor(sync_data_t sync_data, void (*root)(processor_t))
+{
+  processor_t proc = (processor_t) malloc(sizeof(struct processor));
+  proc->qoq = bqueue_new(25000);
+  proc->task = task_make(sync_data);
+  proc->id = global_id++;
+
+  proc->available = true;
+  proc->mutex = task_mutex_new();
+  proc->cv = task_condition_new();
+
+  reset_stack_to((void (*)(void*)) root, proc);
+
+  sync_data_register_proc(sync_data);
+  sync_data_enqueue_runnable(sync_data, proc);
+
+  return proc;
+}
+
+
 void
 proc_shutdown(processor_t proc, processor_t wait_proc)
 {
-  enqueue_private_queue(proc, NULL, wait_proc);
+  bqueue_enqueue_wait(proc->qoq, NULL, wait_proc);
 }
 
 void

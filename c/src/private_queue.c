@@ -44,7 +44,7 @@ void
 priv_queue_shutdown(priv_queue_t pq, processor_t proc, processor_t wait_proc)
 {
   priv_queue_lock(pq, proc, wait_proc);
-  enqueue_closure(pq->q, closure_new_end(), proc);
+  bqueue_enqueue_wait(pq->q, closure_new_end(), proc);
   priv_queue_unlock(pq, proc);
 }
 
@@ -52,20 +52,22 @@ void
 priv_queue_lock(priv_queue_t pq, processor_t proc, processor_t wait_proc)
 {
   pq->last_was_func = false;
-  enqueue_private_queue(proc, pq, wait_proc);
+  bqueue_enqueue_wait(proc->qoq, pq, wait_proc);
 }
 
 void
 priv_queue_unlock(priv_queue_t pq, processor_t proc)
 {
-  enqueue_closure(pq->q, NULL, proc);
+  bqueue_enqueue_wait(pq->q, NULL, proc);
 }
 
 
 closure_t
 priv_dequeue(priv_queue_t pq, processor_t proc)
 {
-  return dequeue_closure(pq->q, proc);
+  closure_t clos;
+  bqueue_dequeue_wait(pq->q, (void**)&clos, proc);
+  return clos;
 }
 
 
@@ -86,12 +88,12 @@ priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
         {
           // If we couldn't swap this closure in, queue it up.
           closure_free(last);
-          enqueue_closure(pq->q, clos, wait_proc);
+          bqueue_enqueue_wait(pq->q, clos, wait_proc);
         }
     }
   else
     {
-      enqueue_closure(pq->q, clos, wait_proc);  
+      bqueue_enqueue_wait(pq->q, clos, wait_proc);
     }
 }
 

@@ -2,7 +2,8 @@ lib_LTLIBRARIES = libqs.la
 
 libqs_la_SOURCES = executor.c list.c task.c processor.c notifier.c \
 	sync_ops.c task_mutex.c task_condition.c ctx.c bounded_queue.c \
-	closure.c private_queue.c queue_impl.cpp
+	closure.c private_queue.c queue_impl.cpp \
+	debug_log.c libqs/debug_log.h
 
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).
@@ -12,7 +13,7 @@ HEADER_FILES = executor.h list.h task.h processor.h notifier.h \
 
 pkginclude_HEADERS = $(addprefix libqs/, $(HEADER_FILES))
 
-FLAGS = -pthread -U_FORTIFY_SOURC -Wall -Werror
+FLAGS = -pthread -U_FORTIFY_SOURCE -Wall -Werror
 libqs_la_CFLAGS = -std=gnu99 $(FLAGS)
 libqs_la_CXXFLAGS = -std=c++11 $(FLAGS)
 

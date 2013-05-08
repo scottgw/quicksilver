@@ -32,31 +32,16 @@ struct processor
 };
 
 processor_t
-make_processor();
+make_processor(sync_data_t sync_data);
+
+processor_t
+make_root_processor(sync_data_t sync_data, void (*root)(processor_t));
 
 void
 reset_stack_to(void (*)(void*), processor_t);
 
 void
 proc_wake(processor_t proc);
-
-void*
-dequeue_wait_maybe(bounded_queue_t q, processor_t proc);
-
-void
-enqueue_maybe(bounded_queue_t q, void *ptr, processor_t proc);
-
-closure_t
-dequeue_closure(bounded_queue_t q, processor_t proc);
-
-void
-enqueue_closure(bounded_queue_t q, closure_t clos, processor_t proc);
-
-priv_queue_t
-dequeue_private_queue(processor_t proc);
-
-void
-enqueue_private_queue(processor_t proc, priv_queue_t q, processor_t wait_proc);
 
 void
 yield_to_processor(executor_t, processor_t);

@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include "libqs/debug_log.h"
 #include "libqs/processor.h"
-
 #include "libqs/queue_impl.h"
 #include "libqs/task_mutex.h"
 #include "libqs/task_condition.h"
@@ -50,11 +50,15 @@ task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
   volatile processor_t vproc = proc;
   assert(task_mutex_owner(mutex) == vproc);
 
+  logs("%p waiting in cv %p\n", proc, cv);
+
   task_set_state(vproc->task, TASK_TRANSITION_TO_WAITING);
   bool success = queue_impl_enqueue(cv->wait_queue, vproc);
   assert(success);
 
   task_mutex_unlock(mutex, vproc);
+  logs("%p moving to executor in cv %p\n", proc, cv);
   yield_to_executor(vproc);
+  logs("%p resumed in cv %p\n", proc, cv);
   task_mutex_lock(mutex, vproc);
 }
