@@ -18,6 +18,11 @@ typedef struct list* list_t;
 struct bounded_queue;
 typedef struct bounded_queue* bounded_queue_t;
 
+// single supplier/consumer queue declarations
+struct spsc_queue;
+typedef struct spsc_queue* spsc_queue_t;
+
+
 // private queues
 struct priv_queue;
 typedef struct priv_queue* priv_queue_t;

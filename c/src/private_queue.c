@@ -6,11 +6,12 @@
 #include "libqs/debug_log.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
+#include "libqs/spsc_queue.h"
 #include "libqs/task.h"
 
 struct priv_queue
 {
-  bounded_queue_t q;
+  spsc_queue_t q;
   closure_t last;
 
   bool last_was_func;
@@ -23,7 +24,7 @@ priv_queue_new(processor_t proc)
 
   pq->last_was_func = false;
   pq->last = NULL;
-  pq->q = bqueue_new(2048);
+  pq->q = spsc_new(2048);
 
   return pq;
 }
@@ -36,7 +37,7 @@ priv_queue_free(priv_queue_t pq)
       closure_free(pq->last);
     }
 
-  bqueue_free(pq->q);
+  spsc_free(pq->q);
 
   free(pq);
 }
@@ -47,7 +48,7 @@ priv_queue_shutdown(priv_queue_t pq,
                     processor_t client)
 {
   priv_queue_lock(pq, supplier, client);
-  bqueue_enqueue_wait(pq->q, closure_new_end(), client);
+  spsc_enqueue_wait(pq->q, closure_new_end(), client);
   priv_queue_unlock(pq, client);
 }
 
@@ -63,7 +64,7 @@ priv_queue_lock(priv_queue_t pq,
 void
 priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
-  bqueue_enqueue_wait(pq->q, NULL, client);
+  spsc_enqueue_wait(pq->q, NULL, client);
 }
 
 
@@ -71,7 +72,7 @@ closure_t
 priv_dequeue(priv_queue_t pq, processor_t proc)
 {
   closure_t clos;
-  bqueue_dequeue_wait(pq->q, (void**)&clos, proc);
+  spsc_dequeue_wait(pq->q, (void**)&clos, proc);
   return clos;
 }
 
@@ -93,13 +94,13 @@ priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
         {
           // If we couldn't swap this closure in, queue it up.
           closure_free(last);
-          bqueue_enqueue_wait(pq->q, clos, wait_proc);
+          spsc_enqueue_wait(pq->q, clos, wait_proc);
         }
     }
   else
     {
       logs("%p enqueueing work\n", wait_proc);
-      bqueue_enqueue_wait(pq->q, clos, wait_proc);
+      spsc_enqueue_wait(pq->q, clos, wait_proc);
     }
 }
 
