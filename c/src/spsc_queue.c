@@ -42,10 +42,9 @@ spsc_free(spsc_queue_t q)
 void
 spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
 {
-  bool first_try = queue_impl_enqueue(q->impl, data);
   int n = __sync_fetch_and_add(&q->count, 1);
   if (n == -1)
-    {     
+    {
       bool success = queue_impl_enqueue(q->impl, data);
       assert(success);
 
@@ -55,7 +54,7 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
       q->waiter = NULL;
       proc_wake(waiter);
     }
-  else if (!first_try)
+  else if (n == q->max)
     {
       q->waiter = proc;
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
@@ -64,13 +63,18 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
       bool success = queue_impl_enqueue(q->impl, data);
       assert(success);
     }
+  else
+    {
+      while(!queue_impl_enqueue(q->impl, data));
+      /* bool success = queue_impl_enqueue(q->impl, data); */
+      /* assert(success); */
+    }
 }
 
 
 void
 spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
 {
-  bool first_try = queue_impl_dequeue(q->impl, data);
   int n = __sync_fetch_and_sub(&q->count, 1);
   if (n == q->max + 1)
     {
@@ -84,7 +88,7 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
       q->waiter = NULL;
       proc_wake(waiter);
     }
-  else if (!first_try)
+  else if (n == 0)
     {
       q->waiter = proc;
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
@@ -93,5 +97,12 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
       bool success = queue_impl_dequeue(q->impl, data);
       assert(success);
     }
+  else
+    {
+      while(!queue_impl_dequeue(q->impl, data));
+      /* bool success = queue_impl_dequeue(q->impl, data); */
+      /* assert(success); */
+    }
+  
 }
 
