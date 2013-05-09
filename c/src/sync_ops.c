@@ -75,9 +75,11 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   bool success = queue_impl_enqueue(sync_data->runnable_queue, proc);
   assert(success);
 
-  __sync_fetch_and_add(&sync_data->num_runnable, 1);
+  /* __sync_fetch_and_add(&sync_data->num_runnable, 1); */
 
+  pthread_mutex_lock(&sync_data->run_mutex);
   pthread_cond_broadcast(&sync_data->not_empty);
+  pthread_mutex_unlock(&sync_data->run_mutex);
 }
 
 processor_t
@@ -85,6 +87,14 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
 {
   volatile processor_t proc;
   proc = NULL;
+
+  for (int i = 0; i < 1024; i++)
+    {
+      if (queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
+        {
+          return proc;
+        }
+    }
 
   if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
     {
@@ -101,7 +111,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
       proc != NULL)
     {
       assert(proc->task->state == TASK_RUNNABLE);
-      __sync_fetch_and_sub(&sync_data->num_runnable, 1);
+      /* __sync_fetch_and_sub(&sync_data->num_runnable, 1); */
     }
   else
     {

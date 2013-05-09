@@ -100,11 +100,14 @@ closure_apply(closure_t clos, void* res)
       ffi_type **ffi_arg_types = (ffi_type **)clos->arg_types;
       ffi_cif cif;
 
-      assert(ffi_prep_cif(&cif,
-                          FFI_DEFAULT_ABI,
-                          clos->argc,
-                          ffi_res_type,
-                          ffi_arg_types) == FFI_OK);
+      int result = ffi_prep_cif(&cif,
+                                FFI_DEFAULT_ABI,
+                                clos->argc,
+                                ffi_res_type,
+                                ffi_arg_types);
+        
+      assert(result == FFI_OK);
+
       ffi_call(&cif, clos->fn, res, (void**)clos->args);
     }
 }

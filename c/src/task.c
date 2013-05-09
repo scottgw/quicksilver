@@ -91,7 +91,8 @@ void
 task_run(task_t task)
 {
   task->state = TASK_RUNNING;
-  assert(ctx_set(task->ctx) == 0);
+  int result = ctx_set(task->ctx);
+  assert(result == 0);
 }
 
 void
