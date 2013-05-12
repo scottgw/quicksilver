@@ -3,7 +3,7 @@ lib_LTLIBRARIES = libqs.la
 libqs_la_SOURCES = executor.c list.c task.c processor.c notifier.c \
 	sync_ops.c task_mutex.c task_condition.c ctx.c bounded_queue.c \
 	closure.c private_queue.c queue_impl.cpp \
-	debug_log.c libqs/debug_log.h
+	debug_log.cpp libqs/debug_log.h
 
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).

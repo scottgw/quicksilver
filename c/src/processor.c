@@ -32,7 +32,7 @@ notify_available(processor_t proc)
 {
   task_mutex_lock(proc->mutex, proc);
   proc->last_waiter = NULL;
-  logs("%p signaling availablitity\n", proc);
+  logs(2, "%p signaling availability\n", proc);
   task_condition_signal(proc->cv);
   task_mutex_unlock(proc->mutex, proc);
 }
@@ -42,7 +42,7 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
 {
   task_mutex_lock(waitee->mutex, waiter);
   waitee->last_waiter = waiter;
-  logs("%p waiting availablitity of %p\n", waiter, waitee);
+  logs(2, "%p waiting availablitity of %p\n", waiter, waitee);
   while (waitee->last_waiter != waiter)
     {
       task_condition_wait(waitee->cv, waitee->mutex, waiter);
@@ -54,7 +54,7 @@ void
 proc_loop(void* ptr)
 {
   processor_t proc = (processor_t)ptr;
-  logs("%p starting\n", proc);
+  logs(1, "%p starting\n", proc);
   while (true)
     {
       maybe_yield(proc);
@@ -127,7 +127,7 @@ proc_wake(processor_t proc)
 void
 yield_to_executor(processor_t proc)
 {
-  logs("%p yielding to executor %p\n", proc, proc->executor);
+  logs(2, "%p yielding to executor %p\n", proc, proc->executor);
   yield_to(proc->task, proc->executor->task);
 }
 

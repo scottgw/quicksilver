@@ -100,7 +100,7 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
       task_mutex_lock(q->not_full_mutex, proc);
       while (!queue_impl_enqueue(q->impl, data))
         {
-          logs("%p waiting to enqueue in %p\n", proc, q);
+          logs(2, "%p waiting to enqueue in %p\n", proc, q);
           task_condition_wait(q->not_full, q->not_full_mutex, proc);
         }
       task_condition_signal(q->not_full);
@@ -141,7 +141,7 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
       __sync_fetch_and_add(&q->waiters, 1);
       while (!queue_impl_dequeue(q->impl, data))
         {
-          logs("%p waiting to dequeue in %p\n", proc, q);
+          logs(2, "%p waiting to dequeue in %p\n", proc, q);
           task_condition_wait(q->not_empty, q->not_empty_mutex, proc);
         }
       task_condition_signal(q->not_empty);

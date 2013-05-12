@@ -1,7 +1,9 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
+#include "libqs/debug_log.h"
 #include "libqs/sync_ops.h"
 #include "libqs/processor.h"
 #include "libqs/task.h"
@@ -28,6 +30,16 @@ sync_data_new(uint32_t max_tasks)
 {
   sync_data_t sync_data = (sync_data_t)malloc(sizeof(struct sync_data));
 
+  char* libqs_log_str = getenv("LIBQS_LOG");
+  if (libqs_log_str == NULL)
+    {
+      log_setup(0);
+    }
+  else
+    {
+      log_setup(atoi(libqs_log_str));
+    }
+
   sync_data->num_processors = 0;
   sync_data->max_tasks = max_tasks;
 
@@ -51,6 +63,7 @@ sync_data_free(sync_data_t sync_data)
   queue_impl_free(sync_data->runnable_queue);
   queue_impl_free(sync_data->sleep_list);
   free(sync_data);
+  log_write();
 }
 
 void
@@ -78,12 +91,12 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   /* __sync_fetch_and_add(&sync_data->num_runnable, 1); */
 
   pthread_mutex_lock(&sync_data->run_mutex);
-  pthread_cond_broadcast(&sync_data->not_empty);
+  pthread_cond_signal(&sync_data->not_empty);
   pthread_mutex_unlock(&sync_data->run_mutex);
 }
 
 processor_t
-sync_data_dequeue_runnable(sync_data_t sync_data)
+sync_data_dequeue_runnable(sync_data_t sync_data, void* exec)
 {
   volatile processor_t proc;
   proc = NULL;
@@ -98,6 +111,8 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
 
   if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
     {
+      usleep(500);
+      logs(1, "%p runnable dequeue start\n", exec);
       pthread_mutex_lock(&sync_data->run_mutex);
       while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
              sync_data->num_processors > 0)
@@ -105,6 +120,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data)
           pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
         }
       pthread_mutex_unlock(&sync_data->run_mutex);
+      logs(1, "%p runnable dequeue end\n", exec);
     }
 
   if (sync_data->num_processors > 0 &&
@@ -147,7 +163,6 @@ sync_data_num_processors(sync_data_t sync_data)
   return sync_data->num_processors;
 }
 
-
 /* ---------------- */
 /* Sleep operations */
 /* ---------------- */
@@ -178,7 +193,6 @@ sync_data_add_sleeper(sync_data_t sync_data,
 
   assert (success && "Insertion failed");
 }
-
 
 static
 bool

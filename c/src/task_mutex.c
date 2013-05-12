@@ -90,23 +90,23 @@ task_mutex_owner(task_mutex_t mutex)
 void
 task_mutex_lock(volatile task_mutex_t mutex, volatile processor_t proc)
 {
-  logs("%p requests mutex %p\n", proc, mutex);
+  logs(2, "%p requests mutex %p\n", proc, mutex);
 
   if (__atomic_add_fetch(&mutex->count, 1, __ATOMIC_SEQ_CST) > 1)
     {
       // if the owner is already set then we add to the wait list
       // and yield to the executor.
-      logs("%p fails to attain %p\n", proc, mutex);
+      logs(2, "%p fails to attain %p\n", proc, mutex);
       bool success = queue_impl_enqueue(mutex->wait_queue, proc);
       assert(success);
 
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
       yield_to_executor(proc);
-      logs("%p retries mutex %p\n", proc, mutex);
+      logs(2, "%p retries mutex %p\n", proc, mutex);
     }
 
   mutex->owner = proc;
-  logs("%p attains mutex %p\n", proc, mutex);
+  logs(2, "%p attains mutex %p\n", proc, mutex);
 }
 
 void
@@ -115,14 +115,14 @@ task_mutex_unlock(volatile task_mutex_t mutex, volatile processor_t proc)
   assert(mutex->owner == proc);
   assert(mutex->count > 0);
   
-  logs("%p unlocks mutex %p\n", proc, mutex);
+  logs(2, "%p unlocks mutex %p\n", proc, mutex);
 
   if (__atomic_sub_fetch(&mutex->count, 1, __ATOMIC_SEQ_CST) > 0)
     {
-      logs("%p found another waiting on mutex %p\n", proc, mutex);
+      logs(2, "%p found another waiting on mutex %p\n", proc, mutex);
       processor_t other_proc = NULL;
       while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
-      logs("%p is awoken out of mutex %p\n", other_proc, mutex);
+      logs(2, "%p is awoken out of mutex %p\n", other_proc, mutex);
       // If there's someone in the loop, spin to dequeue them from the
       // wait-queue.
       //
