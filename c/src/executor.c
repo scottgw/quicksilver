@@ -4,8 +4,6 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#include <ucontext.h>
-
 #include "libqs/debug_log.h"
 #include "libqs/executor.h"
 #include "libqs/processor.h"
@@ -20,10 +18,12 @@ void
 switch_to_next_processor(executor_t exec)
 {
   // take a new piece of work.
-  volatile processor_t proc = sync_data_dequeue_runnable(exec->task->sync_data);
+
+  volatile processor_t proc = sync_data_dequeue_runnable(exec->task->sync_data, exec);
+
   if (proc != NULL)
     {
-      logs("%p is dequeued by executor %p\n", proc, exec);
+      logs(2, "%p is dequeued by executor %p\n", proc, exec);
       proc->executor = exec;
       exec->current_proc = proc;
 
@@ -39,15 +39,15 @@ switch_to_next_processor(executor_t exec)
         {
         case TASK_TRANSITION_TO_RUNNABLE:
           proc->task->state = TASK_RUNNABLE;
-          logs("%p is descheduled by executor %p\n", proc, exec);
+          logs(2, "%p is descheduled by executor %p\n", proc, exec);
           sync_data_enqueue_runnable(exec->task->sync_data, proc);
           break;
         case TASK_TRANSITION_TO_WAITING:
-          logs("%p is set to wait by executor %p\n", proc, exec);
+          logs(2, "%p is set to wait by executor %p\n", proc, exec);
           proc->task->state = TASK_WAITING;
           break;
         case TASK_TRANSITION_TO_FINISHED:
-          logs("%p is set to finished by executor %p\n", proc, exec);
+          logs(2, "%p is set to finished by executor %p\n", proc, exec);
           proc->task->state = TASK_FINISHED;
           proc_free(proc);
           break;
