@@ -25,13 +25,15 @@ import Language.QuickSilver.TypeCheck.TypedExpr
 preamble :: TClass -> Build (BuildState -> BuildState)
 preamble clas = do
   vt <- vtables
+  debug "Adding consts and string consts"
   declMap <- (liftM2 union) addConstDecls addStringConsts
   let declTrans = updEnv (union declMap)
   return (declTrans .  env vt)
       where
         vtables = (lift . depGenInt . view className) clas >>=
                   either (error . show)  genClassStructs 
-        env classEnv = setCurrent (clasInterface $ untype clas) . setClassEnv classEnv
+        env classEnv =
+          setCurrent (clasInterface $ untype clas) . setClassEnv classEnv
 
 ptr :: Build TypeRef
 ptr = pointerType <$> int8TypeM <*> pure 0

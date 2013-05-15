@@ -11,11 +11,14 @@ import Language.QuickSilver.Util
 
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
+import Language.QuickSilver.Generate.LLVM.Util
 
 import Language.QuickSilver.Generate.Memory.Attribute
 
 featDeclType :: RoutineI -> Build TypeRef
-featDeclType f = join $ (liftM2 funcType) (featResTyp f) (featArgTyps f)
+featDeclType f =
+  do debug (show f)
+     join $ (liftM2 funcType) (featResTyp f) (featArgTyps f)
 
 featResTyp :: RoutineI -> Build TypeRef
 featResTyp = typeOfM . routineResult

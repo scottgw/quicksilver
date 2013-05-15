@@ -3,6 +3,7 @@
 module Language.QuickSilver.Generate.Feature (genRoutines) where
 
 import Control.Applicative ((<$>))
+import Control.Lens
 import Control.Monad
 import Control.Monad.Reader
 
@@ -53,9 +54,6 @@ routineEnv rout func = unions <$> sequence [ routResult rout
 
 lookupLocal :: Text -> Build ValueRef
 lookupLocal = (flip load) "" <=< lookupEnv
-
-firstArgTyp :: TRoutine -> Typ
-firstArgTyp = maybe (error "firstArgTyp") declType . listToMaybe . routineArgs
 
 genBody :: TRoutine -> Build ()
 genBody r =
@@ -109,10 +107,12 @@ preCond = mapM_ clause . contractClauses . routineReq
 
 genRoutine :: TRoutine -> Build ()
 genRoutine rout = do
-  let ClassType cname _ = firstArgTyp rout
+  clas <- currentClass
+  let cname = view className clas
   funcRef <- getNamedFunction (fullNameStr cname (routineName rout))
+  debug "Setting calling convention on function"
   setFunctionCallConv funcRef Fast
-
+  debug "Creating start block"
   routStartBlock rout funcRef
   env <- routineEnv rout funcRef
   debug $ concat [ "Starting to generate "

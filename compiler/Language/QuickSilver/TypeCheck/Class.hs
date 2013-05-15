@@ -41,7 +41,7 @@ clasM :: [AbsClas ctxBody Expr]
          -> Either String TClass
 clasM cs c = runTyping cs c (clas c routineWithBody)
 
-clas :: AbsClas t Expr 
+clas :: AbsClas t Expr
         -> (t -> TypingBody ctxBody body) 
         -> TypingBody ctxBody (AbsClas body T.TExpr)
 clas c rtnBodyCheck = 

@@ -28,6 +28,8 @@ import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 
+-- Generate the class structres and the routine prototypes
+-- so they are available to be looked up later.
 genClassStructs :: [ClasInterface] -> Build ClassEnv
 genClassStructs = opaqueClasses >=> constructClassTypes
 
@@ -43,8 +45,23 @@ opaqueClasses csNormal =
 
 constructClassTypes :: ClassEnv -> Build ClassEnv
 constructClassTypes pcMap = do
-  Traverse.mapM (setClasType pcMap) pcMap
+  Traverse.mapM (setClasTypeAndRoutine pcMap) pcMap
   return pcMap
+
+setClasTypeAndRoutine :: ClassEnv -> ClassInfo -> Build ()
+setClasTypeAndRoutine pcMap ci@(ClassInfo cls t) =
+  do setClasType pcMap ci
+     debug $ concat ["Generating prototypes for ", show cls]
+     mapM_ genRoutineType (view routines cls)
+  where
+    genRoutineType rtn =
+      do fType <- featDeclType rtn
+         let name = fullNameStr (view className cls) (routineName rtn)
+         fPtr <- addFunc name fType
+         debug $ concat [ "Adding routine prototype "
+                        , Text.unpack name ," @ ", show fPtr
+                        ]
+         return fPtr
 
 -- bug here, evaluating the vtable somewhere
 setClasType :: ClassEnv -> ClassInfo -> Build ()
@@ -55,7 +72,9 @@ setClasType pcMap (ClassInfo cls t) =
 
 -- Adding first `Current' argument to functions
 modClas :: ClasInterface -> ClasInterface
-modClas c = classMapRoutines (modFeatureArgs c) c
+modClas c
+  | view isModule c = c
+  | otherwise = classMapRoutines (modFeatureArgs c) c
 
 modFeatureArgs :: AbsClas body expA
                -> AbsRoutine body expB -> AbsRoutine body expB

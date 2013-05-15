@@ -27,14 +27,16 @@ import Language.QuickSilver.Generate.LLVM.Types
 genClass :: TClass -> Bool -> Build ()
 genClass clas isMain = do
   envTransform <- preamble clas 
-  let clas' = classMapRoutines (modFeatureArgs clas) clas
+  let clas'
+        | view isModule clas = clas
+        | otherwise = classMapRoutines (modFeatureArgs clas) clas
   local envTransform (genClass' clas' isMain)
 
 genClass' :: TClass -> Bool -> Build ()
 genClass' clas isMain = do
   debug "Generating Creation routines"
-  genCreates (allCreates clas) 
-  debug "Generating features"
+  genCreates (allCreates clas)
+  debug "Generating routines"
   genRoutines (view routines clas)
   debug "Generating main routine (if required)"
   when isMain (genMain clas)

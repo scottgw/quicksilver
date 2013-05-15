@@ -29,7 +29,7 @@ typeOf e t =
       DoubleType -> doubleTypeM
       CharType -> int8TypeM
       ClassType s _ ->
-          let cInfo = maybe (error $ "couldn't find class " ++ show s ++ " " ++ show e) id
+          let cInfo = maybe (error $ "typeOf: couldn't find class " ++ show s ++ " " ++ show e) id
                       (Map.lookup s e)
           in return $ pointer0 (rtClassStruct cInfo)
 

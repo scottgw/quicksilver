@@ -20,11 +20,12 @@ instance Error ParseError where
     strMsg s = newErrorMessage (Message s) (initialPos "NoFile") 
 
 depGen :: ClassName -> IO (Either ParseError [Clas])
-depGen name = runErrorT $ do
-  anyClassEi <- lift (parseClassFile (classNameFile "any"))
-  case anyClassEi of
-    Left str -> throwError $ strMsg $ "depGen->" ++ show str
-    Right anyClass -> depGen' name [anyClass]
+depGen name = runErrorT $ do depGen' name []
+  -- We don't have ANY
+  -- anyClassEi <- lift (parseClassFile (classNameFile "any"))
+  -- case anyClassEi of
+  --   Left str -> throwError $ strMsg $ "depGen->" ++ show str
+  --   Right anyClass -> depGen' name [anyClass]
 
 depGenInt :: ClassName -> IO (Either ParseError [ClasInterface])
 depGenInt = fmap (fmap (map clasInterface)) . depGen
