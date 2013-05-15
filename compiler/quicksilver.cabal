@@ -42,17 +42,43 @@ Build-type:          Simple
 -- Extra-source-files:  
 
 -- Constraint on the version of Cabal needed to build this package.
-Cabal-version:       >=1.6
+Cabal-version:       >=1.8
 
+
+Executable qs
+  main-is:             Main.hs
+  Hs-Source-Dirs:      exec/
+  Build-depends:       quicksilver,
+                       array,
+                       base >=4 && < 5,
+                       binary,
+                       bytestring,
+                       cmdargs,
+                       deepseq,
+                       derive,
+                       ghc-prim,
+                       hashable,
+                       lens,
+                       llvm-base,
+                       pretty,
+                       parsec,
+                       text,
+                       containers,
+                       mtl,
+                       unordered-containers
 
 Library
   -- Modules exported by the library.
-  Exposed-modules:     Language.QuickSilver.PrettyPrint, 
-                       Language.QuickSilver.Position,
-                       Language.QuickSilver.Syntax,
-                       Language.QuickSilver.Summary,
-                       Language.QuickSilver.Util,
+  Exposed-modules:     Language.QuickSilver.PrettyPrint
+                       Language.QuickSilver.Position
+                       Language.QuickSilver.Syntax
+                       Language.QuickSilver.Summary
+                       Language.QuickSilver.Util
                        Language.QuickSilver.Parser
+                       Language.QuickSilver.Generate.CompilePipeline
+                       Language.QuickSilver.Parser.Lex
+                       Language.QuickSilver.Generate.DepGen
+                       Language.QuickSilver.TypeCheck.Class
   
   -- Packages needed in order to build this package.
   Build-depends:       array,
@@ -64,6 +90,7 @@ Library
                        ghc-prim,
                        hashable,
                        lens,
+                       llvm-base,
                        pretty,
                        parsec,
                        text,
@@ -76,9 +103,30 @@ Library
                        Language.QuickSilver.Parser.Clause,
                        Language.QuickSilver.Parser.Expr,
                        Language.QuickSilver.Parser.Feature,
-                       Language.QuickSilver.Parser.Lex,
                        Language.QuickSilver.Parser.Statement,
                        Language.QuickSilver.Parser.Typ
+                       Language.QuickSilver.Generate.Clas
+                       Language.QuickSilver.Generate.Eval
+                       Language.QuickSilver.Generate.ExtractStrings
+                       Language.QuickSilver.Generate.Feature
+                       Language.QuickSilver.Generate.Preamble
+                       Language.QuickSilver.Generate.Statement
+                       Language.QuickSilver.Generate.Util
+                       Language.QuickSilver.Generate.LLVM.Simple
+                       Language.QuickSilver.Generate.LLVM.Types
+                       Language.QuickSilver.Generate.LLVM.Util
+                       Language.QuickSilver.Generate.LLVM.Values
+                       Language.QuickSilver.Generate.Memory.Attribute
+                       Language.QuickSilver.Generate.Memory.Class
+                       Language.QuickSilver.Generate.Memory.Feature
+                       Language.QuickSilver.Generate.Memory.Type
+                       Language.QuickSilver.TypeCheck.BasicTypes
+                       Language.QuickSilver.TypeCheck.Context
+                       Language.QuickSilver.TypeCheck.Expr
+                       Language.QuickSilver.TypeCheck.Generic
+                       Language.QuickSilver.TypeCheck.TypedExpr
+                       Util.Monad
+
   
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   Build-tools:         alex

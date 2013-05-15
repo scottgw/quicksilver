@@ -1,27 +1,35 @@
 module Language.QuickSilver.Generate.Interface where
 
+import Control.Lens
+
+import Data.Text (unpack)
+
 import Language.QuickSilver.Syntax
+import Language.QuickSilver.Parser (classNameFile)
+import Language.QuickSilver.Util
 
-import Parser.Parser (classNameFile)
 
-extractInterface :: AbsClas body exp -> ClasInterface
-extractInterface c = c {features = map makeFeatureI (features c), invnts = []}
+extractInterface :: AbsClas body Expr -> ClasInterface
+extractInterface c =
+  c { _routines = map makeRoutineI (_routines c)
+    , _invnts   = []
+    }
 
 showInterface :: ClasInterface -> String
 showInterface c = 
     unlines $ concat
-      [["class " ++ className c], [[]]
+      [["class " ++ unpack (view className c)], [[]]
       ,["feature"]
-      ,map show (attributes c), [[]]
-      ,map show (features c)
+      ,map show (view attributes c), [[]]
+      ,map show (view routines c)
       ,["end"]
       ]
 
-reduceToInterfaceStr :: ClasI exp -> String
+reduceToInterfaceStr :: ClasI Expr -> String
 reduceToInterfaceStr = showInterface . extractInterface
 
 interfaceFilename :: ClasInterface -> String
-interfaceFilename ci = classNameFile (className ci) ++ "i"
+interfaceFilename ci = classNameFile (view className ci) ++ "i"
 
 writeInterface :: ClasInterface -> IO ()
 writeInterface ci =
