@@ -71,7 +71,8 @@ expr (Attached typeMb attch asMb) = do
   --TODO: Decide if we have to do any checking between typeMb and attch
   attch' <- typeOfExpr attch
   curr <- current <$> ask
-  flatClas <- getFlat' curr
+  -- FIXME: we don't need the below do we?
+  -- flatClas <- getFlat' curr
   tagPos $ T.Attached typeMb attch' asMb
 
 expr (UnOpExpr op e)

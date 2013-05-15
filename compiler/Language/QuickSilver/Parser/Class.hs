@@ -38,7 +38,8 @@ create = do
 
 absClas :: Parser body -> Parser (AbsClas body Expr)
 absClas routineP = do
-  keyword TokClass
+  isMod <- (keyword TokClass >> return False) <|>
+           (keyword TokModule >> return True)
   name <- identifier
   gen  <- option [] genericsP
   cs   <- many create
@@ -53,6 +54,7 @@ absClas routineP = do
            , _routines   = rts
            , _consts     = cnsts
            , _invnts     = invs
+           , _isModule   = isMod
            }
          )
 

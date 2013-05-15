@@ -30,7 +30,7 @@ import           Util.Monad
 
 data TypeContext body expr = TypeContext {
       interfaces :: Map ClassName (AbsClas body expr),
-      current    :: Typ,
+      current    :: Maybe Typ,
       result     :: Typ,
       variables  :: Map Text Typ,
       pos        :: SourcePos
@@ -109,18 +109,28 @@ throwErrorPos e = do
 
 currentM :: TypingBody body TExpr
 currentM = do
-  t <- current <$> ask
-  tagPos (T.CurrentVar t)
+  currentTypeMb <- current <$> ask
+  case currentTypeMb of
+    Just t -> tagPos (T.CurrentVar t)
+    Nothing ->
+      throwError "Asking for Current in module, Current only exists in classes"
 
-mkCtx :: Typ -> [AbsClas body expr] -> TypeContext body expr
-mkCtx currTyp cs = 
+mkClassCtx :: Typ -> [AbsClas body expr] -> TypeContext body expr
+mkClassCtx currType cs = mkCtx (Just currType) cs
+
+mkModuleCtx = mkCtx Nothing
+
+
+mkCtx :: Maybe Typ -> [AbsClas body expr] -> TypeContext body expr
+mkCtx currTypMb cs = 
     TypeContext 
     { interfaces = clasMap cs
-    , current = currTyp 
+    , current = currTypMb
     , result = error "mkCtx: no Result"
     , variables = Map.empty -- attrMap c
     , pos = error "mkCtx: no position"
     }
+
 
 varCtx :: TypingBodyExpr body expr (Map Text Typ)
 varCtx = fmap variables ask

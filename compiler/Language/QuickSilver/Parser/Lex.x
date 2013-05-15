@@ -137,6 +137,7 @@ tokenMap =
    ,("obsolete", TokObsolete)
    ,("built_in", TokBuiltin)
    ,("class", TokClass)
+   ,("module", TokModule)
    ,("inherit", TokInherit)
    ,("note", TokNote)
    ,("check", TokCheck)
@@ -255,6 +256,7 @@ data Token
     | TokObsolete
     | TokBuiltin
     | TokClass
+    | TokModule
     | TokInherit
     | TokNote
     | TokCheck

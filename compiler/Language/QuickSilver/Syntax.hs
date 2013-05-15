@@ -35,6 +35,7 @@ data AbsClas body exp =
           , _routines   :: [AbsRoutine body exp]
           , _consts     :: [Constant exp]
           , _invnts     :: [Clause exp]
+          , _isModule   :: Bool
           } deriving (Eq, Show)
 
 data Generic = 

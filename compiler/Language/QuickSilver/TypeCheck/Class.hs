@@ -6,8 +6,6 @@ import           Control.Lens
 import           Control.Monad.Reader
 
 import qualified Data.HashMap.Strict as Map
-import qualified Data.Traversable as Trav
-import qualified Data.Text as Text
 import           Data.Text (Text)
 
 import           Language.QuickSilver.Syntax
@@ -31,7 +29,12 @@ runTyping :: [AbsClas ctxBody expr']
              -> AbsClas body expr
              -> TypingBodyExpr ctxBody expr' a
              -> Either String a
-runTyping cs curr m = idErrorRead m (mkCtx (cType curr) cs)
+runTyping cs curr m =
+  idErrorRead m (mkCtx (maybeCurrType curr) cs)
+
+maybeCurrType clas
+  | view isModule clas = Nothing
+  | otherwise = Just (cType clas)
 
 clasM :: [AbsClas ctxBody Expr] 
          -> AbsClas (RoutineBody Expr) Expr 
@@ -83,7 +86,7 @@ cType c =
 
 typedPre :: [ClasInterface] -> ClasInterface 
             -> Text -> Either String (Contract T.TExpr)
-typedPre cis classInt name = idErrorRead go (mkCtx (cType classInt) cis)
+typedPre cis classInt name = idErrorRead go (mkCtx (maybeCurrType classInt) cis)
   where Just rout = findAbsRoutine classInt name 
         go = routineEnv rout
                    (do r <- routine (const (return EmptyBody)) rout
