@@ -28,6 +28,23 @@ import           Language.QuickSilver.TypeCheck.Generic
 
 import           Util.Monad
 
+checkBinOp :: BinOp -> TExpr -> TExpr -> TypingBody body TExpr
+checkBinOp op e1 e2 = 
+    case lookup (op, t1, t2) opList of
+      Just resType -> tagPos (T.BinOpExpr op e1 e2 resType)
+      Nothing -> 
+          throwError $ concat ["checkBinOp: no infix operation for: "
+                              , show (op, t1, t2)
+                              ]
+    where
+      t1 = T.texpr e1
+      t2 = T.texpr e2
+
+      opList =
+          [ ((Add, IntType, IntType), IntType)
+          , ((RelOp Gt NoType, IntType, IntType), BoolType)
+          ]
+
 clause :: Clause Expr -> TypingBody body (Clause TExpr)
 clause (Clause n e) =
   Clause n <$> typeOfExprIs boolType e
@@ -64,7 +81,7 @@ expr (StaticCall typ name args) = do
     Nothing -> 
       throwError (show typ ++ ": does not contain static call " ++ 
                   Text.unpack name)
-    Just feat-> do 
+    Just feat-> do
       args' <- mapM typeOfExpr args
       let argTypes = map declType (routineArgs feat)
       argsConform args' argTypes
@@ -98,31 +115,10 @@ expr (BinOpExpr op e1 e2)
     tagPos (T.EqExpr (T.eqOp op) e1' e2')
   | otherwise = do
     e1' <- typeOfExpr e1
-
-    let
-      attLocals :: Maybe Typ -> T.TExpr -> Maybe Text ->
-                   TypingBody body a -> TypingBody body a
-      attLocals typeMb attch asMb m =
-        let attTyp = fromMaybe (T.texpr attch) typeMb
-        in case asMb of 
-          Just as -> local (addDecls [Decl as attTyp]) m
-          Nothing -> m
-
-      extraLocals :: TypingBody body a -> TypingBody body a
-      extraLocals =
-          case contents e1' of
-            T.Attached typeMb attch asMb -> attLocals typeMb attch asMb
-            T.Call trg "negated" [] _ -> case contents trg of
-              T.Attached typeMb attch asNameMb -> \ m ->
-                do attTypeMb <- maybe (return Nothing) typeOfVar asNameMb
-                   maybe (attLocals typeMb attch asNameMb m) (const m) attTypeMb
-              _ -> id
-            _ -> id
-    flatCls <- getFlat' (T.texpr e1')
-    case findOperator flatCls (opAlias op) 1 of
-      Nothing -> throwError $ 
-        "expr.BinOp.Operator " ++ show op ++ " not found in " ++ show (T.texpr e1')
-      Just feat -> extraLocals (expr $ QualCall e1 (routineName feat) [e2])
+    e2' <- typeOfExpr e2
+    let t1 = T.texpr e1'
+        t2 = T.texpr e2'
+    checkBinOp op e1' e2'
 
 expr (UnqualCall fName args) = do
   qual <- QualCall <$> tagPos CurrentVar 

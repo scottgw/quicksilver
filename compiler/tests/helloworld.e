@@ -4,8 +4,15 @@ import String
 module HelloWorld
 
   main()
+    local
+      i: Integer
     do
-      {Prelude}.print ("Hello World%N")
+      from i := 1
+      until i > 10
+      loop
+        {Prelude}.print ("Hello World%N")
+        i := i + 1
+      end
     end
 
 end

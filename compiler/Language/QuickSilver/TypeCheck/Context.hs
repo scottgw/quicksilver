@@ -96,7 +96,9 @@ getFlat !t =
 getFlat' :: Typ -> TypingBodyExpr body expr (AbsClas body expr)
 getFlat' !t =
   do cfMb <- getFlat t
-     cMb <- (Map.lookup (classNameType t) . interfaces) <$> ask
+     cMb <- if isBasic t
+            then error "getFlat': basic type"
+            else (Map.lookup (classNameType t) . interfaces) <$> ask
      case cfMb <|> cMb of
        Just c -> return c
        Nothing -> error $ "getFlat': couldn't find " ++ show t

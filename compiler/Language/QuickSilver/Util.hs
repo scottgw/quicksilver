@@ -237,7 +237,12 @@ classToType clas =
 
 -- | Whether a type is basic (where basic meaning its an integer, natural, real or boolean).
 isBasic :: Typ -> Bool
-isBasic t = any ($ t) [isBooleanType, isIntegerType, isNaturalType, isRealType, isCharType]
+isBasic t = case t of
+              BoolType -> True
+              IntType -> True
+              CharType -> True
+              DoubleType -> True
+              _ -> False
 
 -- | A list of the number of integer bits (8, 16, ...)
 intBits :: [Integer]

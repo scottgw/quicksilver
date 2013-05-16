@@ -26,7 +26,6 @@ preamble :: TClass -> Build (BuildState -> BuildState)
 preamble clas = do
   vt <- vtables
   debug "Adding consts and string consts"
-  debug ("Class env: " ++ show vt)
   declMap <- (liftM2 union) addConstDecls addStringConsts
   let declTrans = updEnv (union declMap)
   return (declTrans .  env vt)

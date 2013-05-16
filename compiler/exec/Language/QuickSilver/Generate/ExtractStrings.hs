@@ -58,6 +58,7 @@ fromExpr = fromExpr' . contents
 fromExpr' (LitString str) = string (Text.unpack str) >> return ()
 fromExpr' (StaticCall _ _ args _) = mapM_ fromExpr args
 fromExpr' (Call trg _ args _) = fromExpr trg >> mapM_ fromExpr args
+fromExpr' (BinOpExpr _ e1 e2 _) = fromExpr e1 >> fromExpr e2
 fromExpr' (Access trg _ _) = fromExpr trg
 fromExpr' (Var _ _) = return ()
 fromExpr' (Attached _ e _) = fromExpr e
