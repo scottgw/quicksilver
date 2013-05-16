@@ -217,15 +217,15 @@ data Typ = ClassType ClassName [Typ]
          | NoType deriving (Eq, Ord, G.Generic)
 
 instance Hashable Typ where
-  hash t =
+  hashWithSalt salt t =
     case t of
       IntType -> 0
       BoolType -> 1
       DoubleType -> 2
       CharType -> 3
       VoidType -> 4
-      Sep _ _ name -> hash name
-      ClassType name _ -> hash name
+      Sep _ _ name -> hashWithSalt salt name
+      ClassType name _ -> hashWithSalt salt name
 
 data Decl = Decl 
     { declName :: Text,

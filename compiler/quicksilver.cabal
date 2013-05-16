@@ -67,44 +67,9 @@ Executable qs
                        mtl,
                        unordered-containers
 
-Library
-  -- Modules exported by the library.
-  Exposed-modules:     Language.QuickSilver.PrettyPrint
-                       Language.QuickSilver.Position
-                       Language.QuickSilver.Syntax
-                       Language.QuickSilver.Summary
-                       Language.QuickSilver.Util
-                       Language.QuickSilver.Parser
-                       Language.QuickSilver.Generate.CompilePipeline
-                       Language.QuickSilver.Parser.Lex
+  Other-modules:
                        Language.QuickSilver.Generate.DepGen
-                       Language.QuickSilver.TypeCheck.Class
-  
-  -- Packages needed in order to build this package.
-  Build-depends:       array,
-                       base >=4 && < 5,
-                       binary,
-                       bytestring,
-                       deepseq,
-                       derive,
-                       ghc-prim,
-                       hashable,
-                       lens,
-                       llvm-base,
-                       pretty,
-                       parsec,
-                       text,
-                       containers,
-                       mtl,
-                       unordered-containers
-  
-  -- Modules not exported by this package.
-  Other-modules:       Language.QuickSilver.Parser.Class,
-                       Language.QuickSilver.Parser.Clause,
-                       Language.QuickSilver.Parser.Expr,
-                       Language.QuickSilver.Parser.Feature,
-                       Language.QuickSilver.Parser.Statement,
-                       Language.QuickSilver.Parser.Typ
+                       Language.QuickSilver.Generate.CompilePipeline
                        Language.QuickSilver.Generate.Clas
                        Language.QuickSilver.Generate.Eval
                        Language.QuickSilver.Generate.ExtractStrings
@@ -120,11 +85,47 @@ Library
                        Language.QuickSilver.Generate.Memory.Class
                        Language.QuickSilver.Generate.Memory.Feature
                        Language.QuickSilver.Generate.Memory.Type
+
+Library
+  -- Modules exported by the library.
+  Exposed-modules:     Language.QuickSilver.PrettyPrint
+                       Language.QuickSilver.Position
+                       Language.QuickSilver.Syntax
+                       Language.QuickSilver.Summary
+                       Language.QuickSilver.Util
+                       Language.QuickSilver.Parser
+                       Language.QuickSilver.Parser.Lex
+                       Language.QuickSilver.TypeCheck.Class
+                       Language.QuickSilver.TypeCheck.TypedExpr
+  
+  -- Packages needed in order to build this package.
+  Build-depends:       array,
+                       base >=4 && < 5,
+                       binary,
+                       bytestring,
+                       deepseq,
+                       derive,
+                       ghc-prim,
+                       hashable,
+                       lens,    
+                       pretty,
+                       parsec,
+                       text,
+                       containers,
+                       mtl,
+                       unordered-containers
+  
+  -- Modules not exported by this package.
+  Other-modules:       Language.QuickSilver.Parser.Class,
+                       Language.QuickSilver.Parser.Clause,
+                       Language.QuickSilver.Parser.Expr,
+                       Language.QuickSilver.Parser.Feature,
+                       Language.QuickSilver.Parser.Statement,
+                       Language.QuickSilver.Parser.Typ
                        Language.QuickSilver.TypeCheck.BasicTypes
                        Language.QuickSilver.TypeCheck.Context
                        Language.QuickSilver.TypeCheck.Expr
                        Language.QuickSilver.TypeCheck.Generic
-                       Language.QuickSilver.TypeCheck.TypedExpr
                        Util.Monad
 
   

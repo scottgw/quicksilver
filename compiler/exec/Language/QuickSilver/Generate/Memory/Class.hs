@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Memory.Class 
     ( mallocClas
     , getAttribute

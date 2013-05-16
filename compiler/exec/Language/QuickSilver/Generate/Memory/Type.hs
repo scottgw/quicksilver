@@ -34,9 +34,10 @@ genClassStructs :: [ClasInterface] -> Build ClassEnv
 genClassStructs = opaqueClasses >=> constructClassTypes
 
 nameClassInfo :: ClasInterface -> Build (Text, ClassInfo)
-nameClassInfo clsIntr = 
-    let name = view className clsIntr 
-    in (name,) <$> ClassInfo clsIntr <$> structCreateNamed name
+nameClassInfo clsIntr = (name,) <$> ClassInfo clsIntr <$> t    
+    where name = view className clsIntr 
+          t | isSpecialClass clsIntr = mkSpecialClassType name
+            | otherwise              = structCreateNamed name
 
 opaqueClasses :: [ClasInterface] -> Build ClassEnv
 opaqueClasses csNormal =
@@ -51,8 +52,11 @@ constructClassTypes pcMap = do
 setClasTypeAndRoutine :: ClassEnv -> ClassInfo -> Build ()
 setClasTypeAndRoutine pcMap (ClassInfo cls t) =
   local (setClassEnv pcMap) $ do
-    ts <- unClasTable <$> mkClasTable cls
-    structSetBody t ts False
+    -- Non special classes need their struct generated.
+    -- special classes have already been done in 'nameClassInfo'
+    when (not $ isSpecialClass cls) $
+         do ts <- unClasTable <$> mkClasTable cls
+            structSetBody t ts False
     mapM_ genRoutineType (view routines cls)
   where
     genRoutineType rtn =
@@ -63,6 +67,21 @@ setClasTypeAndRoutine pcMap (ClassInfo cls t) =
                         , Text.unpack name ," @ ", show fPtr
                         ]
          return fPtr
+
+isSpecialClass :: ClasInterface -> Bool
+isSpecialClass cls = view className cls `elem` map fst nameAndType
+
+mkSpecialClassType :: Text -> Build TypeRef
+mkSpecialClassType name = 
+    case lookup name nameAndType of
+      Just t -> t
+      Nothing ->
+          error $ "mkSpecialClassType: non special type: " ++ Text.unpack name
+
+nameAndType :: [(Text, Build TypeRef)]
+nameAndType =
+    [("Pointer_8", pointer0 <$> int8TypeM)
+    ]
 
 
 -- Adding first `Current' argument to functions
