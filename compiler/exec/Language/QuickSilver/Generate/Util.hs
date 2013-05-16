@@ -13,7 +13,7 @@ mallocTyp :: TypeRef -> Build ValueRef
 mallocTyp t = do
     sz <- sizeOf t
     pt <- mallocSz sz
-    bitcast pt (pointer0 t) "casting char ptr to typed ptr"
+    bitcast pt t "casting char ptr to typed ptr"
 
 sizeOf :: TypeRef -> Build ValueRef
 sizeOf t = do

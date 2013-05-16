@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Eval (eval, loadEval, evalUnPos, true, int) where
 
+import Control.Applicative
+
 import Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -46,6 +48,16 @@ loadEval e = eval e >>= load'
 
 evalUnPos :: UnPosTExpr -> Build ValueRef
 evalUnPos (Cast t e) = eval e >>= castType t
+evalUnPos (StaticCall moduleType name args retVal) =
+    do debug "evalUnPos: static call"
+       mod <- lookupClas (classNameType moduleType)
+       fn <- getNamedFunction name
+       args' <- mapM loadEval args
+       debugDump fn
+       mapM debugDump args'
+       r <- call' fn args' ("static call: " ++ Text.unpack name)
+       setInstructionCallConv r Fast
+       if retVal /= NoType then simpStore r else return r
 evalUnPos (Call trg fName args retVal) = do
   let (ClassType cName _) = texpr trg
 
@@ -97,15 +109,16 @@ evalUnPos (LitString s) = do
   -- we rely that the strings are stored internally as char8*
   rawStr <- getNamedGlobal (s `Text.append` "_global")
   n <- int (Text.length s)
-  f <- getNamedFunction (featureAsCreate "STRING_8" "make")
+  f <- getNamedFunction (fullNameStr "String" "make_with_pointer")
   charType <- int8TypeM
   rawStrPtr <- bitcast rawStr (pointer0 charType) "char8 cast"
-  debug "Creating string.. hold on!"
   debugDump f
   debugDump rawStrPtr
   debugDump n
-  eiffelString <- call' f [rawStrPtr, n] ("call: string constructor")
-  f' <- getNamedFunction (fullNameStr "STRING_8" "make")
-  call' f' [eiffelString, rawStrPtr, n] "call: string make"
-  simpStore eiffelString
+  debug "Creating string.. hold on!"
+  strPtr <- unClasRef <$> mallocClas "String"
+ --  str <- load strPtr "loading created string"
+  -- debugDump str
+  call' f [strPtr, n, rawStrPtr] ("call: string constructor")
+  simpStore strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e

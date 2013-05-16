@@ -50,11 +50,18 @@ genMain clas = do
 
   call "GC_init" []
 
-  curr <- unClasRef <$> mallocClas (view className clas)
   norm <- appendBasicBlock fRef "normal"
   lpad <- appendBasicBlock fRef "landing pad"
-  f <- getNamedFunction (fullNameStr (view className clas) "make")
-  r <- invoke' f [curr] norm lpad "make"
+  let mainName -- | view isModule clas = "main"
+               -- | otherwise
+                   = fullNameStr (view className clas) "main"
+  mainArg <- if view isModule clas
+             then return []
+             else 
+                 do curr <- unClasRef <$> mallocClas (view className clas)
+                    return [curr]
+  f <- getNamedFunction mainName
+  r <- invoke' f mainArg norm lpad "make"
   setInstructionCallConv r Fast
 
   positionAtEnd lpad

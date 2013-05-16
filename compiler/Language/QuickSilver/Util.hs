@@ -80,13 +80,19 @@ classMapExprs routineF clauseF constF c =
 -- * Interface construction
 
 -- | Strip the bodies from all features.
-clasInterface :: AbsClas body Expr -> ClasInterface
+clasInterface :: AbsClas (RoutineBody expr) Expr -> ClasInterface
 clasInterface = over (routines.traverse) makeRoutineI
 
 -- | Strip the bodies and rescue clause from a routine.
-makeRoutineI :: AbsRoutine body Expr -> RoutineI
-makeRoutineI f = f { routineImpl = EmptyBody 
-                   , routineRescue = Nothing}
+makeRoutineI :: AbsRoutine (RoutineBody expr) Expr -> RoutineI
+makeRoutineI rtn = 
+    rtn { routineImpl = empty
+        , routineRescue = Nothing
+        }
+    where
+      empty = case routineImpl rtn of
+                RoutineExternal name body -> EmptyExternal name body
+                _ -> EmptyBody
 
 -- * Map construction
 
@@ -172,6 +178,12 @@ routineDecls r =
   case routineImpl r of
     RoutineExternal _ _ -> []
     body -> routineLocal body
+
+routineIsExternal :: AbsRoutine (RoutineBody exp) exp -> Bool
+routineIsExternal rtn =
+    case routineImpl rtn of
+      RoutineExternal _ _ -> True
+      _ -> False
 
 -- Operator utilities
 
@@ -307,7 +319,7 @@ charType = CharType
 
 -- | The default string type.
 stringType :: Typ
-stringType = namedType "STRING_8"
+stringType = namedType "String"
 
 -- | The top type, ANY.
 anyType :: Typ

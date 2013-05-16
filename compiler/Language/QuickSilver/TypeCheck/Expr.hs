@@ -57,16 +57,19 @@ expr (LitString s) = tagPos (T.LitString s)
 expr (LitChar c)   = tagPos (T.LitChar c)
 expr CurrentVar    = currentM
 expr ResultVar     = join (tagPos <$> T.ResultVar <$> result <$> ask)
+
 expr (StaticCall typ name args) = do
   flatClas <- getFlat' typ
   case findAbsRoutine flatClas name of
     Nothing -> 
-      throwError (show typ ++ ": does not contain static call " ++ Text.unpack name)
+      throwError (show typ ++ ": does not contain static call " ++ 
+                  Text.unpack name)
     Just feat-> do 
       args' <- mapM typeOfExpr args
       let argTypes = map declType (routineArgs feat)
       argsConform args' argTypes
       tagPos (T.StaticCall typ name args' (routineResult feat))
+
 expr (Attached typeMb attch asMb) = do
   --TODO: Decide if we have to do any checking between typeMb and attch
   attch' <- typeOfExpr attch
@@ -126,15 +129,15 @@ expr (UnqualCall fName args) = do
                    <*> pure fName 
                    <*> pure args
   expr qual
-  
+
 expr (QualCall trg name args) = do
   trg' <- typeOfExpr trg
-  args' <- mapM typeOfExpr args
   let targetType = T.texpr trg'
+  args' <- mapM typeOfExpr args
   flatCls  <- getFlat' targetType
-  
+
   case findAbsRoutine flatCls name of
-    Nothing -> throwError $ "expr.QualCall: " ++ show trg' ++ ": " ++ Text.unpack name ++ show args' ++ show (map (routineName) $ view routines flatCls)
+    Nothing -> throwError $ "expr.QualCall: " ++ show trg ++ ": " ++ Text.unpack name ++ show args' ++ show (map (routineName) $ view routines flatCls)
     Just feat -> do
       let formArgs = map declType (routineArgs feat)
           res = routineResult feat
@@ -200,4 +203,5 @@ argsConform :: [TExpr]       -- ^ List of typed expressions
                -> TypingBody body ()
 argsConform args formArgs 
     | map T.texpr args == formArgs = return ()
-    | otherwise = throwError "Differing number of args"
+    | otherwise = 
+        throwError $ "Differing number of args: " ++ show (args, formArgs)

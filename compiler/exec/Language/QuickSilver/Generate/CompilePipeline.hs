@@ -35,19 +35,32 @@ generateLL debug outFile genMain =
   ask >>= lift . generate debug outFile genMain
 
 dataLayout32 = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32"
-dataLayout64 = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
+dataLayout64 = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
+
+targetTriple32 = "x86-pc-linux-gnu"
+targetTriple64 = "x86_64-pc-linux-gnu"
+
+-- "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
 dataLayout = if wORD_SIZE_IN_BITS == 32
              then dataLayout32
              else dataLayout64
 
+targetTriple = if wORD_SIZE_IN_BITS == 32
+              then targetTriple32
+              else targetTriple64
+
+setLayoutAndTriple modul =
+    do withCString dataLayout (setDataLayout modul)
+       withCString targetTriple (setTarget modul)
 
 generateObject :: Bool -> String -> Bool -> TClass -> IO ()
 generateObject debug outFile genMain clas = do
   when debug $ putStrLn "Compiling to object code"
   passMan <- createPassManager
   modul <- generateModule debug genMain clas
-  withCString dataLayout (setDataLayout modul)
+
+  setLayoutAndTriple modul
 
   withCString outFile (addEmitObjectPass modul)
   -- runPassManager passMan modul
@@ -58,7 +71,9 @@ generate :: Bool -> String -> Bool -> TClass -> IO ()
 generate debug outFile genMain clas = do
   when debug $ putStrLn "Compiling to bytecode"
   modul <- generateModule debug genMain clas
-  withCString dataLayout (setDataLayout modul)
+
+  setLayoutAndTriple modul
+
   _ <- writeModuleToFile modul outFile
   return ()
 

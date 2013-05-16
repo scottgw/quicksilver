@@ -45,28 +45,41 @@ opaqueClasses csNormal =
   in Map.fromList <$> mapM nameClassInfo cs
 
 constructClassTypes :: ClassEnv -> Build ClassEnv
-constructClassTypes pcMap = do
-  Traverse.mapM (setClasTypeAndRoutine pcMap) pcMap
-  return pcMap
+constructClassTypes pcMap =
+  do pcMap' <- Traverse.mapM (setClasType pcMap) pcMap
+     Traverse.mapM (setupRoutines pcMap') pcMap'
+     return pcMap'
 
-setClasTypeAndRoutine :: ClassEnv -> ClassInfo -> Build ()
-setClasTypeAndRoutine pcMap (ClassInfo cls t) =
+
+setupRoutines :: ClassEnv -> ClassInfo -> Build ()
+setupRoutines pcMap (ClassInfo cls t) = 
+    local (setClassEnv pcMap) $ mapM_ genRoutineType (view routines cls)    
+    where
+      genRoutineType rtn =
+          do fType <- featDeclType rtn
+             let name =
+                     case routineImpl rtn of
+                       EmptyExternal name _ -> name
+                       _ ->
+                           fullNameStr (view className cls) (routineName rtn)
+             fPtr <- addFunc name fType
+             debug $ concat [ "Adding routine prototype "
+                            , Text.unpack name ," @ ", show fPtr
+                            ]
+             return fPtr
+
+setClasType :: ClassEnv -> ClassInfo -> Build ClassInfo
+setClasType pcMap (ClassInfo cls t) =
   local (setClassEnv pcMap) $ do
     -- Non special classes need their struct generated.
     -- special classes have already been done in 'nameClassInfo'
-    when (not $ isSpecialClass cls) $
-         do ts <- unClasTable <$> mkClasTable cls
-            structSetBody t ts False
-    mapM_ genRoutineType (view routines cls)
-  where
-    genRoutineType rtn =
-      do fType <- featDeclType rtn
-         let name = fullNameStr (view className cls) (routineName rtn)
-         fPtr <- addFunc name fType
-         debug $ concat [ "Adding routine prototype "
-                        , Text.unpack name ," @ ", show fPtr
-                        ]
-         return fPtr
+    t' <- if (not $ isSpecialClass cls) 
+          then
+            do ts <- unClasTable <$> mkClasTable cls
+               structSetBody t ts False
+               return (pointer0 t)
+          else return t
+    return (ClassInfo cls t')
 
 isSpecialClass :: ClasInterface -> Bool
 isSpecialClass cls = view className cls `elem` map fst nameAndType

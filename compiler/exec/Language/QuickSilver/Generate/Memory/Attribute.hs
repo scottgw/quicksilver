@@ -31,7 +31,7 @@ typeOf e t =
       ClassType s _ ->
           let cInfo = maybe (error $ "typeOf: couldn't find class " ++ show s ++ " " ++ show e) id
                       (Map.lookup s e)
-          in return $ pointer0 (rtClassStruct cInfo)
+          in return $ rtClassStruct cInfo
 
 typeOfM :: Typ -> Build TypeRef
 typeOfM t = askClassEnv >>= \env -> typeOf env t

@@ -57,7 +57,9 @@ type RoutineI = AbsRoutine EmptyBody Expr
 type RoutineWithBody exp = AbsRoutine (RoutineBody exp) exp
 type Routine = RoutineWithBody Expr
 
-data EmptyBody = EmptyBody deriving (Show, Eq, Ord)
+data EmptyBody = EmptyBody
+               | EmptyExternal Text (Maybe Text)
+                 deriving (Show, Eq, Ord)
 
 data Contract exp = 
   Contract { contractInherited :: Bool 
@@ -255,6 +257,7 @@ instance Show Typ where
     show IntType       = "Integer_64"
     show CharType      = "Character_8"
     show DoubleType    = "Real_64"
+    show BoolType      = "Boolean"
     show (ClassType s gs) = show s ++ show gs
     show (TupleType typesDecls) = "TUPLE " ++ show typesDecls
 

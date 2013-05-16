@@ -360,22 +360,24 @@ blockStringLex _ _ = do
                  else go (Text.cons c str) MidLine input
 
 processString :: Text -> Token
-processString str = String str -- -- $ either reverse reverse $ foldl go (Right "") str
-  -- where go (Right acc) '%' = Left acc
-  --       go (Right acc) c = Right (c:acc)
-  --       go (Left acc) c = Right (x:acc)
-  --         where x = case c of
-  --                 'N' -> '\n'
-  --                 '"' -> '"'
-  --                 '%' -> '%'
-  --                 'T' -> '\t'
-  --                 'R' -> '\r'
-  --                 '\n' -> ' '
-  --                 'c' -> '^'
-  --                 o -> error ("processString: didn't catch '" ++ 
-  --                             [o] ++ 
-  --                             "' in " ++
-  --                             str)
+processString str = String $ either 
+              Text.reverse 
+              Text.reverse $ Text.foldl go (Right "") str
+   where go (Right acc) '%' = Left acc
+         go (Right acc) c = Right (c `Text.cons` acc)
+         go (Left acc) c = Right (x `Text.cons` acc)
+           where x = case c of
+                   'N' -> '\n'
+                   '"' -> '"'
+                   '%' -> '%'
+                   'T' -> '\t'
+                   'R' -> '\r'
+                   '\n' -> ' '
+                   'c' -> '^'
+                   o -> error ("processString: didn't catch '" ++ 
+                               [o] ++ 
+                               "' in " ++
+                               Text.unpack str)
 
 alexPosnToPos (AlexPn _ line col) = 
   newPos "FIXME: Lex.hs, no file"

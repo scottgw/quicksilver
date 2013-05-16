@@ -26,7 +26,7 @@ featMap = Map.unions $
           ] ++ 
           map arrayFunctions [real64ArrayDesc, charArrayDesc]
 createMap = Map.unions $
-            [Array.arrayCreatMap
+            [ Array.arrayCreatMap
             , Pointer.creatMap
             , Stdio.createMap
             ] ++ 

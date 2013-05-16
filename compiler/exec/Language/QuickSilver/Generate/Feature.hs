@@ -41,16 +41,24 @@ genDecls r =
 
 allocP :: ValueRef -> Decl -> Int -> Build Env
 allocP fRef d i = do
+  debug "Routine: allocating decl for arg"
   vr <- allocDecl d
-  store (getParam fRef i) vr >> return (singleEnv d vr)
+  debug "Routine: storing parameter from function ref"
+  debugDump fRef
+  store (getParam fRef i) vr
+  debug "Routine: returning new env"
+  return (singleEnv d vr)
 
 allocPs :: ValueRef -> [Decl] -> Build Env
 allocPs fRef ds = unions `fmap` zipWithM (allocP fRef) ds [0..]
 
 routineEnv :: TRoutine -> ValueRef -> Build Env
-routineEnv rout func = unions <$> sequence [ routResult rout
-                                           , genDecls rout
-                                           , allocPs func (routineArgs rout)]
+routineEnv rout func = 
+    unions <$> sequence [ debug "Routine: generating result" >> routResult rout
+                        , debug "Routine: generating decls" >> genDecls rout
+                        , debug "Routine: genrating args" >>
+                                allocPs func (routineArgs rout)
+                        ]
 
 lookupLocal :: Text -> Build ValueRef
 lookupLocal = (flip load) "" <=< lookupEnv
@@ -58,9 +66,9 @@ lookupLocal = (flip load) "" <=< lookupEnv
 genBody :: TRoutine -> Build ()
 genBody r =
   case routineImpl r of
-    RoutineBody _ _ body        -> genStmt (contents body)
+    RoutineBody _ _ body -> genStmt (contents body)
 --    RoutineExternal "built_in" _ -> genBuiltin r
-    b                           -> error ("genBody: " ++ show b)
+    RoutineExternal name _ -> return ()
 
 start :: TRoutine -> Build ()
 start r = getInsertBlock >>= positionAtEnd >> genBody r
@@ -106,6 +114,7 @@ preCond :: TRoutine -> Build ()
 preCond = mapM_ clause . contractClauses . routineReq
 
 genRoutine :: TRoutine -> Build ()
+genRoutine rout | routineIsExternal rout = return ()
 genRoutine rout = do
   clas <- currentClass
   let cname = view className clas
@@ -114,6 +123,7 @@ genRoutine rout = do
   setFunctionCallConv funcRef Fast
   debug "Creating start block"
   routStartBlock rout funcRef
+  debug "Routine: generating environment"
   env <- routineEnv rout funcRef
   debug $ concat [ "Starting to generate "
                  , Text.unpack (routineName rout)

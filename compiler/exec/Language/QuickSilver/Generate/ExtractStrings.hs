@@ -56,6 +56,7 @@ fromStmt' (PrintD _) = return ()
 fromExpr = fromExpr' . contents
 
 fromExpr' (LitString str) = string (Text.unpack str) >> return ()
+fromExpr' (StaticCall _ _ args _) = mapM_ fromExpr args
 fromExpr' (Call trg _ args _) = fromExpr trg >> mapM_ fromExpr args
 fromExpr' (Access trg _ _) = fromExpr trg
 fromExpr' (Var _ _) = return ()
