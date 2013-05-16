@@ -49,10 +49,11 @@ constructClassTypes pcMap = do
   return pcMap
 
 setClasTypeAndRoutine :: ClassEnv -> ClassInfo -> Build ()
-setClasTypeAndRoutine pcMap ci@(ClassInfo cls t) =
-  do setClasType pcMap ci
-     debug $ concat ["Generating prototypes for ", show cls]
-     mapM_ genRoutineType (view routines cls)
+setClasTypeAndRoutine pcMap (ClassInfo cls t) =
+  local (setClassEnv pcMap) $ do
+    ts <- unClasTable <$> mkClasTable cls
+    structSetBody t ts False
+    mapM_ genRoutineType (view routines cls)
   where
     genRoutineType rtn =
       do fType <- featDeclType rtn
@@ -63,12 +64,6 @@ setClasTypeAndRoutine pcMap ci@(ClassInfo cls t) =
                         ]
          return fPtr
 
--- bug here, evaluating the vtable somewhere
-setClasType :: ClassEnv -> ClassInfo -> Build ()
-setClasType pcMap (ClassInfo cls t) =
-  local (setClassEnv pcMap) $ do
-    ts <- unClasTable <$> mkClasTable cls
-    structSetBody t ts False
 
 -- Adding first `Current' argument to functions
 modClas :: ClasInterface -> ClasInterface

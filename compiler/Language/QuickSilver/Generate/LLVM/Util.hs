@@ -89,13 +89,13 @@ type Build a = ReaderT BuildState IO a
 
 debug :: String -> Build ()
 debug str = do
-  debug <- bsDebug <$> ask
-  when debug $ lift $ putStrLn str
+  debg <- bsDebug <$> ask
+  when debg $ lift $ putStrLn str
 
 debugDump :: ValueRef -> Build ()
 debugDump valRef = do
-  debug <- bsDebug <$> ask
-  when debug $ lift $ L.dumpValue valRef
+  debg <- bsDebug <$> ask
+  when debg $ lift $ L.dumpValue valRef
 
 withPtrArray :: Storable a => [a] -> (Ptr a -> IO b) -> IO b
 withPtrArray as f = do
@@ -133,7 +133,7 @@ writeModuleToFile :: ModuleRef -> String -> IO Bool
 writeModuleToFile = (flip withCString) . L.writeBitcodeToFile
 
 runBuild :: Bool -> Text -> Build a -> IO a
-runBuild debug moduleName b = do
+runBuild debg moduleName b = do
   context <- L.contextCreate
   builder <- L.createBuilderInContext context
   modul   <- withCString (Text.unpack moduleName)
@@ -147,7 +147,7 @@ runBuild debug moduleName b = do
                 , bsRoutine  = error "Current routine not set"
                 , bsEnv      = Map.empty
                 , bsClassEnv = Map.empty
-                , bsDebug    = debug
+                , bsDebug    = debg
                 }
                )
 

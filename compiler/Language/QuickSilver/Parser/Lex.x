@@ -138,6 +138,7 @@ tokenMap =
    ,("built_in", TokBuiltin)
    ,("class", TokClass)
    ,("module", TokModule)
+   ,("import", TokImport)
    ,("inherit", TokInherit)
    ,("note", TokNote)
    ,("check", TokCheck)
@@ -257,6 +258,7 @@ data Token
     | TokBuiltin
     | TokClass
     | TokModule
+    | TokImport
     | TokInherit
     | TokNote
     | TokCheck

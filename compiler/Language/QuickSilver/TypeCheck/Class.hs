@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Language.QuickSilver.TypeCheck.Class 
        (clas, clasM, typeInterfaces, typedPre, runTyping) where
 
@@ -32,9 +33,9 @@ runTyping :: [AbsClas ctxBody expr']
 runTyping cs curr m =
   idErrorRead m (mkCtx (maybeCurrType curr) cs)
 
-maybeCurrType clas
-  | view isModule clas = Nothing
-  | otherwise = Just (cType clas)
+maybeCurrType cls
+  | view isModule cls = Nothing
+  | otherwise = Just (cType cls)
 
 clasM :: [AbsClas ctxBody Expr] 
          -> AbsClas (RoutineBody Expr) Expr 
@@ -60,7 +61,7 @@ clas c rtnBodyCheck =
                    ,_invnts = invs
                    }
       where
-        check lens f = mapMOf traverse f (view lens c)
+        check lenss f = mapMOf traverse f (view lenss c)
 
 typeInterfaces :: [ClasInterface] -> 
                   IO (Either String [AbsClas EmptyBody T.TExpr])
@@ -80,7 +81,7 @@ interface :: AbsClas EmptyBody Expr
 interface curr = clas curr return
 
 cType :: AbsClas body exp -> Typ
-cType c =
+cType !c =
   ClassType (view className c) 
             (map (\ g -> ClassType (genericName g) []) (view generics c))
 

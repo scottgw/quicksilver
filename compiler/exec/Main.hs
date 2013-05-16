@@ -54,17 +54,18 @@ clasFile :: Clas -> String
 clasFile = (++ ".bc") . map toLower . Text.unpack . view className
 
 compile :: String -> Bool -> Bool -> Bool -> Clas -> IO ()
-compile outFile debug genMain runMain clas = do
+compile outFile debug genMain runMain cls = do
     let outFile' = case outFile of
-                    "" -> clasFile clas
+                    "" -> clasFile cls
                     str -> str
 
     when debug $ putStrLn "Generating dependency interfaces"
-    envsE <- depGenInt (view className clas)
+    envsE <- depGenInt (view className cls)
+    when debug $ print envsE
     case envsE of
       Left e -> putStrLn "Dependency Error:" >> error (show e)
       Right envs ->
-          case clasM envs clas of
+          case clasM envs cls of
             Left  e -> putStrLn "TypeChecking Error:" >> error e
             Right c -> 
                 if not runMain

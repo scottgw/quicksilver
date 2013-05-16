@@ -22,13 +22,17 @@ import           Language.QuickSilver.Position
 
 type Map = HashMap
 
+newtype Import = Import Text
+               deriving (Eq, Show)
+
 type Clas = ClasBody Expr
 type ClasBody exp = AbsClas (RoutineBody exp) exp
 type ClasInterface = AbsClas EmptyBody Expr
 type ClasI exp = AbsClas (RoutineBody exp) exp
 
 data AbsClas body exp =
-  AbsClas { _className  :: ClassName
+  AbsClas { _imports    :: [Import]
+          , _className  :: ClassName
           , _generics   :: [Generic]
           , _creates    :: [CreateClause]
           , _attributes :: [Attribute]
@@ -164,7 +168,7 @@ defaultCreate :: Text
 defaultCreate = "default_create"
 
 instance Show UnPosExpr where
-    show (UnqualCall s args) = show s ++ argsShow args
+    show (UnqualCall s args) = "(unqual)" ++ show s ++ argsShow args
     show (QualCall t s args) = show t ++ "." ++ show s ++ argsShow args
     show (Lookup t args) = show t ++ "[" ++ commaSepShow args ++ "]"
     show (PrecursorCall t args) = "Precursor " ++ show t ++  argsShow args
@@ -212,7 +216,16 @@ data Typ = ClassType ClassName [Typ]
          | VoidType
          | NoType deriving (Eq, Ord, G.Generic)
 
-instance Hashable Typ
+instance Hashable Typ where
+  hash t =
+    case t of
+      IntType -> 0
+      BoolType -> 1
+      DoubleType -> 2
+      CharType -> 3
+      VoidType -> 4
+      Sep _ _ name -> hash name
+      ClassType name _ -> hash name
 
 data Decl = Decl 
     { declName :: Text,
@@ -233,13 +246,15 @@ instance Show Proc where
     show Dot = "<.>"
     show p = show $ unProcGen p
 
-
 instance Show Typ where
     show (Sep c ps t)  = concat [ "separate <", show c, ">"
                                 , show (map unProcGen ps)," ",show t
                                 ]
     show NoType        = "notype"
     show VoidType      = "NONE"
+    show IntType       = "Integer_64"
+    show CharType      = "Character_8"
+    show DoubleType    = "Real_64"
     show (ClassType s gs) = show s ++ show gs
     show (TupleType typesDecls) = "TUPLE " ++ show typesDecls
 
@@ -321,6 +336,7 @@ instance Binary Text where
   put = put . Text.encodeUtf8
   get = fmap Text.decodeUtf8 get
 
+$( derive makeBinary ''Import )
 $( derive makeBinary ''Typ )
 $( derive makeBinary ''UnPosExpr )
 $( derive makeBinary ''BinOp )
@@ -348,7 +364,7 @@ $( derive makeBinary ''Clause )
 $( derive makeBinary ''CreateClause )
 $( derive makeBinary ''AbsClas )
 
-
+$( derive makeNFData ''Import )
 $( derive makeNFData ''Typ )
 $( derive makeNFData ''UnPosExpr )
 $( derive makeNFData ''BinOp )

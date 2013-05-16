@@ -14,13 +14,26 @@ classTyp :: Parser Typ
 classTyp = do
   i  <- identifier
   let i' = case i of
-        "INTEGER" -> "INTEGER_32"
-        "CHARACTER" -> "CHARACTER_8"
-        "REAL" -> "REAL_32"
         "STRING" -> "STRING_8"
         x -> x
   gs <- option [] (squares (typ `sepBy1` comma))
   return (ClassType i' gs)
+
+basicType :: Parser Typ
+basicType = choice $ map tyFunc nameAndType
+  where
+    nameAndType :: [(Text, Typ)]
+    nameAndType = 
+      [ ("Character", CharType)
+      , ("Character_8", CharType)
+      , ("Integer", IntType)
+      , ("Real", DoubleType)
+      , ("Boolean", BoolType)
+      ]
+
+    tyFunc :: (Text, Typ) -> Parser Typ
+    tyFunc (name, ty) = identifierNamed name >> return ty
+       
 
 tupleTyp :: Parser Typ
 tupleTyp = do
@@ -41,7 +54,7 @@ typ :: Parser Typ
 typ = detTyp <|> attTyp <|> sepTyp <|> baseTyp
 
 baseTyp :: Parser Typ
-baseTyp = tupleTyp <|> classTyp
+baseTyp = basicType <|> tupleTyp <|> classTyp
 
 sepTyp :: Parser Typ
 sepTyp = do

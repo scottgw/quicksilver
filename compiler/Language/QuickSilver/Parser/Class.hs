@@ -36,8 +36,13 @@ create = do
   names <- identifier `sepBy` comma
   return (CreateClause exports names)
 
+importt =
+  do keyword TokImport
+     Import <$> identifier
+
 absClas :: Parser body -> Parser (AbsClas body Expr)
 absClas routineP = do
+  impts <- many importt
   isMod <- (keyword TokClass >> return False) <|>
            (keyword TokModule >> return True)
   name <- identifier
@@ -47,7 +52,8 @@ absClas routineP = do
   invs <- option [] invariants
   keyword TokEnd
   return ( AbsClas 
-           { _className  = name
+           { _imports    = impts
+           , _className  = name
            , _generics   = gen 
            , _creates    = cs
            , _attributes = attrs

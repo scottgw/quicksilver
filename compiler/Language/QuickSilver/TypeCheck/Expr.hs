@@ -8,7 +8,7 @@ module Language.QuickSilver.TypeCheck.Expr
        (typeOfExpr, typeOfExprIs, clause) where
 
 import           Control.Applicative
-import           Control.Lens
+import           Control.Lens hiding (op)
 import           Control.Monad.Error
 import           Control.Monad.Reader
 
@@ -127,10 +127,9 @@ expr (UnqualCall fName args) = do
                    <*> pure args
   expr qual
   
-expr (QualCall trg name args) = do 
+expr (QualCall trg name args) = do
   trg' <- typeOfExpr trg
   args' <- mapM typeOfExpr args
-
   let targetType = T.texpr trg'
   flatCls  <- getFlat' targetType
   
@@ -180,7 +179,17 @@ expr (Lookup targ args) = do
     Nothing -> throwError $ 
       "expr.BinOp.Lookup: [] not found in " ++ show (T.texpr targ')
     Just feat -> expr $ QualCall targ (routineName feat) args
-
+expr (VarOrCall s) =
+  do tyMb <- typeOfVar s
+     case tyMb of
+       Just ty -> tagPos (T.Var s ty)
+       Nothing ->
+         do !curr <- currentM
+            !currCls <- getFlat' (T.texpr curr)
+            case findAttrInt currCls s of
+              Just a -> tagPos (T.Access curr s (declType $ attrDecl a))
+              Nothing ->
+                throwError "TypeCheck.Expr.expr: var or attribute not found"
 expr t = throwError ("TypeCheck.Expr.expr: " ++ show t)
 
 -- | Checks that a list of args conform to a list of types. Raises an error

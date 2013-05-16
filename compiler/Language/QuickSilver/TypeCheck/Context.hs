@@ -15,7 +15,7 @@ import           Control.Monad.State
 
 import           Data.Char
 import qualified Data.HashMap.Strict as Map
-import           Data.Maybe (fromJust)
+import           Data.Maybe (fromJust, isJust)
 import qualified Data.Text as Text
 import           Data.Text (Text)
 
@@ -89,10 +89,17 @@ lookupFlatFeatEx cls name = do
   return (resMb <|> findAbsRoutine cls name)
 
 getFlat :: Typ -> TypingBodyExpr body expr (Maybe (AbsClas body expr))
-getFlat t = lift (gets (Map.lookup t . view flatPart))
+getFlat !t =
+  do !flats <- lift get
+     return (Map.lookup t $ view flatPart flats)
 
 getFlat' :: Typ -> TypingBodyExpr body expr (AbsClas body expr)
-getFlat' t = fromJust <$> getFlat t
+getFlat' !t =
+  do cfMb <- getFlat t
+     cMb <- (Map.lookup (classNameType t) . interfaces) <$> ask
+     case cfMb <|> cMb of
+       Just c -> return c
+       Nothing -> error $ "getFlat': couldn't find " ++ show t
 
 guardThrow :: Bool -> String -> TypingBody body ()
 guardThrow False = throwErrorPos

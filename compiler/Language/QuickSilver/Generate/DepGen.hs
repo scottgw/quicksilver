@@ -20,12 +20,7 @@ instance Error ParseError where
     strMsg s = newErrorMessage (Message s) (initialPos "NoFile") 
 
 depGen :: ClassName -> IO (Either ParseError [Clas])
-depGen name = runErrorT $ do depGen' name []
-  -- We don't have ANY
-  -- anyClassEi <- lift (parseClassFile (classNameFile "any"))
-  -- case anyClassEi of
-  --   Left str -> throwError $ strMsg $ "depGen->" ++ show str
-  --   Right anyClass -> depGen' name [anyClass]
+depGen name = runErrorT $ depGen' name []
 
 depGenInt :: ClassName -> IO (Either ParseError [ClasInterface])
 depGenInt = fmap (fmap (map clasInterface)) . depGen
@@ -35,37 +30,17 @@ depGen' cn acc = do
   newClassEi <- lift (parseClassFile (classNameFile cn))
   case newClassEi of
     Left str -> throwError $ strMsg $ "depGen'->" ++ show str
-    Right newClass -> depClas newClass (newClass:acc)
+    Right newClass -> depClas newClass acc
 
 depClas :: Clas -> [Clas] -> DepM [Clas]
-depClas c acc = 
-    depFeats c (acc ++ genericStubs c) >>= depAttrs c
+depClas c acc
+  | acc `hasClas` view className c = return acc
+  | otherwise = foldM go acc' imps
+  where
+    go :: [Clas] -> Import -> DepM [Clas]
+    go cs (Import name) = depGen' name cs
+    acc' = c:acc
+    imps = view imports c
 
-depFeats :: Clas -> [Clas] -> DepM [Clas]
-depFeats c acc = foldM depFeat acc (view routines c)
-
-depAttrs :: Clas -> [Clas] -> DepM [Clas]
-depAttrs c acc = depDecls (map attrDecl $ view attributes c) acc
-
-depFeat :: [Clas] -> Routine -> DepM [Clas]
-depFeat acc f = 
-    let fSig     = Decl (routineName f) (routineResult f)
-        locals   = routineDecls f
-        allDecls = fSig : locals ++ routineArgs f
-    in depDecls allDecls acc
-
-depDecls :: [Decl] -> [Clas] -> DepM [Clas]
-depDecls ds acc = foldM depDecl acc ds
-
-hasClas :: ClassName -> [Clas] -> Bool
-hasClas cn = any ( (==) cn . view className)
-
-depDecl :: [Clas] -> Decl -> DepM [Clas]
-depDecl acc (Decl _ t) = depTyp acc t
-
-depTyp :: [Clas] -> Typ -> DepM [Clas]
-depTyp acc (ClassType cn gs)
-    | not (hasClas cn acc) = foldM depTyp acc gs >>= depGen' cn
-    | otherwise = return acc
-depTyp acc (Sep _ _ cn) = depTyp acc (ClassType cn [])
-depTyp acc _ = return acc
+hasClas :: [Clas] -> ClassName -> Bool
+hasClas classes cn = any ( (==) cn . view className) classes

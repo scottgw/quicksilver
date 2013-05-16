@@ -291,19 +291,19 @@ classNameType t = error $ "Non-class type " ++ show t
 
 -- | The default integer type.
 intType :: Typ
-intType = namedType "INTEGER_32"
+intType = IntType
 
 -- | The default boolean type.
 boolType :: Typ
-boolType = namedType "BOOLEAN"
+boolType = BoolType
 
 -- | The default real number type.
 realType :: Typ
-realType = namedType "REAL_64"
+realType = DoubleType
 
 -- | The default character type.
 charType :: Typ
-charType = namedType "CHARACTER_8"
+charType = CharType
 
 -- | The default string type.
 stringType :: Typ
