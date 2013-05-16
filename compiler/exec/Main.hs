@@ -64,7 +64,7 @@ compile outFile debug genMain runMain cls = do
     case envsE of
       Left e -> putStrLn "Dependency Error:" >> error (show e)
       Right envs ->
-          when debug $ putStrLn "Type checking" >>
+          when debug (putStrLn "Type checking") >>
           case clasM envs cls of
             Left  e -> putStrLn "TypeChecking Error:" >> error e
             Right c -> 

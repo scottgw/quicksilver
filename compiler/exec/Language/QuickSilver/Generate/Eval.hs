@@ -7,7 +7,7 @@ import Control.Applicative
 import Data.Text (Text)
 import qualified Data.Text as Text
 
-import Language.QuickSilver.Syntax (Typ (..))
+import Language.QuickSilver.Syntax (Typ (..), BinOp(..), ROp(..))
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
 
@@ -46,6 +46,20 @@ simpStore v = do
 load' ref = load ref ""
 loadEval e = eval e >>= load'
 
+genBinOp :: BinOp -> TExpr -> TExpr -> Typ -> Build ValueRef
+genBinOp op e1 e2 resType =
+  case lookup (op, texpr e1, texpr e2) opFuncs of
+    Just f ->
+      do e1' <- loadEval e1
+         e2' <- loadEval e2
+         v <- f e1' e2' "genBinOp generated operation"
+         simpStore v
+  where
+    opFuncs =
+      [ ((Add, IntType, IntType), add)
+      , ((RelOp Gt NoType, IntType, IntType), icmp IntSGT)
+      , ((RelOp Gte NoType, IntType, IntType), icmp IntSGE)
+      ]
 evalUnPos :: UnPosTExpr -> Build ValueRef
 evalUnPos (Cast t e) = eval e >>= castType t
 evalUnPos (StaticCall moduleType name args retVal) =
@@ -83,6 +97,7 @@ evalUnPos (LitDouble d)   = dbl d >>= simpStore
 evalUnPos (LitChar c)     = char c >>= simpStore
 evalUnPos (LitBool True)  = simpStore =<< true
 evalUnPos (LitBool False) = simpStore =<< false
+evalUnPos (BinOpExpr op t1 t2 resType) = genBinOp op t1 t2 resType
 evalUnPos (Access trg attr _) = do
   trgV <- loadEval trg
   let (ClassType cname _) = texprTyp (contents trg)

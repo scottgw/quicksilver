@@ -1,0 +1,13 @@
+#!/bin/bash
+BCFILE=${1%.*}.bc
+EBCFILE=${1%.*}.ebc
+SFILE=${1%.*}.s
+OBJFILE=${1%.*}.o
+QS_LIB_PATH=`pwd`/lib
+
+qs $1 -m
+llvm-link lib/stdlib.bc ${BCFILE} -o ${EBCFILE}
+llc ${EBCFILE} -o ${SFILE}
+gcc ${SFILE} -c 
+gcc ${OBJFILE} -lgc -lstdc++ -o ${1%.*}
+
