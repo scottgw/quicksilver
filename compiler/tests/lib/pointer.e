@@ -6,4 +6,8 @@ module Pointer
     external "new_pointer_8"
     end
 
+  pointer_8_put (p: Pointer_8; i: Integer; v: Integer_8)
+    external "pointer_8_put"
+    end
+
 end

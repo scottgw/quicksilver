@@ -2,18 +2,11 @@
 module Language.QuickSilver.TypeCheck.Generic 
        (resolveIFace, updateGeneric, updateGenerics) where
 
-import           Control.Applicative
 import           Control.Lens
 
-import qualified Data.Text as Text
-import           Data.Text (Text)
-
 import           Language.QuickSilver.TypeCheck.Context
-import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
-
 import           Language.QuickSilver.Syntax
 import           Language.QuickSilver.Util
-import           Language.QuickSilver.Position
 
 import           Util.Monad
 

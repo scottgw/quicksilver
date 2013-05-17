@@ -12,10 +12,7 @@ import           Control.Lens hiding (op)
 import           Control.Monad.Error
 import           Control.Monad.Reader
 
-import           Data.Maybe
-import qualified Data.Map as Map
 import qualified Data.Text as Text
-import           Data.Text (Text)
 
 import           Language.QuickSilver.Syntax
 import           Language.QuickSilver.Position
@@ -24,9 +21,6 @@ import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
 import           Language.QuickSilver.TypeCheck.TypedExpr (TExpr)
 import           Language.QuickSilver.TypeCheck.BasicTypes
 import           Language.QuickSilver.TypeCheck.Context
-import           Language.QuickSilver.TypeCheck.Generic
-
-import           Util.Monad
 
 checkBinOp :: BinOp -> TExpr -> TExpr -> TypingBody body TExpr
 checkBinOp op e1 e2 = 
@@ -48,10 +42,6 @@ checkBinOp op e1 e2 =
 clause :: Clause Expr -> TypingBody body (Clause TExpr)
 clause (Clause n e) =
   Clause n <$> typeOfExprIs boolType e
-
-maybeTag :: Maybe a -> TypingBody ctxBody (Maybe (Pos a))
-maybeTag Nothing  = return Nothing
-maybeTag (Just x) = Just <$> tagPos x
 
 typeOfExpr :: Expr -> TypingBody body TExpr
 typeOfExpr e = setPosition (position e) 
@@ -90,9 +80,6 @@ expr (StaticCall typ name args) = do
 expr (Attached typeMb attch asMb) = do
   --TODO: Decide if we have to do any checking between typeMb and attch
   attch' <- typeOfExpr attch
-  curr <- current <$> ask
-  -- FIXME: we don't need the below do we?
-  -- flatClas <- getFlat' curr
   tagPos $ T.Attached typeMb attch' asMb
 
 expr (UnOpExpr op e)
@@ -116,8 +103,6 @@ expr (BinOpExpr op e1 e2)
   | otherwise = do
     e1' <- typeOfExpr e1
     e2' <- typeOfExpr e2
-    let t1 = T.texpr e1'
-        t2 = T.texpr e2'
     checkBinOp op e1' e2'
 
 expr (UnqualCall fName args) = do
@@ -200,4 +185,4 @@ argsConform :: [TExpr]       -- ^ List of typed expressions
 argsConform args formArgs 
     | map T.texpr args == formArgs = return ()
     | otherwise = 
-        throwError $ "Differing number of args: " ++ show (args, formArgs)
+        throwError $ "Argument types differ: " ++ show (args, formArgs)

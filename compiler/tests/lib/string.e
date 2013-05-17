@@ -8,7 +8,8 @@ class String
   make (n: Integer)
     do
       length := n
-      data := {Pointer}.new_pointer_8 (n)
+      data := {Pointer}.new_pointer_8 (n + 1)
+      data.put (n + 1, 0)
     end
 
   make_with_pointer (n: Integer; p: Pointer_8)
@@ -20,5 +21,10 @@ class String
   item (i: Integer): Character_8
     do
       Result := data.char_item (i)
+    end
+
+  append (str: String): String
+    do
+      
     end
 end

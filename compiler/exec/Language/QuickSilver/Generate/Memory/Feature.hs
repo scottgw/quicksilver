@@ -7,12 +7,8 @@ module Language.QuickSilver.Generate.Memory.Feature
 import Control.Monad.Reader
 
 import Language.QuickSilver.Syntax
-import Language.QuickSilver.Util
-
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Util
-
 import Language.QuickSilver.Generate.Memory.Attribute
 
 featDeclType :: RoutineI -> Build TypeRef

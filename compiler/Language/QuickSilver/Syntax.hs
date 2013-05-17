@@ -8,9 +8,7 @@ import           Control.Lens hiding (op)
 
 import           Data.List
 import           Data.Hashable
-import qualified Data.HashMap.Strict as Map
 import           Data.HashMap.Strict (HashMap)
-import           Data.Set (Set)
 import qualified Data.Text.Encoding as Text
 import           Data.Text (Text)
 import           Data.DeriveTH
@@ -210,6 +208,7 @@ instance Show UnPosExpr where
 
 data Typ = ClassType ClassName [Typ]
          | IntType
+         | Int8Type
          | BoolType
          | DoubleType
          | CharType
@@ -221,11 +220,14 @@ data Typ = ClassType ClassName [Typ]
 instance Hashable Typ where
   hashWithSalt salt t =
     case t of
-      IntType -> 0
+      NoType -> 0
       BoolType -> 1
       DoubleType -> 2
       CharType -> 3
       VoidType -> 4
+      IntType -> 5
+      Int8Type -> 6
+      TupleType ei -> either (hashWithSalt salt) (hashWithSalt salt) ei
       Sep _ _ name -> hashWithSalt salt name
       ClassType name _ -> hashWithSalt salt name
 
@@ -254,7 +256,8 @@ instance Show Typ where
                                 ]
     show NoType        = "notype"
     show VoidType      = "NONE"
-    show IntType       = "Integer_64"
+    show IntType       = "Integer"
+    show Int8Type      = "Integer_8"
     show CharType      = "Character_8"
     show DoubleType    = "Real_64"
     show BoolType      = "Boolean"

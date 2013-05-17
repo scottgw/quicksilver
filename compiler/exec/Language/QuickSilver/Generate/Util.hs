@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Util where
 
-import Data.Text
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Values

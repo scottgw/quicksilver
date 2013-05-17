@@ -2,7 +2,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Util.Monad where
 
-import           Control.Applicative
 import           Control.Monad.Reader
 
 import qualified Data.HashMap.Strict as Map

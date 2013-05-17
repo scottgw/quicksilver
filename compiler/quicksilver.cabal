@@ -47,6 +47,7 @@ Cabal-version:       >=1.8
 
 Executable qs
   main-is:             Main.hs
+  GHC-Options:         -Wall -fno-warn-missing-signatures -fno-warn-unused-do-bind -funbox-strict-fields
   Hs-Source-Dirs:      exec/
   Build-depends:       quicksilver,
                        array,

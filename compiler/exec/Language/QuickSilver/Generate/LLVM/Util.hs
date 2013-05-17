@@ -36,7 +36,6 @@ import           Control.Applicative
 import           Control.Monad.Reader
 
 import           Language.QuickSilver.Syntax
-import           Language.QuickSilver.Util
 
 import           Data.Array.Storable
 import           Data.Hashable

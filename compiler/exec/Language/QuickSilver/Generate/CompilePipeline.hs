@@ -57,7 +57,7 @@ setLayoutAndTriple modul =
 generateObject :: Bool -> String -> Bool -> TClass -> IO ()
 generateObject debug outFile genMain clas = do
   when debug $ putStrLn "Compiling to object code"
-  passMan <- createPassManager
+  -- passMan <- createPassManager
   modul <- generateModule debug genMain clas
 
   setLayoutAndTriple modul

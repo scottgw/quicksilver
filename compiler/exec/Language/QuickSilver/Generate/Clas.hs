@@ -67,7 +67,7 @@ genMain clas = do
   positionAtEnd lpad
   -- ex <- call "llvm.eh.exception" []
   pf <- getNamedFunction "__gxx_personality_v0"
-  pfCast <- bitcast pf ptrT ""
+  -- pfCast <- bitcast pf ptrT ""
   tuple <- structType [ptrT, i32T] False
   landRes <- buildLandingPad tuple pf 1 "my landing pad"
   zti <- lookupEnv "_ZTIi"

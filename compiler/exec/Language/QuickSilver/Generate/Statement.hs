@@ -57,13 +57,13 @@ genStmt (If b then_ elseIfs elseMb) = do
 
   -- Language.QuickSilver.Generate a single elseIf case, using the next elseIf as a branch
   -- destination. Should be used in a fold over all the elseIfParts
-  let genIfElse nextIfCase (ElseIfPart cond stmt) = do
+  let genIfElse nextIfCase (ElseIfPart c stmt) = do
         elseIfB     <- appendBasicBlock func "elseIf"
         elseIfThenB <- appendBasicBlock func "elseIfThen"
         
         positionAtEnd elseIfB
-        condVal <- loadEval cond
-        res     <- icmp IntEQ tr bRes "if conditional test"
+        condVal <- loadEval c
+        res     <- icmp IntEQ tr condVal "if conditional test"
         _ <- condBr res elseIfThenB nextIfCase
     
         positionAtEnd elseIfThenB

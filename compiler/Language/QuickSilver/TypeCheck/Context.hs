@@ -13,9 +13,7 @@ import           Control.Monad.Identity
 import           Control.Monad.Reader
 import           Control.Monad.State
 
-import           Data.Char
 import qualified Data.HashMap.Strict as Map
-import           Data.Maybe (fromJust, isJust)
 import qualified Data.Text as Text
 import           Data.Text (Text)
 

@@ -52,7 +52,6 @@ module Language.QuickSilver.Generate.LLVM.Simple
      setInstructionCallConv,
     ) where
 
-import Control.Applicative
 import Control.Monad.Reader
 
 import Data.Array.Storable
@@ -188,8 +187,7 @@ string origStr =
      fmt <- lift $ withCString str ( \ cstr -> return $ L.constString cstr l False)
      t <- typeOfVal fmt
      m <- askModule
-     strArrType <- L.arrayType <$> int8TypeM <*> pure l
-     g <- lift $  withCString strGlob (L.addGlobal m t) -- strArrType)
+     g <- lift $  withCString strGlob (L.addGlobal m t)
      lift $ L.setInitializer g fmt
 
      return g

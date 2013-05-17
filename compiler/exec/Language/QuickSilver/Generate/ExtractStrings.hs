@@ -13,12 +13,12 @@ import Language.QuickSilver.Syntax
     , contractClauses
     , routines
     )
-import Language.QuickSilver.Util
+
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr
-
 import Language.QuickSilver.Generate.LLVM.Simple
 
+-- FIXME: Use Data.Generic to shrink this code into nothing.
 fromClass :: TClass -> Build ()
 fromClass = mapM_ fromRoutine . view routines
 

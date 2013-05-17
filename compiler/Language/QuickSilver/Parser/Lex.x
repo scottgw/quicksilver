@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -w #-}
+
 module Language.QuickSilver.Parser.Lex 
        ( Parser
        , Token (..)
@@ -18,7 +20,7 @@ module Language.QuickSilver.Parser.Lex
        , period
        , symbol
        , braces
-         
+
        , arrayStart
        , arrayEnd
          

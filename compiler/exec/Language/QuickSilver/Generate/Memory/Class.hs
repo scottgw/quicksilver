@@ -12,27 +12,18 @@ module Language.QuickSilver.Generate.Memory.Class
 
 import Control.Applicative
 import Control.Lens
-import Control.Monad
 
 import Data.List (findIndex)
 import Data.Text (Text)
 
 import Language.QuickSilver.Syntax
-import Language.QuickSilver.Util
-
 import Language.QuickSilver.Generate.Memory.Attribute
-import Language.QuickSilver.Generate.Memory.Feature
 import Language.QuickSilver.Generate.Util
-
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Values
-import Language.QuickSilver.Generate.LLVM.Types
 
 newtype ClasTable = ClasTable {unClasTable :: [TypeRef]}
-
-typToTable :: Typ -> Build ClasTable
-typToTable = mkClasTable . rtClass <=< lookupClassEnv . classNameType
 
 mkClasTable :: ClasInterface -> Build ClasTable
 mkClasTable c = 

@@ -10,7 +10,6 @@
 module Language.QuickSilver.Util where
 
 import           Control.Applicative hiding (getConst)
-import           Control.Monad
 import           Control.Lens hiding (from, lens)
 
 import           Data.Maybe
@@ -86,13 +85,13 @@ clasInterface = over (routines.traverse) makeRoutineI
 -- | Strip the bodies and rescue clause from a routine.
 makeRoutineI :: AbsRoutine (RoutineBody expr) Expr -> RoutineI
 makeRoutineI rtn = 
-    rtn { routineImpl = empty
+    rtn { routineImpl = emp
         , routineRescue = Nothing
         }
     where
-      empty = case routineImpl rtn of
-                RoutineExternal name body -> EmptyExternal name body
-                _ -> EmptyBody
+      emp = case routineImpl rtn of
+              RoutineExternal name body -> EmptyExternal name body
+              _ -> EmptyBody
 
 -- * Map construction
 
@@ -152,8 +151,10 @@ genericStubs = map makeGenericStub . view generics
 
 -- | Given a generic, construct a class for the generic.
 makeGenericStub :: Generic -> AbsClas body exp
-makeGenericStub (Generic g constrs _) = 
+makeGenericStub (Generic g _constrs _) = 
   AbsClas { _className  = g
+          , _imports    = []
+          , _isModule   = False
           , _generics   = []
           , _creates    = []
           , _attributes = [] 

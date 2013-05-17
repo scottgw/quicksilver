@@ -5,7 +5,6 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Error
 
-import Data.Text (Text)
 import qualified Data.Text as Text
 
 import Language.QuickSilver.Syntax

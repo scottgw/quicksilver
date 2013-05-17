@@ -3,7 +3,7 @@ module Language.QuickSilver.TypeCheck.Class
        (clas, clasM, typeInterfaces, typedPre, runTyping) where
 
 import           Control.Applicative
-import           Control.Lens
+import           Control.Lens hiding (pre)
 import           Control.Monad.Reader
 
 import qualified Data.HashMap.Strict as Map

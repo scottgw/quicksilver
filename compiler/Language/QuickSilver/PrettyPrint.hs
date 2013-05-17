@@ -4,7 +4,6 @@ module Language.QuickSilver.PrettyPrint where
 import           Control.Lens hiding (to, lens, from, assign, op)
 
 import           Data.Hashable
-import qualified Data.HashMap.Strict as Map
 import qualified Data.Set as Set
 import           Data.Set (Set)
 import qualified Data.Text as Text
@@ -38,15 +37,15 @@ emptyLine = text ""
 ups = Text.toUpper
 
 toDoc :: Clas -> Doc
-toDoc = toDocWith False routineBodyDoc
+toDoc = toDocWith routineBodyDoc
 
 toInterfaceDoc :: ClasInterface -> Doc
-toInterfaceDoc = toDocWith True interfaceBodyDoc
+toInterfaceDoc = toDocWith interfaceBodyDoc
 
 interfaceBodyDoc :: EmptyBody -> Doc
 interfaceBodyDoc = const (text "do")
 
-toDocWith fullAttr bodyDoc c =   
+toDocWith bodyDoc c =   
   vsep [ text "class"
        , nestDef (ttext (ups $ view className c)) <+> 
          genericsDoc (view generics c)
@@ -156,6 +155,7 @@ type' (TupleType typeDecls) =
       tupleGen | isEmpty typeArgs = empty
                | otherwise        = text "[" <> typeArgs <> text "]"
   in text "TUPLE" <+> tupleGen
+type' t = text (show t)
 
 routineDoc :: (body -> Doc) -> AbsRoutine body Expr -> Doc
 routineDoc bodyDoc f 

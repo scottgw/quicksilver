@@ -6,6 +6,7 @@ module Language.QuickSilver.Generate.Memory.Type
     , modClas
     , modFeatureArgs
     , featureAsCreate
+    , mkCreateFunc
     ) where
 
 import Control.Applicative
@@ -52,14 +53,14 @@ constructClassTypes pcMap =
 
 
 setupRoutines :: ClassEnv -> ClassInfo -> Build ()
-setupRoutines pcMap (ClassInfo cls t) = 
+setupRoutines pcMap (ClassInfo cls _t) = 
     local (setClassEnv pcMap) $ mapM_ genRoutineType (view routines cls)    
     where
       genRoutineType rtn =
           do fType <- featDeclType rtn
              let name =
                      case routineImpl rtn of
-                       EmptyExternal name _ -> name
+                       EmptyExternal extern _ -> extern
                        _ ->
                            fullNameStr (view className cls) (routineName rtn)
              fPtr <- addFunc name fType

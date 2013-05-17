@@ -7,22 +7,16 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Reader
 
-import Data.Maybe (listToMaybe)
 import Data.HashMap.Strict (unions, union, empty)
-import Data.Text (Text)
 import qualified Data.Text as Text
 
 import Language.QuickSilver.Position
 import Language.QuickSilver.Syntax hiding (ResultVar)
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
-
 import Language.QuickSilver.Generate.Eval
--- import Language.QuickSilver.Generate.Builtin.Builtins
 import Language.QuickSilver.Generate.Memory.Attribute
-import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.Statement
-
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -60,15 +54,12 @@ routineEnv rout func =
                                 allocPs func (routineArgs rout)
                         ]
 
-lookupLocal :: Text -> Build ValueRef
-lookupLocal = (flip load) "" <=< lookupEnv
-
 genBody :: TRoutine -> Build ()
 genBody r =
   case routineImpl r of
     RoutineBody _ _ body -> genStmt (contents body)
 --    RoutineExternal "built_in" _ -> genBuiltin r
-    RoutineExternal name _ -> return ()
+    RoutineExternal _name _ -> return ()
 
 start :: TRoutine -> Build ()
 start r = getInsertBlock >>= positionAtEnd >> genBody r

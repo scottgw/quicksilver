@@ -9,6 +9,12 @@ new_pointer_8 (uint32_t n)
   return (char*) malloc(sizeof(char) * n);
 }
 
+void
+pointer_8_put (char* p, int i, int8_t v)
+{
+  p[i] = v;
+}
+
 struct string
 {
   int length;

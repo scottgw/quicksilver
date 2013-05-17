@@ -7,12 +7,14 @@ import           Control.Applicative
 
 import           Data.DeriveTH
 import           Data.Binary
-import qualified Data.Text as Text
 import           Data.Text (Text)
 
 import qualified Language.QuickSilver.Syntax as E 
   (UnPosExpr (..), ROp (..), UnOp (..))
-import           Language.QuickSilver.Syntax hiding (UnPosExpr (..), ROp (..), UnOp (..))
+import           Language.QuickSilver.Syntax hiding ( UnPosExpr (..)
+                                                    , ROp (..)
+                                                    , UnOp (..)
+                                                    )
 import           Language.QuickSilver.Position
 import           Language.QuickSilver.Util
 

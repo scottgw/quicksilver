@@ -4,24 +4,20 @@ module Language.QuickSilver.Generate.Eval (eval, loadEval, evalUnPos, true, int)
 
 import Control.Applicative
 
-import Data.Text (Text)
+-- import Data.Text (Text)
 import qualified Data.Text as Text
 
 import Language.QuickSilver.Syntax (Typ (..), BinOp(..), ROp(..))
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
-
-import Language.QuickSilver.Generate.Memory.Attribute
-import Language.QuickSilver.Generate.Memory.Class
-import Language.QuickSilver.Generate.Util
-import Language.QuickSilver.Generate.Memory.Type
-
 import Language.QuickSilver.TypeCheck.TypedExpr 
-
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Values
+import Language.QuickSilver.Generate.Memory.Attribute
+import Language.QuickSilver.Generate.Memory.Class
+import Language.QuickSilver.Generate.Util
 
 castType :: Typ -> ValueRef -> Build ValueRef
 -- castType DoubleType v    = do
@@ -47,13 +43,14 @@ load' ref = load ref ""
 loadEval e = eval e >>= load'
 
 genBinOp :: BinOp -> TExpr -> TExpr -> Typ -> Build ValueRef
-genBinOp op e1 e2 resType =
+genBinOp op e1 e2 _resType =
   case lookup (op, texpr e1, texpr e2) opFuncs of
     Just f ->
       do e1' <- loadEval e1
          e2' <- loadEval e2
          v <- f e1' e2' "genBinOp generated operation"
          simpStore v
+    Nothing -> error "genBinOp: operation not found"
   where
     opFuncs =
       [ ((Add, IntType, IntType), add)
@@ -62,9 +59,9 @@ genBinOp op e1 e2 resType =
       ]
 evalUnPos :: UnPosTExpr -> Build ValueRef
 evalUnPos (Cast t e) = eval e >>= castType t
-evalUnPos (StaticCall moduleType name args retVal) =
+evalUnPos (StaticCall _moduleType name args retVal) =
     do debug "evalUnPos: static call"
-       mod <- lookupClas (classNameType moduleType)
+       -- modul <- lookupClas (classNameType moduleType)
        fn <- getNamedFunction name
        args' <- mapM loadEval args
        debugDump fn
@@ -125,8 +122,8 @@ evalUnPos (LitString s) = do
   rawStr <- getNamedGlobal (s `Text.append` "_global")
   n <- int (Text.length s)
   f <- getNamedFunction (fullNameStr "String" "make_with_pointer")
-  charType <- int8TypeM
-  rawStrPtr <- bitcast rawStr (pointer0 charType) "char8 cast"
+  charPtrType <- pointer0 <$> int8TypeM
+  rawStrPtr <- bitcast rawStr charPtrType "char8 cast"
   debugDump f
   debugDump rawStrPtr
   debugDump n
