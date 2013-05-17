@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -8,6 +10,10 @@ import           Control.Applicative
 import           Data.DeriveTH
 import           Data.Binary
 import           Data.Text (Text)
+import qualified Data.Data as D
+import qualified Data.Typeable as T
+
+import qualified GHC.Generics as G
 
 import qualified Language.QuickSilver.Syntax as E 
   (UnPosExpr (..), ROp (..), UnOp (..))
@@ -26,7 +32,8 @@ type UnPosTStmt = AbsStmt TExpr
 type TExpr = Pos UnPosTExpr
 
 
-data EqOp = Eq | Neq | TildeEq | TildeNeq deriving (Show, Eq)
+data EqOp = Eq | Neq | TildeEq | TildeNeq
+            deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
 
 eqOp (RelOp E.Eq _) = Eq
 eqOp (RelOp E.Neq _) = Neq
@@ -61,10 +68,10 @@ data UnPosTExpr
   | LitArray [TExpr]
   | LitChar Char
   | LitString Text
-  | LitInt Integer
+  | LitInt Integer Typ
   | LitBool Bool
   | LitVoid Typ
-  | LitDouble Double deriving (Show, Eq)
+  | LitDouble Double deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
 
 $( derive makeBinary ''EqOp )
 $( derive makeBinary ''UnPosTExpr )
@@ -144,7 +151,7 @@ untypeExpr' (Unbox _ e) = contents $ untypeExpr  e
 untypeExpr' (LitArray es) = E.LitArray (map untypeExpr es)
 untypeExpr' (LitChar c) = E.LitChar c
 untypeExpr' (LitString s) = E.LitString s
-untypeExpr' (LitInt i) = E.LitInt i
+untypeExpr' (LitInt i _t) = E.LitInt i
 untypeExpr' (LitBool b) =  E.LitBool b
 untypeExpr' (LitVoid _) = E.LitVoid
 untypeExpr' (LitDouble d) = E.LitDouble d
@@ -179,7 +186,7 @@ texprTyp (LitChar _) = charType
 texprTyp (Attached{}) = boolType
 texprTyp (LitString _) = stringType
 texprTyp (LitType t) = ClassType "TYPE" [t]
-texprTyp (LitInt _)  = intType
+texprTyp (LitInt _ t)  = t
 texprTyp (LitBool _) = boolType
 texprTyp (LitDouble _) = realType
 texprTyp (LitVoid  t) = t

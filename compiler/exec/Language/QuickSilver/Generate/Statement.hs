@@ -38,10 +38,11 @@ genStmt :: UnPosTStmt -> Build ()
 genStmt (CallStmt e)        = eval e >> return ()
 genStmt (Block ss)          = mapM_ (genStmt . contents) ss
 genStmt (Assign ident expr) = do
-  debug $ "FOO: " ++ show ident
+  debug $ "Assign to: " ++ show ident
 
   lhs <- eval ident
   rhs <- loadEval expr
+  debugDump rhs
   _   <- store rhs lhs
   return ()
 genStmt (If b then_ elseIfs elseMb) = do

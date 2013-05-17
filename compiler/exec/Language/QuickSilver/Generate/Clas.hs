@@ -43,9 +43,9 @@ genClass' clas isMain = do
 
 genMain :: TClass -> Build ()
 genMain clas = do
-  i32T <- int32TypeM
+  i64T <- int64TypeM
   ptrT <- ptr
-  fRef <- addFunc "main" =<< funcType i32T []
+  fRef <- addFunc "main" =<< funcType i64T []
   atNewBlock fRef "mainStart"
 
   call "GC_init" []
@@ -68,7 +68,7 @@ genMain clas = do
   -- ex <- call "llvm.eh.exception" []
   pf <- getNamedFunction "__gxx_personality_v0"
   -- pfCast <- bitcast pf ptrT ""
-  tuple <- structType [ptrT, i32T] False
+  tuple <- structType [ptrT, i64T] False
   landRes <- buildLandingPad tuple pf 1 "my landing pad"
   zti <- lookupEnv "_ZTIi"
   ztiCast <- bitcast zti ptrT ""

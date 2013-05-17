@@ -4,6 +4,7 @@ module Language.QuickSilver.TypeCheck.Class
 
 import           Control.Applicative
 import           Control.Lens hiding (pre)
+import           Control.Monad.Error
 import           Control.Monad.Reader
 
 import qualified Data.HashMap.Strict as Map
@@ -152,10 +153,15 @@ uStmt (CallStmt e) = do
   e' <- typeOfExpr e
   tagPos (CallStmt e')
   
-uStmt (Assign s e) = do
-  s' <- typeOfExpr s
-  e' <- typeOfExprIs (T.texpr s') e
-  return $ inheritPos (Assign s') e'
+uStmt (Assign var e) = do
+  var'  <- typeOfExpr var
+  e'  <- typeOfExpr e
+  e'' <- if T.texpr e' == AnyIntType && isIntegerType (T.texpr var')
+         then tagPos (T.Cast (T.texpr var') e') 
+         else if T.texpr e' == T.texpr var' 
+              then return e'
+              else throwError "Assignment: source and target don't match"
+  return $ inheritPos (Assign var') e''
 
 uStmt (If cond body elseIfs elsePart) = do
   cond' <- typeOfExprIs boolType cond

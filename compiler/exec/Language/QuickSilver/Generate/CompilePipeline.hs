@@ -82,4 +82,4 @@ generateModule debug genMain clas =
   runBuild 
     debug 
     (view className clas) 
-    (fromClass clas >> genClass clas genMain >> askModule)
+    (extractStrings clas >> genClass clas genMain >> askModule)

@@ -26,8 +26,9 @@ basicType = choice $ map tyFunc nameAndType
     nameAndType = 
       [ ("Character", CharType)
       , ("Character_8", CharType)
-      , ("Integer", IntType)
+      , ("Integer", Int64Type)
       , ("Integer_8", Int8Type)
+      , ("Integer_64", Int64Type)
       , ("Real", DoubleType)
       , ("Boolean", BoolType)
       ]

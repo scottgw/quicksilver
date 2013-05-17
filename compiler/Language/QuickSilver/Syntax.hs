@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Syntax where
@@ -6,13 +7,15 @@ module Language.QuickSilver.Syntax where
 import           Control.DeepSeq
 import           Control.Lens hiding (op)
 
-import           Data.List
+import           Data.Binary
+import qualified Data.Data as D
+import           Data.DeriveTH
 import           Data.Hashable
 import           Data.HashMap.Strict (HashMap)
+import           Data.List
 import qualified Data.Text.Encoding as Text
 import           Data.Text (Text)
-import           Data.DeriveTH
-import           Data.Binary
+import qualified Data.Typeable as T
 
 import qualified GHC.Generics as G
 
@@ -21,7 +24,7 @@ import           Language.QuickSilver.Position
 type Map = HashMap
 
 newtype Import = Import Text
-               deriving (Eq, Show)
+               deriving (Eq, Show, G.Generic, D.Data, T.Typeable)
 
 type Clas = ClasBody Expr
 type ClasBody exp = AbsClas (RoutineBody exp) exp
@@ -38,18 +41,18 @@ data AbsClas body exp =
           , _consts     :: [Constant exp]
           , _invnts     :: [Clause exp]
           , _isModule   :: Bool
-          } deriving (Eq, Show)
+          } deriving (Eq, Show, G.Generic, D.Data, T.Typeable)
 
 data Generic = 
   Generic { genericName :: ClassName 
           , genericConstType :: [Typ]
           , genericCreate :: Maybe [Text]
-          } deriving (Show, Eq)
+          } deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
 
 data CreateClause = 
   CreateClause { createExportNames :: [ClassName]
                , createNames :: [Text]
-               } deriving (Show, Eq)
+               } deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
 
 type RoutineI = AbsRoutine EmptyBody Expr
 type RoutineWithBody exp = AbsRoutine (RoutineBody exp) exp
@@ -57,12 +60,12 @@ type Routine = RoutineWithBody Expr
 
 data EmptyBody = EmptyBody
                | EmptyExternal Text (Maybe Text)
-                 deriving (Show, Eq, Ord)
+                 deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 data Contract exp = 
   Contract { contractInherited :: Bool 
            , contractClauses :: [Clause exp]
-           } deriving (Show, Eq, Ord)
+           } deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 data AbsRoutine body exp = 
     AbsRoutine 
@@ -75,7 +78,7 @@ data AbsRoutine body exp =
     , routineImpl   :: !body
     , routineEns    :: Contract exp
     , routineRescue :: Maybe [PosAbsStmt exp]
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 data RoutineBody exp
   = RoutineExternal Text (Maybe Text)
@@ -83,17 +86,17 @@ data RoutineBody exp
     { routineLocal :: [Decl]
     , routineLocalProcs :: [ProcDecl]
     , routineBody  :: PosAbsStmt exp
-    } deriving (Show, Eq, Ord)
+    } deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 data Attribute = 
   Attribute { attrDecl :: Decl
             , attrAssign :: Maybe Text
-            } deriving (Show, Eq, Ord)
+            } deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
   
 data Constant exp = 
   Constant { constDecl :: Decl
            , constVal :: exp
-           } deriving (Show, Eq, Ord)
+           } deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 type Expr = Pos UnPosExpr 
 
@@ -112,7 +115,7 @@ data BinOp = Add
            | Implies
            | RelOp ROp Typ
            | SymbolOp Text
-             deriving (Show, Ord, Eq)
+             deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
 
 data ROp = Lte
          | Lt 
@@ -122,12 +125,12 @@ data ROp = Lte
          | TildeNeq
          | Gt 
          | Gte
-           deriving (Show, Ord, Eq)
+           deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
 
 data UnOp = Not
           | Neg
           | Old
-            deriving (Show, Ord, Eq)
+            deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
 
 data UnPosExpr =
     UnqualCall Text [Expr]
@@ -157,9 +160,9 @@ data UnPosExpr =
   | LitBool Bool
   | LitVoid
   | LitDouble Double 
-  | LitType Typ deriving (Ord, Eq)
+  | LitType Typ deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
 
-data Quant = All | Some deriving (Eq, Ord, Show)
+data Quant = All | Some deriving (Eq, Ord, Show, G.Generic, D.Data, T.Typeable)
 
 commaSepShow es = intercalate "," (map show es)
 argsShow args = "(" ++ commaSepShow args ++ ")"
@@ -207,15 +210,16 @@ instance Show UnPosExpr where
     show LitVoid = "Void"
 
 data Typ = ClassType ClassName [Typ]
-         | IntType
+         | AnyIntType
          | Int8Type
+         | Int64Type
          | BoolType
          | DoubleType
          | CharType
          | TupleType (Either [Typ] [Decl])
          | Sep (Maybe Proc) [Proc] Text
          | VoidType
-         | NoType deriving (Eq, Ord, G.Generic)
+         | NoType deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 instance Hashable Typ where
   hashWithSalt salt t =
@@ -225,8 +229,9 @@ instance Hashable Typ where
       DoubleType -> 2
       CharType -> 3
       VoidType -> 4
-      IntType -> 5
+      AnyIntType -> 5
       Int8Type -> 6
+      Int64Type -> 7
       TupleType ei -> either (hashWithSalt salt) (hashWithSalt salt) ei
       Sep _ _ name -> hashWithSalt salt name
       ClassType name _ -> hashWithSalt salt name
@@ -234,7 +239,7 @@ instance Hashable Typ where
 data Decl = Decl 
     { declName :: Text,
       declType :: Typ
-    } deriving (Ord, Eq, G.Generic)
+    } deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
 instance Hashable Decl
 
 instance Show Decl where
@@ -243,7 +248,7 @@ instance Show Decl where
 
 data Proc = Dot 
           | Proc {unProcGen :: Text} 
-            deriving (Eq, Ord, G.Generic)
+            deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
 instance Hashable Proc
 
 instance Show Proc where
@@ -256,8 +261,9 @@ instance Show Typ where
                                 ]
     show NoType        = "notype"
     show VoidType      = "NONE"
-    show IntType       = "Integer"
+    show AnyIntType    = "Integer"
     show Int8Type      = "Integer_8"
+    show Int64Type     = "Integer_64"
     show CharType      = "Character_8"
     show DoubleType    = "Real_64"
     show BoolType      = "Boolean"
@@ -285,9 +291,10 @@ data AbsStmt a = Assign a a
                | Debug Text (PosAbsStmt a)
                | Print a
                | PrintD a
-               | BuiltIn deriving (Ord, Eq)
+               | BuiltIn deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
 
-data ElseIfPart a = ElseIfPart a (PosAbsStmt a) deriving (Show, Ord, Eq)
+data ElseIfPart a = ElseIfPart a (PosAbsStmt a)
+                    deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss
@@ -327,16 +334,16 @@ showCase (l, s) = "when " ++ show l ++ " then\n" ++ show s
 showDefault Nothing = ""
 showDefault (Just s) = "else\n" ++ show s
 
-data ProcExpr = LessThan Proc Proc deriving (Show, Eq, Ord)
+data ProcExpr = LessThan Proc Proc deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 data ProcDecl = SubTop Proc
               | CreateLessThan Proc Proc 
-                deriving (Show, Eq, Ord)
+                deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 data Clause a = Clause 
     { clauseName :: Maybe Text
     , clauseExpr :: a
-    } deriving (Show, Ord, Eq)
+    } deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
 
 instance Binary Text where
   put = put . Text.encodeUtf8

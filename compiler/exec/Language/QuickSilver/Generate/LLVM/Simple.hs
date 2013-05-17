@@ -28,7 +28,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
      condBr, br,
      icmp, fcmp,
 
-     sext,
+     sext, trunc,
      
      ptrToInt, siToFP, bitcast,
      constPtrToInt,
@@ -340,6 +340,11 @@ sext :: ValueRef -> TypeRef -> String -> Build ValueRef
 sext val extendTo str = 
   withBuilder0 $ \b -> withCString str (L.buildSExt b val extendTo)
   
+trunc :: ValueRef -> TypeRef -> String -> Build ValueRef
+trunc val truncTo str = 
+  withBuilder0 $ \b -> withCString str (L.buildTrunc b val truncTo)
+  
+
 
 getEntryBasicBlock :: ValueRef -> Build BasicBlockRef
 getEntryBasicBlock = liftBuild1 L.getEntryBasicBlock

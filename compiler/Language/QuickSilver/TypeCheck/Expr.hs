@@ -23,21 +23,40 @@ import           Language.QuickSilver.TypeCheck.BasicTypes
 import           Language.QuickSilver.TypeCheck.Context
 
 checkBinOp :: BinOp -> TExpr -> TExpr -> TypingBody body TExpr
-checkBinOp op e1 e2 = 
-    case lookup (op, t1, t2) opList of
-      Just resType -> tagPos (T.BinOpExpr op e1 e2 resType)
-      Nothing -> 
-          throwError $ concat ["checkBinOp: no infix operation for: "
-                              , show (op, t1, t2)
-                              ]
+checkBinOp op e1 e2 
+    | isNumOp = numOp
+    | isCompOp = compOp
+    | otherwise = err
     where
+      err = throwError $ concat ["checkBinOp: no infix operation for: "
+                                , show (op, t1, t2)
+                                ]
+
+      isNumOp  = op `elem` [Add, Sub, Mul, Div]
+      isCompOp = op `elem` (map (flip RelOp NoType) [Gt, Lt, Gte, Lte])
+
       t1 = T.texpr e1
       t2 = T.texpr e2
 
-      opList =
-          [ ((Add, IntType, IntType), IntType)
-          , ((RelOp Gt NoType, IntType, IntType), BoolType)
-          ]
+      numOp
+        | t1 == t2 = tagPos (T.BinOpExpr op e1 e2 t1)
+        | t1 == AnyIntType && isIntegerType t2 =
+            do e1' <- tagPos (T.Cast t2 e1)
+               tagPos (T.BinOpExpr op e1' e2 t2)
+        | t2 == AnyIntType && isIntegerType t1 =
+            do e2' <- tagPos (T.Cast t1 e2)
+               tagPos (T.BinOpExpr op e1 e2' t1)
+        | otherwise = err
+
+      compOp
+        | t1 == t2 = tagPos (T.BinOpExpr op e1 e2 BoolType)
+        | t1 == AnyIntType && isIntegerType t2 =
+            do e1' <- tagPos (T.Cast t2 e1)
+               tagPos (T.BinOpExpr op e1' e2 BoolType)
+        | t2 == AnyIntType && isIntegerType t1 =
+            do e2' <- tagPos (T.Cast t1 e2)
+               tagPos (T.BinOpExpr op e1 e2' BoolType)
+        | otherwise = err
 
 clause :: Clause Expr -> TypingBody body (Clause TExpr)
 clause (Clause n e) =
@@ -56,7 +75,7 @@ typeOfExprIs typ e = do
   return e'
 
 expr :: forall body . UnPosExpr -> TypingBody body TExpr
-expr (LitInt i)    = tagPos (T.LitInt i)
+expr (LitInt i)    = tagPos (T.LitInt i AnyIntType)
 expr (LitDouble d) = tagPos (T.LitDouble d)
 expr (LitBool b)   = tagPos (T.LitBool b)
 expr LitVoid       = tagPos (T.LitVoid VoidType)
@@ -123,8 +142,8 @@ expr (QualCall trg name args) = do
       let formArgs = map declType (routineArgs feat)
           res = routineResult feat
       catchError 
-         (do argsConform args' formArgs
-             tagPos (T.Call trg' name args' res)
+         (do args'' <- argsConform args' formArgs
+             tagPos (T.Call trg' name args'' res)
          )
          (\e -> case args' of
              [arg] -> 
@@ -181,8 +200,15 @@ expr t = throwError ("TypeCheck.Expr.expr: " ++ show t)
 argsConform :: [TExpr]       -- ^ List of typed expressions
                -> [Typ]      -- ^ List of types that the argument list should
                              --   conform to.
-               -> TypingBody body ()
-argsConform args formArgs 
-    | map T.texpr args == formArgs = return ()
+               -> TypingBody body [TExpr]
+argsConform args formArgs
+    | length args == length formArgs =
+        zipWithM checkArg args formArgs
     | otherwise = 
         throwError $ "Argument types differ: " ++ show (args, formArgs)
+    where
+      checkArg e typ 
+          | T.texpr e == typ = return e
+          | T.texpr e == AnyIntType && isIntegerType typ
+              = tagPos (T.Cast typ e)
+          | otherwise = throwError $ "Argument type doesn't match: " ++ show (e, typ)

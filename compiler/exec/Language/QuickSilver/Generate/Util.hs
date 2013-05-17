@@ -19,8 +19,8 @@ sizeOf t = do
   let pt = pointer0 t
   one <- int 1 
   ptr <- gep (nul pt) [one]
-  i32 <- int32TypeM
-  ptrToInt ptr i32 "convert pointer to size"
+  i64 <- int64TypeM
+  ptrToInt ptr i64 "convert pointer to size"
 
 arrayMalloc :: ValueRef -> TypeRef -> Build ValueRef
 arrayMalloc i t = do

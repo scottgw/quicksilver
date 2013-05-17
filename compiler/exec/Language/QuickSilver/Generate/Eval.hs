@@ -20,6 +20,16 @@ import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.Util
 
 castType :: Typ -> ValueRef -> Build ValueRef
+castType Int8Type v =
+    do v' <- load' v
+       debugDump v'
+       i8 <- int8TypeM
+       trunc v' i8 "castType: to int8" >>= simpStore
+castType Int64Type v = return v
+    -- do v' <- load' v
+    --    debugDump v'
+    --    i64 <- int64TypeM
+    --    sext v' i64 "castType: to int64" >>= simpStore
 -- castType DoubleType v    = do
 --   v' <- load' v
 --   dblT <- doubleTypeM
@@ -44,18 +54,23 @@ loadEval e = eval e >>= load'
 
 genBinOp :: BinOp -> TExpr -> TExpr -> Typ -> Build ValueRef
 genBinOp op e1 e2 _resType =
-  case lookup (op, texpr e1, texpr e2) opFuncs of
+  case lookup op opFuncs of
     Just f ->
-      do e1' <- loadEval e1
+      do debug ("genBinOp: " ++ show (op, e1, e2))
+         e1' <- loadEval e1
          e2' <- loadEval e2
          v <- f e1' e2' "genBinOp generated operation"
          simpStore v
     Nothing -> error "genBinOp: operation not found"
   where
     opFuncs =
-      [ ((Add, IntType, IntType), add)
-      , ((RelOp Gt NoType, IntType, IntType), icmp IntSGT)
-      , ((RelOp Gte NoType, IntType, IntType), icmp IntSGE)
+      [ (Add, add)
+      , (RelOp Gt NoType, if isIntegerType (texpr e1)
+                          then icmp IntSGT
+                          else fcmp FPOGT)
+      , (RelOp Gte NoType, if isIntegerType (texpr e1)
+                           then icmp IntSGE
+                           else fcmp FPOGE)
       ]
 evalUnPos :: UnPosTExpr -> Build ValueRef
 evalUnPos (Cast t e) = eval e >>= castType t
@@ -65,7 +80,7 @@ evalUnPos (StaticCall _moduleType name args retVal) =
        fn <- getNamedFunction name
        args' <- mapM loadEval args
        debugDump fn
-       mapM debugDump args'
+       mapM_ debugDump args'
        r <- call' fn args' ("static call: " ++ Text.unpack name)
        setInstructionCallConv r Fast
        if retVal /= NoType then simpStore r else return r
@@ -89,7 +104,7 @@ evalUnPos (Call trg fName args retVal) = do
   setInstructionCallConv r Fast
   
   if retVal /= NoType then simpStore r else return r
-evalUnPos (LitInt i)      = int (fromIntegral i) >>= simpStore
+evalUnPos (LitInt i _t)   = int (fromIntegral i) >>= simpStore
 evalUnPos (LitDouble d)   = dbl d >>= simpStore
 evalUnPos (LitChar c)     = char c >>= simpStore
 evalUnPos (LitBool True)  = simpStore =<< true
@@ -129,8 +144,10 @@ evalUnPos (LitString s) = do
   debugDump n
   debug "Creating string.. hold on!"
   strPtr <- unClasRef <$> mallocClas "String"
+  debugDump strPtr
  --  str <- load strPtr "loading created string"
   -- debugDump str
   call' f [strPtr, n, rawStrPtr] ("call: string constructor")
+  debug "Creating string done"
   simpStore strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e

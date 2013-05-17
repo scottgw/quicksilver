@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Language.QuickSilver.Position 
@@ -25,16 +27,22 @@ module Language.QuickSilver.Position
     ) where
 
 import Control.Monad
+import Control.DeepSeq
 
 import Data.DeriveTH
 import Data.Binary
-import Control.DeepSeq
+import qualified Data.Data as D
+import qualified Data.Typeable as T
+
+import qualified GHC.Generics as G
+
 
 import Text.Parsec
 import Text.Parsec.Pos
 import Text.Parsec.ByteString
 
-data Pos a = Pos SourcePos a deriving Ord
+data Pos a = Pos SourcePos a
+             deriving (Ord, G.Generic, D.Data, T.Typeable)
 
 instance Eq a => Eq (Pos a) where
     (==) p1 p2 = contents p1 == contents p2

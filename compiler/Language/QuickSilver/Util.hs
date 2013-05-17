@@ -240,7 +240,9 @@ classToType clas =
 isBasic :: Typ -> Bool
 isBasic t = case t of
               BoolType -> True
-              IntType -> True
+              AnyIntType -> True
+              Int8Type -> True
+              Int64Type -> True
               CharType -> True
               DoubleType -> True
               _ -> False
@@ -268,7 +270,12 @@ isBooleanType = (== "BOOLEAN") . classNameType
 
 -- | Integer type test.
 isIntegerType :: Typ -> Bool
-isIntegerType = isInTypeNames integerTypeNames
+isIntegerType t = 
+    case t of
+      AnyIntType -> True
+      Int8Type -> True
+      Int64Type -> True
+      _ -> False
 
 -- | Natural number type test.
 isNaturalType :: Typ -> Bool
@@ -309,7 +316,7 @@ classNameType t = error $ "Non-class type " ++ show t
 
 -- | The default integer type.
 intType :: Typ
-intType = IntType
+intType = Int64Type
 
 -- | The default boolean type.
 boolType :: Typ

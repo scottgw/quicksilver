@@ -15,7 +15,7 @@ char :: Char -> Build ValueRef
 char c = constInt <$> int8TypeM <*> pure (fromIntegral $ ord c) <*> pure False
 
 int :: Int -> Build ValueRef
-int i = constInt <$> int32TypeM <*> pure (fromIntegral i) <*> pure False
+int i = constInt <$> int64TypeM <*> pure (fromIntegral i) <*> pure False
 
 dbl :: Double -> Build ValueRef
 dbl d = 

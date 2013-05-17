@@ -8,10 +8,10 @@ import           Language.QuickSilver.Util
 import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
 import           Language.QuickSilver.TypeCheck.Context
 
-numericCanBe (T.LitInt 0) t =
+numericCanBe (T.LitInt 0 _t) t =
   isIntegerType t || isNaturalType t || isRealType t
 numericCanBe (T.LitDouble _n) t = isRealType t
-numericCanBe (T.LitInt i) t
+numericCanBe (T.LitInt i _t) t
   | isIntegerType t || isNaturalType t =
     let (lower, upper) = typeBounds t
     in lower <= fromIntegral i && fromIntegral i <= upper

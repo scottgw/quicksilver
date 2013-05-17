@@ -17,8 +17,9 @@ typeOf :: ClassEnv -> Typ -> Build TypeRef
 typeOf e t =
     case t of
       NoType -> voidTypeM
-      IntType -> int32TypeM
+      AnyIntType -> int64TypeM
       Int8Type -> int8TypeM
+      Int64Type -> int64TypeM
       BoolType -> int1TypeM
       DoubleType -> doubleTypeM
       CharType -> int8TypeM

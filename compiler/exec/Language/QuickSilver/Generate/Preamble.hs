@@ -53,9 +53,9 @@ constDecls =
     [ ("printf",        funcTypeVar' int32TypeM [ptr])
     , ("exit",          funcType' voidTypeM [int32TypeM])
     , ("llvm.sqrt.f64", funcType' doubleTypeM [doubleTypeM])
-    , ("malloc",        funcType' ptr [int32TypeM])
+    , ("malloc",        funcType' ptr [int64TypeM])
     , ("GC_init",       funcType' voidTypeM [])   
-    , ("GC_malloc",     funcType' ptr [int32TypeM])
+    , ("GC_malloc",     funcType' ptr [int64TypeM])
     , ("putchar",       funcType' int32TypeM [int32TypeM])
     , ("__cxa_throw",   cxaThrowType)
     , ("__cxa_allocate_exception", 
@@ -66,7 +66,7 @@ constDecls =
     , ("__gxx_personality_v0", funcTypeVar' int32TypeM [])
 
     , ("llvm.eh.exception", funcType' ptr [])
-    , ("llvm.eh.selector.i32",  funcTypeVar' int32TypeM [ptr, ptr])
+    , ("llvm.eh.selector.i64",  funcTypeVar' int64TypeM [ptr, ptr])
     , ("llvm.eh.typeid.for", funcType' int32TypeM [ptr])
     ]
 

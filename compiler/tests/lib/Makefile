@@ -9,3 +9,6 @@ stdlib.bc: externals.cbc ${EBCFILES}
 
 %.cbc: %.c
 	clang -emit-llvm -c $< -o $@
+
+clean:
+	@rm -f *.bc *.ebc *.cbc

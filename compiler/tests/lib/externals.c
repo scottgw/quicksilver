@@ -17,7 +17,7 @@ pointer_8_put (char* p, int i, int8_t v)
 
 struct string
 {
-  int length;
+  int64_t length;
   char* data;
 };
 
