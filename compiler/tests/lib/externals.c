@@ -18,5 +18,5 @@ struct string
 void
 print(struct string* str)
 {
-  write(fileno(stdout), str->data, str->length);
+  write(STDOUT_FILENO, str->data, str->length);
 }
