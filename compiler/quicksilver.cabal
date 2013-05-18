@@ -76,7 +76,6 @@ Executable qs
                        Language.QuickSilver.Generate.CompilePipeline
                        Language.QuickSilver.Generate.Clas
                        Language.QuickSilver.Generate.Eval
-                       Language.QuickSilver.Generate.ExtractStrings
                        Language.QuickSilver.Generate.Feature
                        Language.QuickSilver.Generate.Preamble
                        Language.QuickSilver.Generate.Statement
