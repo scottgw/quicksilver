@@ -4,18 +4,18 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Reader
 
+import Data.Generics
+import Data.Text as Text
+
 import Foreign.C.String
 
 import GHC.Constants
 
 import Language.QuickSilver.Syntax
-
-import Language.QuickSilver.TypeCheck.TypedExpr
-
+import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.Clas
-import Language.QuickSilver.Generate.ExtractStrings
-
 import Language.QuickSilver.Generate.LLVM.Simple
+
 import LLVM.FFI.Core
 import LLVM.FFI.Support 
 
@@ -83,3 +83,9 @@ generateModule debug genMain clas =
     debug 
     (view className clas) 
     (extractStrings clas >> genClass clas genMain >> askModule)
+
+extractStrings :: TClass -> Build ()
+extractStrings cls = everywhereM (mkM extract) cls >> return ()
+    where
+      extract e@(T.LitString str) = string (Text.unpack str) >> return e
+      extract e = return e
