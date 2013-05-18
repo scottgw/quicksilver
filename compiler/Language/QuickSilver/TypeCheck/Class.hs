@@ -186,14 +186,6 @@ uStmt (Loop setup invs cond body var) = do
 
 uStmt (Block ss) = Block `fmap` mapM stmt ss >>= tagPos
 
-uStmt (Print e)  = do
-  e' <- typeOfExprIs intType e
-  tagPos (Print e')
-
-uStmt (PrintD e)  = do
-  e' <- typeOfExprIs realType e
-  tagPos (PrintD e')
-
 uStmt (Create typeMb vr fName args) = do
   call <- tagPos (QualCall vr fName args) >>= typeOfExpr
   let call' = case contents call of

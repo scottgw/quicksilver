@@ -112,23 +112,6 @@ genStmt (Loop setup _invs cond body _varMb) = do
 
   positionAtEnd afterB
   return ()
-genStmt (Print e) = do
-  v      <- loadEval e
-  fmt    <- lookupEnv "intFmtString"
-  i8 <- int8TypeM
-  let ptr = pointer0 i8
-  zero   <- int 0
-  fmtRef <- gep fmt [zero, zero]
-  fmtCast <- bitcast fmtRef ptr ""
-  _ <- call "printf" [fmtCast ,v]
-  return ()
-genStmt (PrintD e) = do
-  v      <- loadEval e
-  fmt    <- lookupEnv "dblFmtString"
-  zero   <- int 0
-  fmtRef <- gep fmt [zero, zero]
-  _ <- call "printf" [fmtRef,v]
-  return ()
 genStmt (Create _typeMb vr fName args) = do
   var <- lookupVarAccess (contents vr)
   newInst <- lookupMalloc (texpr vr) fName args

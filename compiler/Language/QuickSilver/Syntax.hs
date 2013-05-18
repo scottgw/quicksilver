@@ -289,8 +289,6 @@ data AbsStmt a = Assign a a
                | CheckBlock [Clause a] (PosAbsStmt a)
                | Block [PosAbsStmt a]
                | Debug Text (PosAbsStmt a)
-               | Print a
-               | PrintD a
                | BuiltIn deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
 
 data ElseIfPart a = ElseIfPart a (PosAbsStmt a)
@@ -317,8 +315,6 @@ instance Show a => Show (AbsStmt a) where
     show (CallStmt e) = show e
     show (Assign i e) = show i ++ " := " ++ show e ++ "\n"
     show (AssignAttempt i e) = show i ++ " ?= " ++ show e ++ "\n"
-    show (Print e) = "Printing: " ++ show e ++ "\n"
-    show (PrintD e) = "PrintingD: " ++ show e ++ "\n"
     show (Loop fr _ un l var) = "from" ++ show fr ++ " until" ++ show un ++
                           " loop " ++ show l ++ "variant" ++ show var ++ "end"
     show (Malloc s) = "Malloc: " ++ show s

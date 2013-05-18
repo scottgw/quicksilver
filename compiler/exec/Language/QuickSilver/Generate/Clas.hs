@@ -34,8 +34,13 @@ genClass clas isMain = do
 
 genClass' :: TClass -> Bool -> Build ()
 genClass' clas isMain = do
-  debug "Generating Creation routines"
-  genCreates (allCreates clas)
+  -- Note: generating creation routines specially is required when we have
+  -- special classes that have to be created in an interesting way.
+  -- This is not the case for regular classes, so we'll try to get away
+  -- without doing this!
+  
+  -- debug "Generating Creation routines"
+  -- genCreates (allCreates clas)
   debug "Generating routines"
   genRoutines (view routines clas)
   debug "Generating main routine (if required)"
