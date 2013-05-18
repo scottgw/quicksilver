@@ -6,6 +6,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+void
+exit_with(int i)
+{
+  exit(i);
+}
+
 char*
 new_pointer_8 (uint32_t n)
 {
@@ -33,7 +39,18 @@ print(struct string* str)
 int
 new_tcp_socket()
 {
-  return socket(AF_INET, SOCK_STREAM, 0);
+  int socketfd = socket(AF_INET, SOCK_STREAM, 0);
+  int enable = 1;
+
+  setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
+
+  return socketfd;
+}
+
+int
+fd_close(int fd)
+{
+  return close(fd);
 }
 
 int
@@ -43,7 +60,7 @@ socket_bind(int socketfd, int port)
   
   local_addr.sin_family = AF_INET;
   local_addr.sin_addr.s_addr = INADDR_ANY;
-  local_addr.sin_port = htons(8888);
+  local_addr.sin_port = htons(port);
 
   return bind (socketfd, (struct sockaddr*) &local_addr, sizeof(local_addr));
 }
@@ -61,9 +78,11 @@ socket_accept(int socketfd)
 }
 
 int
-socket_recv(int socketfd, void* buf, int len)
+socket_recv(int socketfd, struct string* str)
 {
-  return recv(socketfd, buf, len, 0);
+  ssize_t recv_size = recv(socketfd, str->data, str->length, 0);
+  str->length = recv_size;
+  return recv_size;
 }
 
 int

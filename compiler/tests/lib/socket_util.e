@@ -1,4 +1,5 @@
 import Pointer_8
+import String
 
 module Socket_Util
   
@@ -19,7 +20,7 @@ module Socket_Util
     end
 
 
-  socket_recv(SocketFd: Integer; Ptr: Pointer_8; Length: Integer): Integer
+  socket_recv(SocketFd: Integer; str: String): Integer
     external "socket_recv"
     end
 
