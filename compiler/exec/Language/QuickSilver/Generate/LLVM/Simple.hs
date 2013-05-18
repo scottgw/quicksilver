@@ -23,7 +23,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
      gep, gepInt,
      extractValue, insertValue,
 
-     add, sub, mul, fdiv, neg,
+     add, sub, mul, fdiv, neg, fneg,
      nott, andd, orr,
      condBr, br,
      icmp, fcmp,
@@ -334,6 +334,7 @@ fdiv = opWrap L.buildFDiv
 nott, neg :: ValueRef -> String -> Build ValueRef
 nott = unOpWrap L.buildNot
 neg = unOpWrap L.buildNeg
+fneg = unOpWrap L.buildFNeg
 
 
 sext :: ValueRef -> TypeRef -> String -> Build ValueRef

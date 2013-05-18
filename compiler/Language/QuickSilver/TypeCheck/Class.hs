@@ -156,7 +156,8 @@ uStmt (CallStmt e) = do
 uStmt (Assign var e) = do
   var'  <- typeOfExpr var
   e'  <- typeOfExpr e
-  e'' <- if T.texpr e' == AnyIntType && isIntegerType (T.texpr var')
+  e'' <- if (T.texpr e' == AnyIntType && isIntegerType (T.texpr var')) ||
+            (T.texpr e' == VoidType && not (isBasic (T.texpr var')))
          then tagPos (T.Cast (T.texpr var') e') 
          else if T.texpr e' == T.texpr var' 
               then return e'

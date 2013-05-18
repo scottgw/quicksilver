@@ -7,10 +7,10 @@ import Control.Applicative
 -- import Data.Text (Text)
 import qualified Data.Text as Text
 
-import Language.QuickSilver.Syntax (Typ (..), BinOp(..), ROp(..))
+import Language.QuickSilver.Syntax (Typ (..), BinOp(..), UnOp(..), ROp(..))
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
-import Language.QuickSilver.TypeCheck.TypedExpr 
+import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -25,7 +25,7 @@ castType Int8Type v =
        debugDump v'
        i8 <- int8TypeM
        trunc v' i8 "castType: to int8" >>= simpStore
-castType Int64Type v = return v
+castType Int64Type v = simpStore v
     -- do v' <- load' v
     --    debugDump v'
     --    i64 <- int64TypeM
@@ -36,8 +36,7 @@ castType Int64Type v = return v
 --   siToFP v' dblT "intToDouble" >>= simpStore
 castType (ClassType c _) v = do
   t <- lookupClasLType c
-  let tp = (pointer0 . pointer0) t
-  bitcast v tp ("castTo" ++ Text.unpack c)
+  bitcast v t ("castTo" ++ Text.unpack c) >>= simpStore
 castType t _ = error $ "castType: not implemented for " ++ show t
 
 eval :: TExpr -> Build ValueRef
@@ -61,10 +60,12 @@ genBinOp op e1 e2 _resType =
          e2' <- loadEval e2
          v <- f e1' e2' "genBinOp generated operation"
          simpStore v
-    Nothing -> error "genBinOp: operation not found"
+    Nothing -> error $ "genBinOp: operation not found: " ++ show op
   where
     opFuncs =
       [ (Add, add)
+      , (Or, orr)
+      , (And, andd)
       , (RelOp Gt NoType, if isIntegerType (texpr e1)
                           then icmp IntSGT
                           else fcmp FPOGT)
@@ -72,8 +73,28 @@ genBinOp op e1 e2 _resType =
                            then icmp IntSGE
                            else fcmp FPOGE)
       ]
+
+genUnOp :: UnOp -> TExpr -> Typ -> Build ValueRef
+genUnOp op e _resType =
+  case lookup op opFuncs of
+    Just f ->
+      do debug ("genUnOp: " ++ show (op, e))
+         e' <- loadEval e
+         debugDump e'
+         v <- f e' "genUnOp generated operation"
+         debugDump v
+         simpStore v
+    Nothing -> error $ "genUnOp: operation not found: " ++ show op
+  where
+    opFuncs =
+      [ (Neg, if isIntegerType (texpr e)
+              then neg
+              else fneg)
+      ]
+
+
 evalUnPos :: UnPosTExpr -> Build ValueRef
-evalUnPos (Cast t e) = eval e >>= castType t
+evalUnPos (Cast t e) = debug "evalUnPos: cast" >> loadEval e >>= castType t
 evalUnPos (StaticCall _moduleType name args retVal) =
     do debug "evalUnPos: static call"
        -- modul <- lookupClas (classNameType moduleType)
@@ -84,6 +105,32 @@ evalUnPos (StaticCall _moduleType name args retVal) =
        r <- call' fn args' ("static call: " ++ Text.unpack name)
        setInstructionCallConv r Fast
        if retVal /= NoType then simpStore r else return r
+
+evalUnPos (EqExpr op e1 e2) =
+  do let cmp | isIntegerType (texpr e1) =
+                   icmp $ case op of
+                     T.Neq -> IntNE
+                     T.Eq -> IntEQ
+             | otherwise = \ e1 e2 str ->
+                   do i64 <- int64TypeM
+                      i1 <- ptrToInt e1 i64 "ptrToInt 1"
+                      i2 <- ptrToInt e2 i64 "ptrToInt 2"
+                      let llvmOp = case op of
+                            T.Neq -> IntNE
+                            T.Eq -> IntEQ
+                      icmp llvmOp i1 i2 str
+     debug "evalUnPos: eqExpr"
+
+     e1' <- loadEval e1
+     debugDump e1'
+     debug "evalUnPos: eqExpr 1"
+
+     e2' <- loadEval e2
+     debugDump e2'
+     debug "evalUnPos: eqExpr 2"
+
+     cmp e1' e2' "equality check" >>= simpStore
+
 evalUnPos (Call trg fName args retVal) = do
   let (ClassType cName _) = texpr trg
 
@@ -104,12 +151,20 @@ evalUnPos (Call trg fName args retVal) = do
   setInstructionCallConv r Fast
   
   if retVal /= NoType then simpStore r else return r
+
 evalUnPos (LitInt i _t)   = int (fromIntegral i) >>= simpStore
 evalUnPos (LitDouble d)   = dbl d >>= simpStore
 evalUnPos (LitChar c)     = char c >>= simpStore
 evalUnPos (LitBool True)  = simpStore =<< true
 evalUnPos (LitBool False) = simpStore =<< false
-evalUnPos (BinOpExpr op t1 t2 resType) = genBinOp op t1 t2 resType
+evalUnPos (Var s _) = lookupEnv s
+evalUnPos (LitVoid t) = nul `fmap` typeOfM t >>= simpStore
+evalUnPos (CurrentVar _) = lookupEnv "Current"
+evalUnPos (ResultVar _) = lookupEnv "Result"
+
+evalUnPos (UnOpExpr op e resType) = genUnOp op e resType
+evalUnPos (BinOpExpr op e1 e2 resType) = genBinOp op e1 e2 resType
+
 evalUnPos (Access trg attr _) = do
   trgV <- loadEval trg
   let (ClassType cname _) = texprTyp (contents trg)
@@ -117,21 +172,20 @@ evalUnPos (Access trg attr _) = do
   case attributeIndex clas attr of
     Just index -> gepInt trgV [0,index]
     Nothing -> error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
-evalUnPos (Var s _) = lookupEnv s
-evalUnPos (CurrentVar _) = lookupEnv "Current"
-evalUnPos (ResultVar _) = lookupEnv "Result"
+
 evalUnPos (Box c e) = do
   v    <- loadEval e
   vPtr <- mallocTyp =<< typeOfM (texpr e)
   _ <- store v vPtr
   vPtrPtr <- simpStore vPtr
   castType c vPtrPtr
+
 evalUnPos (Unbox t e) = do
   ePtr <- loadEval e
   t' <- typeOfM t
   casted <- bitcast ePtr (pointer0 t') "unboxing cast"
   load casted "unboxing" >>= simpStore
-evalUnPos (LitVoid t) = nul `fmap` typeOfM t
+
 evalUnPos (LitString s) = do
   -- we rely that the strings are stored internally as char8*
   rawStr <- getNamedGlobal (s `Text.append` "_global")

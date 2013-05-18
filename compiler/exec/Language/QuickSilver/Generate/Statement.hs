@@ -46,7 +46,9 @@ genStmt (Assign ident expr) = do
   _   <- store rhs lhs
   return ()
 genStmt (If b then_ elseIfs elseMb) = do
+  debug "genStmt: if"
   bRes   <- loadEval b
+  debugDump bRes
   tr     <- true
   cond   <- icmp IntEQ tr bRes "if conditional test"
 
@@ -135,7 +137,8 @@ lookupMalloc (ClassType cName _) fName args = do
   if isCreate
     then do
       args' <- mapM loadEval args
-      callByName (featureAsCreate cName fName) args'
+      unClasRef `fmap` mallocClas cName 
+      -- callByName (featureAsCreate cName fName) args'
     else unClasRef `fmap` mallocClas cName 
 lookupMalloc t _ _ = 
     error ("lookupMalloc: called on non-class type: " ++ show t)

@@ -50,6 +50,7 @@ binEqOp TildeNeq = RelOp E.TildeNeq NoType
 data UnPosTExpr 
   = Call TExpr Text [TExpr] Typ
   | BinOpExpr BinOp TExpr TExpr Typ
+  | UnOpExpr E.UnOp TExpr Typ
   | Access TExpr Text Typ
   | Agent TExpr Text [TExpr] Typ
   | Old TExpr
@@ -144,6 +145,10 @@ untypeExpr' (ResultVar _t)
     = E.ResultVar
 untypeExpr' (EqExpr op e1 e2)
   = E.BinOpExpr (binEqOp op) (untypeExpr e1) (untypeExpr e2)
+untypeExpr' (BinOpExpr op e1 e2 _)
+  = E.BinOpExpr op (untypeExpr e1) (untypeExpr e2)
+untypeExpr' (UnOpExpr op e _)
+  = E.UnOpExpr op (untypeExpr e)
 untypeExpr' (Attached typ e asName)
   = E.Attached typ (untypeExpr e) asName
 untypeExpr' (Box _ e) = contents $ untypeExpr e
@@ -170,6 +175,7 @@ texpr = texprTyp . contents
 texprTyp :: UnPosTExpr -> Typ
 texprTyp (CreateExpr t _ _) = t
 texprTyp (BinOpExpr _ _ _ t) = t
+texprTyp (UnOpExpr _ _ t) = t
 texprTyp (Agent _ _ _ t) = t
 texprTyp (Var _ t)   = t
 texprTyp (Cast t _)  = t

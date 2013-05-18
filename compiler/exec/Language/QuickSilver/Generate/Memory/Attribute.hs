@@ -4,6 +4,8 @@ module Language.QuickSilver.Generate.Memory.Attribute
      typeOfDecl) 
     where
 
+import Control.Applicative
+
 import qualified Data.HashMap.Strict as Map
 
 import Language.QuickSilver.Syntax
@@ -17,6 +19,7 @@ typeOf :: ClassEnv -> Typ -> Build TypeRef
 typeOf e t =
     case t of
       NoType -> voidTypeM
+      VoidType -> pointer0 <$> int8TypeM
       AnyIntType -> int64TypeM
       Int8Type -> int8TypeM
       Int64Type -> int64TypeM

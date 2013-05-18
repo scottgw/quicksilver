@@ -26,17 +26,37 @@ checkBinOp :: BinOp -> TExpr -> TExpr -> TypingBody body TExpr
 checkBinOp op e1 e2 
     | isNumOp = numOp
     | isCompOp = compOp
+    | isEqOp   = equalOp
+    | isBoolOp = tagPos (T.BinOpExpr op e1 e2 BoolType)
     | otherwise = err
     where
       err = throwError $ concat ["checkBinOp: no infix operation for: "
                                 , show (op, t1, t2)
                                 ]
 
+      isEqOp   = op `elem` (map (flip RelOp NoType) [Eq, Neq])
       isNumOp  = op `elem` [Add, Sub, Mul, Div]
+      isBoolOp  = op `elem` [And, Or]
       isCompOp = op `elem` (map (flip RelOp NoType) [Gt, Lt, Gte, Lte])
 
       t1 = T.texpr e1
       t2 = T.texpr e2
+
+      equalOp
+        | t1 == t2 = tagPos (T.EqExpr (T.eqOp op) e1 e2)
+        | t1 == AnyIntType && isIntegerType t2 =
+            do e1' <- tagPos (T.Cast t2 e1)
+               tagPos (T.EqExpr (T.eqOp op) e1' e2)
+        | t2 == AnyIntType && isIntegerType t1 =
+            do e2' <- tagPos (T.Cast t1 e2)
+               tagPos (T.EqExpr (T.eqOp op) e1 e2')
+        | t1 == VoidType && not (isBasic t2) =
+            do e1' <- tagPos (T.Cast t2 e1)
+               tagPos (T.EqExpr (T.eqOp op) e1' e2)
+        | t2 == VoidType && not (isBasic t1) =
+            do e2' <- tagPos (T.Cast t1 e2)
+               tagPos (T.EqExpr (T.eqOp op) e1 e2')
+        | otherwise = err
 
       numOp
         | t1 == t2 = tagPos (T.BinOpExpr op e1 e2 t1)
@@ -107,22 +127,12 @@ expr (UnOpExpr op e)
     tagPos (T.Old e')
   | otherwise = do
     e' <- typeOfExpr e
-    cls <- getFlat' (T.texpr e')
-    case findOperator cls (unOpAlias op) 0 of
-      Nothing -> 
-        throwError 
-        ("No routine found associated with unary operator " ++ show op ++ " in " ++ show (T.texpr e'))
-      Just f -> expr (QualCall e (routineName f) [])
+    tagPos (T.UnOpExpr op e' (T.texpr e'))
 
-expr (BinOpExpr op e1 e2) 
-  | equalityOp op = do
-    e1' <- typeOfExpr e1
-    e2' <- typeOfExpr e2
-    tagPos (T.EqExpr (T.eqOp op) e1' e2')
-  | otherwise = do
-    e1' <- typeOfExpr e1
-    e2' <- typeOfExpr e2
-    checkBinOp op e1' e2'
+expr (BinOpExpr op e1 e2) =
+  do e1' <- typeOfExpr e1
+     e2' <- typeOfExpr e2
+     checkBinOp op e1' e2'
 
 expr (UnqualCall fName args) = do
   qual <- QualCall <$> tagPos CurrentVar 
@@ -137,7 +147,14 @@ expr (QualCall trg name args) = do
   flatCls  <- getFlat' targetType
 
   case findAbsRoutine flatCls name of
-    Nothing -> throwError $ "expr.QualCall: " ++ show trg ++ ": " ++ Text.unpack name ++ show args' ++ show (map (routineName) $ view routines flatCls)
+    Nothing ->
+      case findAttrInt flatCls name of
+        Just a -> tagPos (T.Access trg' name (declType $ attrDecl a))
+        Nothing -> throwError $
+                   concat ["expr.QualCall: ", show trg, ": "
+                          , Text.unpack name, show args'
+                          , show (map (routineName) $ view routines flatCls)
+                          ]
     Just feat -> do
       let formArgs = map declType (routineArgs feat)
           res = routineResult feat
