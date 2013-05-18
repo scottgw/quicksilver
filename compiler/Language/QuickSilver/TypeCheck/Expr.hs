@@ -36,7 +36,7 @@ checkBinOp op e1 e2
 
       isEqOp   = op `elem` (map (flip RelOp NoType) [Eq, Neq])
       isNumOp  = op `elem` [Add, Sub, Mul, Div]
-      isBoolOp  = op `elem` [And, Or]
+      isBoolOp  = op `elem` [And, Or, OrElse, AndThen]
       isCompOp = op `elem` (map (flip RelOp NoType) [Gt, Lt, Gte, Lte])
 
       t1 = T.texpr e1

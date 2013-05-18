@@ -3,6 +3,7 @@
 module Language.QuickSilver.Generate.Eval (eval, loadEval, evalUnPos, true, int) where
 
 import Control.Applicative
+import Control.Monad
 
 -- import Data.Text (Text)
 import qualified Data.Text as Text
@@ -56,23 +57,56 @@ genBinOp op e1 e2 _resType =
   case lookup op opFuncs of
     Just f ->
       do debug ("genBinOp: " ++ show (op, e1, e2))
-         e1' <- loadEval e1
-         e2' <- loadEval e2
-         v <- f e1' e2' "genBinOp generated operation"
+         v <- f "genBinOp generated operation"
          simpStore v
     Nothing -> error $ "genBinOp: operation not found: " ++ show op
   where
     opFuncs =
-      [ (Add, add)
-      , (Or, orr)
-      , (And, andd)
+      [ (Add, strictApply add)
+      , (Or, strictApply orr)
+      , (And, strictApply andd)
+      , (OrElse, orElse)
+      -- , (AndThen, andThen)
       , (RelOp Gt NoType, if isIntegerType (texpr e1)
-                          then icmp IntSGT
-                          else fcmp FPOGT)
+                          then strictApply (icmp IntSGT)
+                          else strictApply (fcmp FPOGT))
       , (RelOp Gte NoType, if isIntegerType (texpr e1)
-                           then icmp IntSGE
-                           else fcmp FPOGE)
+                           then strictApply (icmp IntSGE)
+                           else strictApply (fcmp FPOGE))
       ]
+
+    strictApply f str =
+      do e1' <- loadEval e1
+         e2' <- loadEval e2
+         f e1' e2' str
+
+    orElse _str =
+      do startB <- getInsertBlock
+         func   <- getBasicBlockParent startB
+         res    <- join (alloca <$> int1TypeM <*> pure "orElse result")
+         tr     <- true
+
+         shortcutB <- appendBasicBlock func "orElse shortcut"
+         fullEvalB <- appendBasicBlock func "orElse full evaluate"
+         afterB    <- appendBasicBlock func "orElse after"
+
+         positionAtEnd startB
+         e1'  <- loadEval e1
+         condBr e1' shortcutB fullEvalB
+
+         positionAtEnd fullEvalB
+         e2'  <- loadEval e2
+         store e2' res
+         br afterB
+
+         positionAtEnd shortcutB
+         store tr res
+         br afterB
+
+         positionAtEnd afterB
+         debug "orElse res"
+         debugDump res
+         load res "orElse result"
 
 genUnOp :: UnOp -> TExpr -> Typ -> Build ValueRef
 genUnOp op e _resType =
@@ -107,29 +141,34 @@ evalUnPos (StaticCall _moduleType name args retVal) =
        if retVal /= NoType then simpStore r else return r
 
 evalUnPos (EqExpr op e1 e2) =
-  do let cmp | isIntegerType (texpr e1) =
+  do let ccmp | isIntegerType (texpr e1) =
                    icmp $ case op of
                      T.Neq -> IntNE
                      T.Eq -> IntEQ
-             | otherwise = \ e1 e2 str ->
+              | otherwise = \ v1 v2 str ->
                    do i64 <- int64TypeM
-                      i1 <- ptrToInt e1 i64 "ptrToInt 1"
-                      i2 <- ptrToInt e2 i64 "ptrToInt 2"
+                      i1 <- ptrToInt v1 i64 "1 ptrToInt"
+                      i2 <- ptrToInt v2 i64 "2 ptrToInt"
                       let llvmOp = case op of
                             T.Neq -> IntNE
                             T.Eq -> IntEQ
+                      debug "ptr compare"
+                      debugDump i1
+                      debugDump i2
                       icmp llvmOp i1 i2 str
-     debug "evalUnPos: eqExpr"
-
+     debug $ "evalUnPos: eqExpr " ++ show (op, e1, e2)
+     
+     debug "evalUnPos: 1 eqExpr"
      e1' <- loadEval e1
      debugDump e1'
-     debug "evalUnPos: eqExpr 1"
-
+     
+     debug "evalUnPos: 2 eqExpr"
      e2' <- loadEval e2
      debugDump e2'
-     debug "evalUnPos: eqExpr 2"
 
-     cmp e1' e2' "equality check" >>= simpStore
+     res <- ccmp e1' e2' "equality check"
+     debug "evalUnPos: eqExpr done"
+     simpStore res
 
 evalUnPos (Call trg fName args retVal) = do
   let (ClassType cName _) = texpr trg

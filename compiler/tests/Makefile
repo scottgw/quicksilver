@@ -1,3 +1,6 @@
+http_test: http_test.e lib/stdlib.bc
+	./qsc $<
+
 socket_test: socket_test.e lib/stdlib.bc
 	./qsc $<
 

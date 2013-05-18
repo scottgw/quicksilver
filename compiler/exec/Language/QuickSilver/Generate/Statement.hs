@@ -104,9 +104,7 @@ genStmt (Loop setup _invs cond body _varMb) = do
 
   positionAtEnd condB
   res     <- loadEval cond
-  tr      <- true
-  condRes <- icmp IntEQ tr res "loop conditional test" 
-  _ <- condBr condRes afterB bodyB
+  _ <- condBr res afterB bodyB
 
   positionAtEnd bodyB
   genStmt (contents body)
