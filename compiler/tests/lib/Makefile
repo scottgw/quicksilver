@@ -1,4 +1,4 @@
-EFILES=pointer_8 prelude pointer string
+EFILES=pointer_8 prelude pointer string socket_util socket
 EBCFILES=$(EFILES:=.ebc)
 
 stdlib.bc: externals.cbc ${EBCFILES}
@@ -8,7 +8,7 @@ stdlib.bc: externals.cbc ${EBCFILES}
 	qs $< -o $@
 
 %.cbc: %.c
-	clang -emit-llvm -c $< -o $@
+	clang -emit-llvm -c $< -o $@ -Wall
 
 clean:
 	@rm -f *.bc *.ebc *.cbc
