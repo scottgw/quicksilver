@@ -135,10 +135,14 @@ expr (BinOpExpr op e1 e2) =
      checkBinOp op e1' e2'
 
 expr (UnqualCall fName args) = do
-  qual <- QualCall <$> tagPos CurrentVar 
-                   <*> pure fName 
-                   <*> pure args
-  expr qual
+  currTypEi <- current <$> ask
+  case currTypEi of
+    Right _t ->
+      do qual <- QualCall <$> tagPos CurrentVar 
+                          <*> pure fName 
+                          <*> pure args
+         expr qual
+    Left t -> expr (StaticCall t fName args) 
 
 expr (QualCall trg name args) = do
   trg' <- typeOfExpr trg

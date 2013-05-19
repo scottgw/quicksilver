@@ -58,11 +58,15 @@ setupRoutines pcMap (ClassInfo cls _t) =
     where
       genRoutineType rtn =
           do fType <- featDeclType rtn
-             let name =
-                     case routineImpl rtn of
-                       EmptyExternal extern _ -> extern
-                       _ ->
-                           fullNameStr (view className cls) (routineName rtn)
+             let name = fullNameStr (view className cls) (routineName rtn)
+
+             -- External routines should also declare the external
+             -- thing they bind to as a function. The type of that
+             -- function matches the type of the outer declaration,
+             -- so we just reuse it.
+             case routineImpl rtn of
+                       EmptyExternal extern _ -> void (addFunc extern fType)
+                       _ -> return ()
              fPtr <- addFunc name fType
              debug $ concat [ "Adding routine prototype "
                             , Text.unpack name ," @ ", show fPtr

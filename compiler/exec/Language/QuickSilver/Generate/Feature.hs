@@ -59,7 +59,27 @@ genBody r =
   case routineImpl r of
     RoutineBody _ _ body -> genStmt (contents body)
 --    RoutineExternal "built_in" _ -> genBuiltin r
-    RoutineExternal _name _ -> return ()
+    RoutineExternal name _ -> genExternal name
+
+genExternal name =
+  do debug "generating external"
+     func <- getInsertBlock >>= getBasicBlockParent
+     let params = countParams func
+         args = map (getParam func) [0 .. params - 1]
+     debugDump func
+     
+     mapM_ debugDump args
+
+     externFunc <- getNamedFunction name
+     
+     v <- call' externFunc args "forwarding to external"
+     debug "generated external call"
+     debugDump v
+     resultMb <- lookupEnvM "Result"
+     case resultMb of
+       Nothing -> return ()
+       Just result -> void (store v result)
+
 
 start :: TRoutine -> Build ()
 start r = getInsertBlock >>= positionAtEnd >> genBody r
@@ -105,7 +125,6 @@ preCond :: TRoutine -> Build ()
 preCond = mapM_ clause . contractClauses . routineReq
 
 genRoutine :: TRoutine -> Build ()
-genRoutine rout | routineIsExternal rout = return ()
 genRoutine rout = do
   clas <- currentClass
   let cname = view className clas
@@ -134,12 +153,9 @@ routResult f = allocDeclEnv . Decl "Result" . routineResult $ f
 
 routReturn :: TRoutine -> Build ()
 routReturn rout =
-  case routineImpl rout of
-    RoutineExternal _ _ -> return ()
-    _                   -> 
-      case routineResult rout of
-        NoType -> retVoid
-        t      -> evalUnPos (ResultVar t) >>= (`load` "") >>= ret
+  case routineResult rout of
+    NoType -> retVoid
+    t      -> evalUnPos (ResultVar t) >>= (`load` "") >>= ret
 
 genRoutines :: [TRoutine] -> Build ()
 genRoutines = mapM_ genRoutine

@@ -35,8 +35,8 @@ runTyping cs curr m =
   idErrorRead m (mkCtx (maybeCurrType curr) cs)
 
 maybeCurrType cls
-  | view isModule cls = Nothing
-  | otherwise = Just (cType cls)
+  | view isModule cls = Left (cType cls)
+  | otherwise = Right (cType cls)
 
 clasM :: [AbsClas ctxBody Expr] 
          -> AbsClas (RoutineBody Expr) Expr 

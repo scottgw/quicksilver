@@ -139,10 +139,10 @@ evalUnPos (Cast t e) =
   do debug $ "evalUnPos: cast " ++ show (t, e)
      v <- loadEval e
      castType t v
-evalUnPos (StaticCall _moduleType name args retVal) =
+evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
     do debug "evalUnPos: static call"
        -- modul <- lookupClas (classNameType moduleType)
-       fn <- getNamedFunction name
+       fn <- getNamedFunction (fullNameStr moduleType name)
        args' <- mapM loadEval args
        debugDump fn
        mapM_ debugDump args'

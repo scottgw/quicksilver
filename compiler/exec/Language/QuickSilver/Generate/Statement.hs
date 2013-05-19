@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Language.QuickSilver.Generate.Statement where
+module Language.QuickSilver.Generate.Statement (genStmt) where
 
 import Control.Monad
 
@@ -8,15 +8,11 @@ import Data.Text (Text)
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
-import Language.QuickSilver.TypeCheck.TypedExpr
-
+import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.Memory.Class
-import Language.QuickSilver.Generate.Memory.Type
-
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
-import Language.QuickSilver.Generate.LLVM.Types
 
 fetchCurrentAttr :: Text -> Build ValueRef
 fetchCurrentAttr ident = do
@@ -31,6 +27,7 @@ lookupVarOrAttr ident =
 
 lookupVarAccess :: UnPosTExpr -> Build ValueRef
 lookupVarAccess (Var i _) = lookupEnv i
+lookupVarAccess (T.ResultVar _) = lookupEnv "Result"
 lookupVarAccess (Access _ i _) = fetchCurrentAttr i
 lookupVarAccess e = error ("lookupVarAccess: not Var or Access: " ++ show e)
 
@@ -126,11 +123,11 @@ genStmt s = error $ "genStmt: no pattern for: " ++ show s
 
 
 lookupMalloc :: Typ -> Text -> [TExpr] -> Build ValueRef
-lookupMalloc (ClassType cName _) fName args = do
+lookupMalloc (ClassType cName _) fName _args = do
   isCreate <- lookupCreate cName fName
   if isCreate
     then do
-      args' <- mapM loadEval args
+      -- args' <- mapM loadEval args
       unClasRef `fmap` mallocClas cName 
       -- callByName (featureAsCreate cName fName) args'
     else unClasRef `fmap` mallocClas cName 
