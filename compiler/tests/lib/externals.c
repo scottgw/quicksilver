@@ -1,16 +1,23 @@
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 
-#include <sys/socket.h>
 #include <netinet/in.h>
+
+#include <sys/socket.h>
+#include <sys/stat.h>
 
 void
 exit_with(int64_t i)
 {
   exit(i);
 }
+
+/***********************************/
+/* Character and pointer functions */
+/***********************************/
 
 char*
 new_pointer_8 (int64_t n)
@@ -40,7 +47,7 @@ int8_to_char (int8_t i)
 struct string
 {
   int64_t length;
-  int8_t* data;
+  uint8_t* data;
 };
 
 void
@@ -48,6 +55,33 @@ print(struct string* str)
 {
   write(STDOUT_FILENO, str->data, str->length);
 }
+
+
+/*****************************/
+/* File descriptor functions */
+/*****************************/
+
+int
+fd_close(int fd)
+{
+  return close(fd);
+}
+
+int
+open_read(struct string* str)
+{
+  return open((char*)str->data, O_RDONLY);
+}
+
+ssize_t
+fd_read(int fd, char *buf, uint64_t size)
+{
+  return read(fd, buf, size);
+}
+
+/********************/
+/* Socket functions */
+/********************/
 
 int
 new_tcp_socket()
@@ -60,11 +94,6 @@ new_tcp_socket()
   return socketfd;
 }
 
-int
-fd_close(int fd)
-{
-  return close(fd);
-}
 
 int
 socket_bind(int socketfd, int port)

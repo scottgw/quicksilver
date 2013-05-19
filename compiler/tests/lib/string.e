@@ -49,6 +49,51 @@ class String
         Result := not found_different
       end
     end
+
+  equals(other: String): Boolean
+    local
+      i: Integer
+      found_different: Boolean
+    do
+      Result := False
+
+      if other.length = length then
+        found_different := False
+
+        from
+          i := 1
+        until
+          i > length or found_different
+        loop
+          found_different := item(i) /= other.item(i)
+          i := i + 1
+        end
+
+        Result := not found_different
+      end      
+    end
+  
+  find(c: Character_8): Integer
+    local
+      i: Integer
+      found: Boolean
+    do
+      Result := -1
+
+      from
+        found := False
+        i := 1
+      until
+        i > length or found
+      loop
+        found := item(i) = c
+        i := i + 1
+      end
+
+      if found then
+        Result := i - 1
+      end
+    end
   
   append (other: String): String
     local

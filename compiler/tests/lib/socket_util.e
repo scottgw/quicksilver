@@ -19,7 +19,6 @@ module Socket_Util
     external "socket_accept"
     end
 
-
   socket_recv(SocketFd: Integer; str: String): Integer
     external "socket_recv"
     end

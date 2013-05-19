@@ -63,6 +63,27 @@ create make_server, make_fd
       end
     end
 
+  send(str: String): Integer
+    local
+      sent_length: Integer
+    do
+      sent_length := {Socket_Util}.socket_send(fd, str.data, str.length)
+      Result := sent_length
+    end
+
+  send_all(str: String)
+    local
+      str_start: Integer
+      sent_length: Integer
+    do
+      from
+      until str.length <= 0 -- There's still more to send
+      loop
+        sent_length := send(str)
+        str := str.substring(sent_length + 1, str.length + 1)
+      end
+    end
+  
   close()
     do
       {Prelude}.fd_close(fd)
