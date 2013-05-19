@@ -81,7 +81,7 @@ eiffel :-
 
 <0>  $white+          ;
 <0>  "--" .*          ;
-<0>  \' @char \'      { withPos (Char . Text.head . Text.tail . Text.init) }
+<0>  \' @char \'      { withPos (processChar . Text.tail . Text.init) }
 <0>  "and" (\ )* "then"    { withPos (opInfoTok AndThen 5 AssocLeft) }
 <0>  "and"                 { withPos (opInfoTok And     5 AssocLeft) }
 <0>  "or" (\ )* "else"     { withPos (opInfoTok OrElse  4 AssocLeft) }
@@ -361,6 +361,25 @@ blockStringLex _ _ = do
                  then go (Text.cons c str) isNew input
                  else go (Text.cons c str) MidLine input
 
+processChar :: Text -> Token
+processChar txt =
+    case Text.unpack txt of
+      '%':c:[] -> case translateChar c of
+        Just t -> Char t
+        Nothing -> error "processChar: error"
+      [c] -> Char c
+
+translateChar c =
+  case c of
+    'N' -> Just '\n'
+    '"' -> Just '"'
+    '%' -> Just '%'
+    'T' -> Just '\t'
+    'R' -> Just '\r'
+    '\n' -> Just ' '
+    'c' -> Just '^'
+    _ -> Nothing
+
 processString :: Text -> Token
 processString str = String $ either 
               Text.reverse 
@@ -368,18 +387,11 @@ processString str = String $ either
    where go (Right acc) '%' = Left acc
          go (Right acc) c = Right (c `Text.cons` acc)
          go (Left acc) c = Right (x `Text.cons` acc)
-           where x = case c of
-                   'N' -> '\n'
-                   '"' -> '"'
-                   '%' -> '%'
-                   'T' -> '\t'
-                   'R' -> '\r'
-                   '\n' -> ' '
-                   'c' -> '^'
-                   o -> error ("processString: didn't catch '" ++ 
-                               [o] ++ 
-                               "' in " ++
-                               Text.unpack str)
+           where x = case translateChar c of
+                   Just t -> t
+                   Nothing ->
+                     error (concat [ "processString: didn't catch '"
+                                   , [c], "' in ", Text.unpack str])
 
 alexPosnToPos (AlexPn _ line col) = 
   newPos "FIXME: Lex.hs, no file"
