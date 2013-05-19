@@ -7,27 +7,40 @@
 #include <netinet/in.h>
 
 void
-exit_with(int i)
+exit_with(int64_t i)
 {
   exit(i);
 }
 
 char*
-new_pointer_8 (uint32_t n)
+new_pointer_8 (int64_t n)
 {
   return (char*) malloc(sizeof(char) * n);
 }
 
 void
-pointer_8_put (char* p, int i, int8_t v)
+pointer_8_put (char* p, int64_t i, char c)
 {
-  p[i] = v;
+  p[i] = c;
 }
+
+char
+pointer_8_get (char* p, int64_t i)
+{
+  return p[i];
+}
+
+char
+int8_to_char (int8_t i)
+{
+  return i;
+}
+
 
 struct string
 {
   int64_t length;
-  char* data;
+  int8_t* data;
 };
 
 void
