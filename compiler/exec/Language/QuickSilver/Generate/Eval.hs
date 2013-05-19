@@ -66,7 +66,7 @@ genBinOp op e1 e2 _resType =
       , (Or, strictApply orr)
       , (And, strictApply andd)
       , (OrElse, orElse)
-      -- , (AndThen, andThen)
+      , (AndThen, andThen)
       , (RelOp Gt NoType, if isIntegerType (texpr e1)
                           then strictApply (icmp IntSGT)
                           else strictApply (fcmp FPOGT))
@@ -113,6 +113,35 @@ genBinOp op e1 e2 _resType =
          debug "orElse res"
          debugDump res
          load res "orElse result"
+
+    andThen _str =
+      do startB <- getInsertBlock
+         func   <- getBasicBlockParent startB
+         res    <- join (alloca <$> int1TypeM <*> pure "andThen result")
+         fl     <- false
+
+         shortcutB <- appendBasicBlock func "andThen shortcut"
+         fullEvalB <- appendBasicBlock func "andThen full evaluate"
+         afterB    <- appendBasicBlock func "andThen after"
+
+         positionAtEnd startB
+         e1'  <- loadEval e1
+         condBr e1' fullEvalB shortcutB
+
+         positionAtEnd fullEvalB
+         e2'  <- loadEval e2
+         store e2' res
+         br afterB
+
+         positionAtEnd shortcutB
+         store fl res
+         br afterB
+
+         positionAtEnd afterB
+         debug "andThen res"
+         debugDump res
+         load res "andThen result"
+
 
 genUnOp :: UnOp -> TExpr -> Typ -> Build ValueRef
 genUnOp op e _resType =
