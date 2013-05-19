@@ -22,10 +22,9 @@ import Language.QuickSilver.Generate.Util
 
 castType :: Typ -> ValueRef -> Build ValueRef
 castType Int8Type v =
-    do v' <- load' v
-       debugDump v'
+    do debug "castType: to int8 start"
        i8 <- int8TypeM
-       trunc v' i8 "castType: to int8" >>= simpStore
+       trunc v i8 "castType: to int8" >>= simpStore
 castType Int64Type v = simpStore v
     -- do v' <- load' v
     --    debugDump v'
@@ -63,6 +62,7 @@ genBinOp op e1 e2 _resType =
   where
     opFuncs =
       [ (Add, strictApply add)
+      , (Sub, strictApply sub)
       , (Or, strictApply orr)
       , (And, strictApply andd)
       , (OrElse, orElse)
@@ -73,6 +73,12 @@ genBinOp op e1 e2 _resType =
       , (RelOp Gte NoType, if isIntegerType (texpr e1)
                            then strictApply (icmp IntSGE)
                            else strictApply (fcmp FPOGE))
+      , (RelOp Lt NoType, if isIntegerType (texpr e1)
+                          then strictApply (icmp IntSLT)
+                          else strictApply (fcmp FPOLT))
+      , (RelOp Lte NoType, if isIntegerType (texpr e1)
+                           then strictApply (icmp IntSLE)
+                           else strictApply (fcmp FPOLE))        
       ]
 
     strictApply f str =
@@ -124,11 +130,15 @@ genUnOp op e _resType =
       [ (Neg, if isIntegerType (texpr e)
               then neg
               else fneg)
+      , (Not, nott)
       ]
 
 
 evalUnPos :: UnPosTExpr -> Build ValueRef
-evalUnPos (Cast t e) = debug "evalUnPos: cast" >> loadEval e >>= castType t
+evalUnPos (Cast t e) =
+  do debug $ "evalUnPos: cast " ++ show (t, e)
+     v <- loadEval e
+     castType t v
 evalUnPos (StaticCall _moduleType name args retVal) =
     do debug "evalUnPos: static call"
        -- modul <- lookupClas (classNameType moduleType)
@@ -137,11 +147,11 @@ evalUnPos (StaticCall _moduleType name args retVal) =
        debugDump fn
        mapM_ debugDump args'
        r <- call' fn args' ("static call: " ++ Text.unpack name)
-       setInstructionCallConv r Fast
+       -- setInstructionCallConv r Fast
        if retVal /= NoType then simpStore r else return r
 
 evalUnPos (EqExpr op e1 e2) =
-  do let ccmp | isIntegerType (texpr e1) =
+  do let ccmp | isIntegerType (texpr e1) || texpr e1 == CharType=
                    icmp $ case op of
                      T.Neq -> IntNE
                      T.Eq -> IntEQ
@@ -187,7 +197,7 @@ evalUnPos (Call trg fName args retVal) = do
   debugDump f
   r <- call' f (trg':args') ("call: " ++ Text.unpack fName)
   debug "eval: call -> done"
-  setInstructionCallConv r Fast
+  -- setInstructionCallConv r Fast
   
   if retVal /= NoType then simpStore r else return r
 

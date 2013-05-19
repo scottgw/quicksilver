@@ -4,6 +4,7 @@ module Language.QuickSilver.Generate.Util where
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Values
+import Language.QuickSilver.Generate.LLVM.Util
 
 mallocSz :: ValueRef -> Build ValueRef
 mallocSz = call "GC_malloc" . (:[])
@@ -11,8 +12,7 @@ mallocSz = call "GC_malloc" . (:[])
 mallocTyp :: TypeRef -> Build ValueRef
 mallocTyp t = do
     sz <- sizeOf t
-    pt <- mallocSz sz
-    bitcast pt t "casting char ptr to typed ptr"
+    mallocSz sz
 
 sizeOf :: TypeRef -> Build ValueRef
 sizeOf t = do

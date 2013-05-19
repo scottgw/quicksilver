@@ -20,6 +20,7 @@ import Language.QuickSilver.Syntax
 import Language.QuickSilver.Generate.Memory.Attribute
 import Language.QuickSilver.Generate.Util
 import Language.QuickSilver.Generate.LLVM.Simple
+import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Values
 
@@ -53,5 +54,11 @@ numAttributes = length . view attributes
 mallocClas :: ClassName -> Build ClasRef
 mallocClas c = do
   clasTyp <- lookupClasLType c
-  inst    <- mallocTyp clasTyp
-  return $ ClasRef inst
+  kind <- getTypeKind clasTyp
+  t <- case kind of
+    PointerTypeKind -> getElementType clasTyp
+    _ -> return clasTyp
+  inst <- mallocTyp t
+  instCasted <- bitcast inst clasTyp "casting char ptr to typed ptr"
+
+  return $ ClasRef instCasted

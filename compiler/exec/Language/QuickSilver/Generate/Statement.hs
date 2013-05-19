@@ -45,12 +45,9 @@ genStmt (Assign ident expr) = do
   debugDump rhs
   _   <- store rhs lhs
   return ()
-genStmt (If b then_ elseIfs elseMb) = do
+genStmt (If cond then_ elseIfs elseMb) = do
   debug "genStmt: if"
-  bRes   <- loadEval b
-  debugDump bRes
-  tr     <- true
-  cond   <- icmp IntEQ tr bRes "if conditional test"
+  condV  <- loadEval cond
 
   startB <- getInsertBlock
   func   <- getBasicBlockParent startB
@@ -66,8 +63,7 @@ genStmt (If b then_ elseIfs elseMb) = do
         
         positionAtEnd elseIfB
         condVal <- loadEval c
-        res     <- icmp IntEQ tr condVal "if conditional test"
-        _ <- condBr res elseIfThenB nextIfCase
+        _ <- condBr condVal elseIfThenB nextIfCase
     
         positionAtEnd elseIfThenB
         genStmt (contents stmt)
@@ -79,14 +75,14 @@ genStmt (If b then_ elseIfs elseMb) = do
   
   positionAtEnd thenB
   genStmt (contents then_)
-  _ <- br mergeB
+  br mergeB
 
   positionAtEnd elseB
   maybe (return ()) (genStmt . contents) elseMb
-  _ <- br mergeB
+  br mergeB
 
   positionAtEnd startB
-  _ <- condBr cond thenB elseIfB
+  condBr condV thenB elseIfB
 
   positionAtEnd mergeB
   return ()
@@ -103,7 +99,7 @@ genStmt (Loop setup _invs cond body _varMb) = do
   _ <- br condB
 
   positionAtEnd condB
-  res     <- loadEval cond
+  res  <- loadEval cond
   _ <- condBr res afterB bodyB
 
   positionAtEnd bodyB

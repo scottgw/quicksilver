@@ -1,13 +1,13 @@
 module Language.QuickSilver.Generate.LLVM.Types 
     (
-     TypeRef,
+     TypeRef, L.TypeKind(..),
      structCreateNamed, structSetBody,
 
      typeOfVal,
 
      structType, countStructElementTypes,
 
-     getTypeKind,
+     getTypeKind, getElementType,
 
      int1TypeM, int8TypeM, int32TypeM, int64TypeM, doubleTypeM, voidTypeM,
 
@@ -50,6 +50,9 @@ structSetBody struct elems packed =
 
 getTypeKind :: TypeRef -> Build TypeKind
 getTypeKind = lift .  L.getTypeKind
+
+getElementType :: TypeRef -> Build TypeRef
+getElementType = lift . L.getElementType
 
 structType :: [TypeRef] -> Bool -> Build TypeRef
 structType ts packed =

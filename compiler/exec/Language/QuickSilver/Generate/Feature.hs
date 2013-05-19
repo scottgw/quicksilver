@@ -111,7 +111,7 @@ genRoutine rout = do
   let cname = view className clas
   funcRef <- getNamedFunction (fullNameStr cname (routineName rout))
   debug "Setting calling convention on function"
-  setFunctionCallConv funcRef Fast
+  -- setFunctionCallConv funcRef Fast
   debug "Creating start block"
   routStartBlock rout funcRef
   debug "Routine: generating environment"

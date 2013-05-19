@@ -67,7 +67,7 @@ genMain clas = do
                     return [curr]
   f <- getNamedFunction mainName
   r <- invoke' f mainArg norm lpad "make"
-  setInstructionCallConv r Fast
+  -- setInstructionCallConv r Fast
 
   positionAtEnd lpad
   -- ex <- call "llvm.eh.exception" []

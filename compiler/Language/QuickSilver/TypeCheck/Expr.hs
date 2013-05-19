@@ -113,8 +113,8 @@ expr (StaticCall typ name args) = do
     Just feat-> do
       args' <- mapM typeOfExpr args
       let argTypes = map declType (routineArgs feat)
-      argsConform args' argTypes
-      tagPos (T.StaticCall typ name args' (routineResult feat))
+      args'' <- argsConform args' argTypes
+      tagPos (T.StaticCall typ name args'' (routineResult feat))
 
 expr (Attached typeMb attch asMb) = do
   --TODO: Decide if we have to do any checking between typeMb and attch
