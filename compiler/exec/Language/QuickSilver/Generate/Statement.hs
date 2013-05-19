@@ -38,9 +38,15 @@ genStmt (Assign ident expr) = do
   debug $ "Assign to: " ++ show ident
 
   lhs <- eval ident
+  debug "Assign: lhs"
+  debugDump lhs
+  
   rhs <- loadEval expr
+  debug "Assign: rhs"
   debugDump rhs
-  _   <- store rhs lhs
+
+  debug "Assign: storing"
+  store rhs lhs
   return ()
 genStmt (If cond then_ elseIfs elseMb) = do
   debug "genStmt: if"

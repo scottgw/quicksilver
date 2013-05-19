@@ -66,7 +66,7 @@ data ClassInfo =
     ClassInfo
     {
       rtClass       :: ClasInterface,
-      rtClassStruct :: TypeRef
+      rtClassStruct :: Either TypeRef TypeRef
     } deriving Show
 
 type ClassEnv = Map Text ClassInfo
@@ -198,7 +198,7 @@ lookupErr err k m = maybe (error err) id (Map.lookup k m)
 lookupValue :: ClassName -> Build ValueRef
 lookupValue = lookupEnv
 
-lookupClasLType :: ClassName -> Build TypeRef
+lookupClasLType :: ClassName -> Build (Either TypeRef TypeRef)
 lookupClasLType = fmap rtClassStruct . lookupClassEnv
 
 lookupClas :: ClassName -> Build ClasInterface

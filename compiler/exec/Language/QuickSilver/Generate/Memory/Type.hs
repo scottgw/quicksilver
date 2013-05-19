@@ -22,9 +22,9 @@ import qualified Data.Traversable as Traverse
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 
+import Language.QuickSilver.Generate.Memory.Attribute
 import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.Memory.Feature
-
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -35,7 +35,7 @@ genClassStructs :: [ClasInterface] -> Build ClassEnv
 genClassStructs = opaqueClasses >=> constructClassTypes
 
 nameClassInfo :: ClasInterface -> Build (Text, ClassInfo)
-nameClassInfo clsIntr = (name,) <$> ClassInfo clsIntr <$> t    
+nameClassInfo clsIntr = (name,) <$> ClassInfo clsIntr <$> Left <$> t
     where name = view className clsIntr 
           t | isSpecialClass clsIntr = mkSpecialClassType name
             | otherwise              = structCreateNamed name
@@ -50,7 +50,6 @@ constructClassTypes pcMap =
   do pcMap' <- Traverse.mapM (setClasType pcMap) pcMap
      Traverse.mapM (setupRoutines pcMap') pcMap'
      return pcMap'
-
 
 setupRoutines :: ClassEnv -> ClassInfo -> Build ()
 setupRoutines pcMap (ClassInfo cls _t) = 
@@ -74,7 +73,7 @@ setupRoutines pcMap (ClassInfo cls _t) =
              return fPtr
 
 setClasType :: ClassEnv -> ClassInfo -> Build ClassInfo
-setClasType pcMap (ClassInfo cls t) =
+setClasType pcMap (ClassInfo cls (Left t)) =
   local (setClassEnv pcMap) $ do
     -- Non special classes need their struct generated.
     -- special classes have already been done in 'nameClassInfo'
@@ -84,22 +83,7 @@ setClasType pcMap (ClassInfo cls t) =
                structSetBody t ts False
                return (pointer0 t)
           else return t
-    return (ClassInfo cls t')
-
-isSpecialClass :: ClasInterface -> Bool
-isSpecialClass cls = view className cls `elem` map fst nameAndType
-
-mkSpecialClassType :: Text -> Build TypeRef
-mkSpecialClassType name = 
-    case lookup name nameAndType of
-      Just t -> t
-      Nothing ->
-          error $ "mkSpecialClassType: non special type: " ++ Text.unpack name
-
-nameAndType :: [(Text, Build TypeRef)]
-nameAndType =
-    [("Pointer_8", pointer0 <$> int8TypeM)
-    ]
+    return (ClassInfo cls (Right t'))
 
 
 -- Adding first `Current' argument to functions

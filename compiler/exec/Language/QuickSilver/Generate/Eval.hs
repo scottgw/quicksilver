@@ -34,9 +34,9 @@ castType Int64Type v = simpStore v
 --   v' <- load' v
 --   dblT <- doubleTypeM
 --   siToFP v' dblT "intToDouble" >>= simpStore
-castType (ClassType c _) v = do
-  t <- lookupClasLType c
-  bitcast v t ("castTo" ++ Text.unpack c) >>= simpStore
+castType t@(ClassType c _) v = do
+  tRep <- typeOfM t
+  bitcast v tRep ("castTo" ++ Text.unpack c) >>= simpStore
 castType t _ = error $ "castType: not implemented for " ++ show t
 
 eval :: TExpr -> Build ValueRef
@@ -214,12 +214,14 @@ evalUnPos (ResultVar _) = lookupEnv "Result"
 evalUnPos (UnOpExpr op e resType) = genUnOp op e resType
 evalUnPos (BinOpExpr op e1 e2 resType) = genBinOp op e1 e2 resType
 
-evalUnPos (Access trg attr _) = do
+evalUnPos (Access trg attr typ) = do
+  debug $ "Access: " ++ show (trg, attr, typ)
   trgV <- loadEval trg
+  debugDump trgV
   let (ClassType cname _) = texprTyp (contents trg)
   clas <- lookupClas cname
   case attributeIndex clas attr of
-    Just index -> gepInt trgV [0,index]
+    Just index -> gepInt trgV [0, index]
     Nothing -> error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
 
 evalUnPos (Box c e) = do

@@ -53,7 +53,7 @@ numAttributes = length . view attributes
 
 mallocClas :: ClassName -> Build ClasRef
 mallocClas c = do
-  clasTyp <- lookupClasLType c
+  clasTyp <- typeOfM (ClassType c [])
   kind <- getTypeKind clasTyp
   t <- case kind of
     PointerTypeKind -> getElementType clasTyp

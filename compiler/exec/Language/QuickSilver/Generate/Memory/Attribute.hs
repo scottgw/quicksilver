@@ -1,10 +1,19 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Language.QuickSilver.Generate.Memory.Attribute 
     (typeOf, 
      typeOfM, 
-     typeOfDecl) 
+     typeOfDecl,
+     isSpecialClass,
+     mkSpecialClassType
+     ) 
     where
 
 import Control.Applicative
+import Control.Lens
+
+import           Data.Text (Text)
+import qualified Data.Text as Text
 
 import qualified Data.HashMap.Strict as Map
 
@@ -27,9 +36,30 @@ typeOf e t =
       DoubleType -> doubleTypeM
       CharType -> int8TypeM
       ClassType s _ ->
-          let cInfo = maybe (error $ "typeOf: couldn't find class " ++ show s ++ " " ++ show e) id
-                      (Map.lookup s e)
-          in return $ rtClassStruct cInfo
+        case Map.lookup s e of
+          Just (ClassInfo cls typeValEi) ->
+            if isSpecialClass cls
+            then return (either id id typeValEi)
+            else return (either pointer0 id typeValEi)
+                 -- Regular class needs to add on the ptr
+          Nothing -> err
+        where err = error $ concat ["typeOf: couldn't find class " 
+                             , show s ++ " " ++ show e]
 
 typeOfM :: Typ -> Build TypeRef
 typeOfM t = askClassEnv >>= \env -> typeOf env t
+
+isSpecialClass :: ClasInterface -> Bool
+isSpecialClass cls = view className cls `elem` map fst nameAndType
+
+nameAndType :: [(Text, Build TypeRef)]
+nameAndType =
+    [("Pointer_8", pointer0 <$> int8TypeM)
+    ]
+
+mkSpecialClassType :: Text -> Build TypeRef
+mkSpecialClassType name = 
+    case lookup name nameAndType of
+      Just t -> t
+      Nothing ->
+          error $ "mkSpecialClassType: non special type: " ++ Text.unpack name
