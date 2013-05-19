@@ -142,6 +142,7 @@ data Linkage =
 setLinkage :: ValueRef -> Linkage -> Buil ()
 setLinkage v l = lift $ L.setLinkage v (fromEnum l)
 -}
+
 getParam :: ValueRef -> Int -> ValueRef
 getParam funcRef = L.getParam funcRef . toEnum
 
@@ -189,6 +190,7 @@ string origStr =
      m <- askModule
      g <- lift $  withCString strGlob (L.addGlobal m t)
      lift $ L.setInitializer g fmt
+     setLinkage g 5 -- WeakAnyLinkage
 
      return g
 
