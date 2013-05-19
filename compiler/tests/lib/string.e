@@ -52,13 +52,12 @@ class String
   
   append (other: String): String
     local
-      str: String
       ptr: Pointer_8
       i: Integer
     do
-      create str.make (length + other.length)
+      create Result.make (length + other.length)
 
-      ptr := str.data
+      ptr := Result.data
       
       from i := 1
       until i > length
@@ -73,7 +72,22 @@ class String
         ptr.put (i - 1, other.item (i - length))
         i := i + 1
       end
-      
-      Result := str
+    end
+
+  substring (start: Integer; finish: Integer): String
+    local
+      ptr: Pointer_8
+      i: Integer
+    do
+      create Result.make (finish - start)
+
+      ptr := Result.data
+
+      from i := start
+      until i >= finish
+      loop
+        ptr.put(i - start, item(i))
+        i := i + 1
+      end
     end
 end
