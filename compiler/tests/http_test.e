@@ -42,7 +42,9 @@ module Http_Test
         i := str.find(' ')
         if i /= -1 then
           file := str.substring(1, i)
-            
+
+          -- Skip past all the other stuff until we hit the end of 
+          -- the request.
           from str := buffer.read_line() 
           until str = Void or str.equals("%R%N")
           loop
@@ -69,18 +71,18 @@ module Http_Test
       file_length_str: String
       response: String
     do
-      create file.open_read(("/home/scott/tmp/").append(filename))
+      create file.open_read(("/home/scott/tmp").append(filename))
 
       file_contents := file.read_all()
       file_length_str := {Prelude}.int_to_str(file_contents.length)
 
       response :=
-        ("HTTP/1.0 200 OK%R%N").append
-        ("Client length: ").append
+        ("HTTP/1.1 200 OK%R%N").append
+        ("Content-Length: ").append
         (file_length_str).append
         ("%R%N%R%N").append
         (file_contents)
-      
+
       client.send_all(response)
     end
 end
