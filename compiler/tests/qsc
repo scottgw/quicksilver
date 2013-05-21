@@ -7,7 +7,7 @@ OBJFILE=${1%.*}.o
 QS_LIB_PATH=`pwd`/lib
 
 qs $1 -m
-llvm-link lib/stdlib.bc ${BCFILE} -o ${EBCFILE}
+llvm-link lib/stdlib.bc ${BCFILE} -o ${EBCFILE} ${@:2}
 opt -O3 ${EBCFILE} -o ${OBCFILE}
 llc ${OBCFILE} -o ${SFILE}
 gcc ${SFILE} -c 
