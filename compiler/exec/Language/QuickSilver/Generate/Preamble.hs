@@ -15,7 +15,7 @@ import Language.QuickSilver.Util
 
 import Language.QuickSilver.Generate.DepGen
 import Language.QuickSilver.Generate.Memory.Type
-
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Types
@@ -25,6 +25,7 @@ import Language.QuickSilver.TypeCheck.TypedExpr
 preamble :: TClass -> Build (BuildState -> BuildState)
 preamble clas = do
   vt <- vtables
+  declareQsFuncs
   debug "Adding consts and string consts"
   declMap <- (liftM2 union) addConstDecls addStringConsts
   let declTrans = updEnv (union declMap)
@@ -38,25 +39,11 @@ preamble clas = do
 ptr :: Build TypeRef
 ptr = pointerType <$> int8TypeM <*> pure 0
 
-funcType' rM aMs = do
-  r <- rM
-  as <- sequence aMs
-  funcType r as
-
-funcTypeVar' rM aMs = do
-  r <- rM
-  as <- sequence aMs
-  funcTypeVar r as
-
 constDecls :: [(Text, Build TypeRef)]
 constDecls = 
-    [ ("printf",        funcTypeVar' int32TypeM [ptr])
-    , ("exit",          funcType' voidTypeM [int32TypeM])
-    , ("llvm.sqrt.f64", funcType' doubleTypeM [doubleTypeM])
-    , ("malloc",        funcType' ptr [int64TypeM])
+    [ ("llvm.sqrt.f64", funcType' doubleTypeM [doubleTypeM])
     , ("GC_init",       funcType' voidTypeM [])   
     , ("GC_malloc",     funcType' ptr [int64TypeM])
-    , ("putchar",       funcType' int32TypeM [int32TypeM])
     , ("__cxa_throw",   cxaThrowType)
     , ("__cxa_allocate_exception", 
                         funcType' ptr [int32TypeM])
@@ -77,9 +64,7 @@ addConstDecls = fromList `fmap` mapM addDecl constDecls
 
 stringConsts :: [(Text, Build ValueRef, Int)]
 stringConsts = 
-    [("intFmtString", string "%d\n", 4)
-    ,("dblFmtString", string "%f\n", 4)
-    ,("_ZTIi", stdTypeInfoExtern, 0)
+    [("_ZTIi", stdTypeInfoExtern, 0)
     ]
 
 addStringConsts :: Build (Map Text ValueRef)

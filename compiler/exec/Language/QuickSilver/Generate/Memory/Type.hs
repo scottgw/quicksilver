@@ -22,6 +22,7 @@ import qualified Data.Traversable as Traverse
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Attribute
 import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.Memory.Feature
@@ -79,12 +80,12 @@ setClasType pcMap (ClassInfo cls (Left t)) =
     -- special classes have already been done in 'nameClassInfo'
     t' <- if (not $ isSpecialClass cls) 
           then
-            do ts <- unClasTable <$> mkClasTable cls
-               structSetBody t ts False
+            do procType <- procTypeM
+               ts <- unClasTable <$> mkClasTable cls
+               structSetBody t (procType:ts) False
                return (pointer0 t)
           else return t
     return (ClassInfo cls (Right t'))
-
 
 -- Adding first `Current' argument to functions
 modClas :: ClasInterface -> ClasInterface

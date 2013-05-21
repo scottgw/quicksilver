@@ -7,7 +7,7 @@ module Language.QuickSilver.Generate.LLVM.Types
 
      structType, countStructElementTypes,
 
-     getTypeKind, getElementType,
+     getTypeKind, getElementType, getTypeByName,
 
      int1TypeM, int8TypeM, int32TypeM, int64TypeM, doubleTypeM, voidTypeM,
 
@@ -50,6 +50,11 @@ structSetBody struct elems packed =
 
 getTypeKind :: TypeRef -> Build TypeKind
 getTypeKind = lift .  L.getTypeKind
+
+getTypeByName :: Text -> Build TypeRef
+getTypeByName name = 
+    do modul <- askModule
+       lift (withCString (Text.unpack name) (L.getTypeByName modul))
 
 getElementType :: TypeRef -> Build TypeRef
 getElementType = lift . L.getElementType

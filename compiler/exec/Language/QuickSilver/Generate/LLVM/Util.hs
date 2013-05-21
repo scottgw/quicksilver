@@ -17,6 +17,8 @@ module Language.QuickSilver.Generate.LLVM.Util
      updClassEnv, insertClassEnv, fromListClassEnv, lookupClassEnv,
      setClassEnv,
 
+     insertNamedType, lookupNamedType,
+
      currentClass, setCurrent,
      currentRoutine, setRoutine,
 
@@ -81,6 +83,7 @@ data BuildState =
       bsRoutine  :: RoutineI, 
       bsCurrent  :: ClasInterface,
       bsClassEnv :: ClassEnv,
+      bsTypeEnv  :: Map Text TypeRef, -- For special types like processor.
       bsDebug    :: Bool
     }
 
@@ -136,7 +139,7 @@ runBuild debg moduleName b = do
   context <- L.contextCreate
   builder <- L.createBuilderInContext context
   modul   <- withCString (Text.unpack moduleName)
-                         (flip L.moduleCreateWithNameInContext context)
+                         (flip L.moduleCreateWithNameInContext context)  
 
   runReaderT b (BuildState {
                   bsBuilder  = builder
@@ -146,6 +149,7 @@ runBuild debg moduleName b = do
                 , bsRoutine  = error "Current routine not set"
                 , bsEnv      = Map.empty
                 , bsClassEnv = Map.empty
+                , bsTypeEnv  = Map.empty
                 , bsDebug    = debg
                 }
                )
@@ -167,6 +171,13 @@ insertEnv s v = Map.insert s v
 
 fromListEnv :: [(Text, ValueRef)] -> Env -> Env
 fromListEnv pairs bs = foldr (uncurry insertEnv) bs pairs
+
+insertNamedType :: Text -> TypeRef -> BuildState -> BuildState
+insertNamedType name typ bs =
+    bs { bsTypeEnv = Map.insert name typ (bsTypeEnv bs) }
+
+lookupNamedType :: Text -> Build (Maybe TypeRef)
+lookupNamedType name = Map.lookup name <$> bsTypeEnv <$> ask
 
 setClassEnv :: ClassEnv -> (BuildState -> BuildState)
 setClassEnv = updClassEnv . const
