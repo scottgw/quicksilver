@@ -283,6 +283,7 @@ data AbsStmt a = Assign a a
                | Across a Text (PosAbsStmt a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
                | CallStmt a
+               | Separate [a] (PosAbsStmt a)
                | Retry
                | Inspect a [([a], PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
@@ -310,6 +311,7 @@ instance Show a => Show (AbsStmt a) where
     show Retry = "retry"
     show (Check cs) = "check " ++ show cs ++ " end"
     show (CheckBlock e body) = "checkBlock " ++ show e ++ "\n" ++ show body
+    show (Separate names body) = "separate: " ++ show names ++ "\n" ++ show body
     show (Create t trg fName args) = 
         concat ["create ", braced t, show trg, ".", show fName, show args]
     show (CallStmt e) = show e

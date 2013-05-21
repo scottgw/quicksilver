@@ -111,6 +111,11 @@ genStmt (Loop setup _invs cond body _varMb) = do
 
   positionAtEnd afterB
   return ()
+
+genStmt (Separate args body) =
+  do -- FIXME: add preparation for the args before generating the body
+     genStmt (contents body)
+  
 genStmt (Create _typeMb vr fName args) = do
   var <- lookupVarAccess (contents vr)
   newInst <- lookupMalloc (texpr vr) fName args
@@ -129,16 +134,20 @@ genStmt s = error $ "genStmt: no pattern for: " ++ show s
 
 
 lookupMalloc :: Typ -> Text -> [TExpr] -> Build ValueRef
-lookupMalloc (ClassType cName _) fName _args = do
-  isCreate <- lookupCreate cName fName
-  if isCreate
-    then do
-      -- args' <- mapM loadEval args
-      unClasRef `fmap` mallocClas cName 
-      -- callByName (featureAsCreate cName fName) args'
-    else unClasRef `fmap` mallocClas cName 
-lookupMalloc t _ _ = 
-    error ("lookupMalloc: called on non-class type: " ++ show t)
+lookupMalloc t  fName _args =
+  case t of
+    ClassType cName _ -> processClass cName
+    Sep _ _ cName -> processClass cName
+    _ -> error ("lookupMalloc: called on non-class type: " ++ show t)
+ where
+   processClass cName =
+      do isCreate <- lookupCreate cName fName
+         if isCreate
+           then do
+             -- args' <- mapM loadEval args
+             unClasRef `fmap` mallocClas cName 
+             -- callByName (featureAsCreate cName fName) args'
+           else unClasRef `fmap` mallocClas cName 
 
 lookupCreate :: Text -> Text -> Build Bool
 lookupCreate cName fName = isCreateName fName `fmap` lookupClas cName

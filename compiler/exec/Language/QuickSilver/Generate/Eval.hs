@@ -210,7 +210,9 @@ evalUnPos (EqExpr op e1 e2) =
      simpStore res
 
 evalUnPos (Call trg fName args retVal) = do
-  let (ClassType cName _) = texpr trg
+  let cName = case  texpr trg of
+        ClassType cName _ -> cName
+        Sep _ _ cName -> cName
 
   trg'  <- loadEval trg
   debugDump trg'

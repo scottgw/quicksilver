@@ -2,6 +2,8 @@
 
 module Language.QuickSilver.Parser.Statement where
 
+import           Control.Applicative ((<$>))
+
 import qualified Data.Text as Text
 
 import           Language.QuickSilver.Syntax
@@ -23,6 +25,7 @@ bareStmt = do
                  , check
                  , retry
                  , create
+                 , separate
                  , ifStmt
                  , inspect
                  , loop
@@ -31,10 +34,20 @@ bareStmt = do
                  ]
      optional semicolon
      return s
+
 stmts :: Parser [Stmt]
 stmts = many stmt
 
 stmts' = many bareStmt
+
+separate =
+  do keyword TokSeparate
+     args <- many expr
+     -- FIXME: add 'require' handling
+     keyword TokDo
+     ss <- attachTokenPos block
+     keyword TokEnd
+     return (Separate args ss)
 
 retry = do
   keyword TokRetry

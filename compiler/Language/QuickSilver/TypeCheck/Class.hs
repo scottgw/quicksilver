@@ -26,7 +26,7 @@ routineEnv :: AbsRoutine body Expr
               -> TypingBody ctxBody a
               -> TypingBody ctxBody a
 routineEnv f m = local (addDecls (routineArgs f) . setResult f) m
- 
+
 runTyping :: [AbsClas ctxBody expr']
              -> AbsClas body expr
              -> TypingBodyExpr ctxBody expr' a
@@ -152,7 +152,7 @@ uStmt :: UnPosStmt -> TypingBody body TStmt
 uStmt (CallStmt e) = do
   e' <- typeOfExpr e
   tagPos (CallStmt e')
-  
+
 uStmt (Assign var e) = do
   var'  <- typeOfExpr var
   e'  <- typeOfExpr e
@@ -176,6 +176,18 @@ uStmt (If cond body elseIfs elsePart) = do
               Nothing -> return Nothing
               Just e  -> Just `fmap` stmt e
   tagPos (If cond' body' elseIfs' else')
+
+uStmt (Separate args body) =
+  do args' <- mapM typeOfExpr args
+     let varOrAccess e =
+           case contents e of
+             T.Var _ _ -> True
+             T.Access _ _ _ -> True
+             _ -> False
+     mapM_ (\e -> guardThrow (varOrAccess e)
+                  "Separate didn't contain var or access expression") args'
+     body' <- stmt body
+     tagPos (Separate args' body')
 
 uStmt (Loop setup invs cond body var) = do
   setup' <- stmt setup

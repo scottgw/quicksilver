@@ -35,7 +35,10 @@ typeOf e t =
       BoolType -> int1TypeM
       DoubleType -> doubleTypeM
       CharType -> int8TypeM
-      ClassType s _ ->
+      Sep _ _ s -> processClass s
+      ClassType s _ -> processClass s
+    where
+      processClass s =
         case Map.lookup s e of
           Just (ClassInfo cls typeValEi) ->
             if isSpecialClass cls
@@ -46,6 +49,7 @@ typeOf e t =
         where err = error $ concat ["typeOf: couldn't find class " 
                              , show s ++ " " ++ show e]
 
+        
 typeOfM :: Typ -> Build TypeRef
 typeOfM t = askClassEnv >>= \env -> typeOf env t
 
