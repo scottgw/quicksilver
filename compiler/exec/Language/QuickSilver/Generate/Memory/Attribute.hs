@@ -5,6 +5,7 @@ module Language.QuickSilver.Generate.Memory.Attribute
      typeOfM, 
      typeOfDecl,
      isSpecialClass,
+     isSpecialClassName,
      mkSpecialClassType
      ) 
     where
@@ -56,7 +57,10 @@ typeOfM :: Typ -> Build TypeRef
 typeOfM t = askClassEnv >>= \env -> typeOf env t
 
 isSpecialClass :: ClasInterface -> Bool
-isSpecialClass cls = view className cls `elem` map fst nameAndType
+isSpecialClass cls = isSpecialClassName (view className cls)
+
+isSpecialClassName :: Text -> Bool
+isSpecialClassName name = name `elem` map fst nameAndType
 
 nameAndType :: [(Text, Build TypeRef)]
 nameAndType =

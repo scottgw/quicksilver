@@ -31,7 +31,12 @@ allocDeclEnv d = singleEnv d `fmap` allocDecl d
 genDecls :: TRoutine -> Build Env
 genDecls r = 
   case routineImpl r of 
-    RoutineBody locals _ _ -> unions <$> mapM allocDeclEnv locals
+    RoutineBody locals _ _ -> unions <$> mapM allocDeclEnv locals'
+      where
+        locals'
+           | routHasNonSpecialCurrent r =
+               Decl "<CurrentProc>" ProcessorType : locals
+           | otherwise = locals
     _ -> return empty
 
 allocP :: ValueRef -> Decl -> Int -> Build Env
@@ -53,6 +58,12 @@ allocPs fRef ds = unions `fmap` zipWithM (allocP fRef) ds [0..]
 --        ref <- alloca procType "<CurrentProc>"
 --        return (singleEnv' "<CurrentProc>" ref)
 
+routHasCurrent :: TRoutine -> Bool
+routHasCurrent rout =
+    case routineArgs rout of
+      Decl "Current" _ : _ -> True
+      _ -> False
+
 routineEnv :: TRoutine -> ValueRef -> Build Env
 routineEnv rout func = 
     unions <$> sequence [ debug "Routine: generating result" >>
@@ -63,11 +74,24 @@ routineEnv rout func =
                         -- , debug "Routine: processor" >> genProcDecl
                         ]
 
+routHasNonSpecialCurrent rout =
+    case routineArgs rout of
+      Decl "Current" t : _ -> not (isSpecialClassName (classNameType t))
+      _ -> False
+
 genBody :: TRoutine -> Build ()
 genBody r =
   case routineImpl r of
-    RoutineBody _ _ body -> genStmt (contents body)
---    RoutineExternal "built_in" _ -> genBuiltin r
+    RoutineBody _ _ body ->
+        do when (routHasNonSpecialCurrent r) $
+                do currRef <- lookupEnv "Current"
+                   curr <- load currRef "loading current to get processor"
+                   procRef <- gepInt curr [0, 0]
+                   proc <- load procRef "loading processor"
+                   procLoc <- lookupEnv "<CurrentProc>"
+                   store proc procLoc
+                   return ()
+           genStmt (contents body)
     RoutineExternal name _ -> genExternal name
 
 genExternal name =

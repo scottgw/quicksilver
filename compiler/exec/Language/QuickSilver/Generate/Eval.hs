@@ -8,7 +8,8 @@ import Control.Monad
 -- import Data.Text (Text)
 import qualified Data.Text as Text
 
-import Language.QuickSilver.Syntax (Typ (..), BinOp(..), UnOp(..), ROp(..))
+import Language.QuickSilver.Syntax
+    (Typ (..), BinOp(..), UnOp(..), ROp(..), AbsRoutine(..), EmptyBody(..))
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
@@ -168,14 +169,21 @@ evalUnPos (Cast t e) =
   do debug $ "evalUnPos: cast " ++ show (t, e)
      v <- loadEval e
      castType t v
-evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
+evalUnPos (StaticCall t@(ClassType moduleType _) name args retVal) =
     do debug "evalUnPos: static call"
-       -- modul <- lookupClas (classNameType moduleType)
+       Just rout <- findAbsRoutine <$> lookupClas moduleType <*> pure name
+       pre <- case routineImpl rout of
+                -- externals do not have an implicit processor parameter
+                -- in modules.
+                EmptyExternal _ _ -> return []
+                _ -> do procRef <- lookupEnv "<CurrentProc>"
+                        proc <- load procRef "loading proc for static call"
+                        return [proc]
        fn <- getNamedFunction (fullNameStr moduleType name)
        args' <- mapM loadEval args
        debugDump fn
-       mapM_ debugDump args'
-       r <- call' fn args' ("static call: " ++ Text.unpack name)
+       mapM_ debugDump (pre ++ args')
+       r <- call' fn (pre ++ args') ("static call: " ++ Text.unpack name)
        -- setInstructionCallConv r Fast
        if retVal /= NoType then simpStore r else return r
 
