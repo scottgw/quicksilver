@@ -252,7 +252,8 @@ evalUnPos (Access trg attr typ) = do
   let (ClassType cname _) = texprTyp (contents trg)
   clas <- lookupClas cname
   case attributeIndex clas attr of
-    Just index -> gepInt trgV [0, index]
+    -- Add 1 to skip the processor in every object.
+    Just index -> gepInt trgV [0, index + 1] 
     Nothing -> error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
 
 evalUnPos (Box c e) = do

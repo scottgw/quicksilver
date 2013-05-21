@@ -119,7 +119,11 @@ genStmt (Separate args body) =
 genStmt (Create _typeMb vr fName args) = do
   var <- lookupVarAccess (contents vr)
   newInst <- lookupMalloc (texpr vr) fName args
-  _ <- store newInst var
+  loc <- gepInt newInst [0, 0]
+  procRef <- lookupEnv "<CurrentProc>"
+  proc <- load procRef "Loading <CurrentProc>"
+  store proc loc
+  store newInst var
 
   genStmt (CallStmt $ attachPos (position vr) (Call vr fName args NoType))
   return ()

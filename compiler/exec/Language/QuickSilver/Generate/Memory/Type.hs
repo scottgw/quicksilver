@@ -4,7 +4,7 @@
 module Language.QuickSilver.Generate.Memory.Type
     ( genClassStructs
     , modClas
-    , modFeatureArgs
+    , modTRoutineArgs
     , featureAsCreate
     , mkCreateFunc
     ) where
@@ -21,7 +21,7 @@ import qualified Data.Traversable as Traverse
 
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
-
+import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Attribute
 import Language.QuickSilver.Generate.Memory.Class
@@ -89,18 +89,36 @@ setClasType pcMap (ClassInfo cls (Left t)) =
 
 -- Adding first `Current' argument to functions
 modClas :: ClasInterface -> ClasInterface
-modClas c
-  | view isModule c = c
-  | otherwise = classMapRoutines (modFeatureArgs c) c
+modClas c = classMapRoutines (modRoutineIArgs c) c
 
-modFeatureArgs :: AbsClas body expA
-               -> AbsRoutine body expB -> AbsRoutine body expB
-modFeatureArgs ci feat =
+modTRoutineArgs :: TClass -> TRoutine -> TRoutine
+modTRoutineArgs  = modRoutineArgs go
+    where
+      go rout p = case routineImpl rout of
+               RoutineExternal _ _ -> []
+               _ -> [p]
+
+modRoutineIArgs :: AbsClas EmptyBody expA
+               -> AbsRoutine EmptyBody expB -> AbsRoutine EmptyBody expB
+modRoutineIArgs = modRoutineArgs go
+    where
+      go rout p = case routineImpl rout of
+               EmptyExternal _ _ -> []
+               _ -> [p]
+
+modRoutineArgs go ci rout =
     let cName     = view className ci
+        isMod     = view isModule ci
         ts        = map (flip ClassType [] . genericName) (view generics ci)
         currDecl  = Decl "Current" (ClassType cName ts)
-        args      = currDecl : (routineArgs feat)
-    in  feat {routineArgs = args}
+        procDecl  = Decl "<CurrentProc>" ProcessorType
+        pre
+            | isMod = go rout procDecl
+            | otherwise = [currDecl]
+    in rout {routineArgs = pre ++ routineArgs rout}
+
+
+
 
 -- Creation routines
 mkCreateFunc :: ClasInterface -> RoutineI -> Build ()

@@ -212,11 +212,15 @@ instance Show UnPosExpr where
 data Typ = ClassType ClassName [Typ]
          | AnyIntType
          | Int8Type
+         | Int16Type
+         | Int32Type
          | Int64Type
+         | Int128Type
          | BoolType
          | DoubleType
          | CharType
          | TupleType (Either [Typ] [Decl])
+         | ProcessorType
          | Sep (Maybe Proc) [Proc] Text
          | VoidType
          | NoType deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
@@ -231,7 +235,11 @@ instance Hashable Typ where
       VoidType -> 4
       AnyIntType -> 5
       Int8Type -> 6
-      Int64Type -> 7
+      Int16Type -> 7
+      Int32Type -> 8
+      Int64Type -> 9
+      Int128Type -> 10
+      ProcessorType -> 11
       TupleType ei -> either (hashWithSalt salt) (hashWithSalt salt) ei
       Sep _ _ name -> hashWithSalt salt name
       ClassType name _ -> hashWithSalt salt name
@@ -263,7 +271,11 @@ instance Show Typ where
     show VoidType      = "NONE"
     show AnyIntType    = "Integer"
     show Int8Type      = "Integer_8"
+    show Int16Type     = "Integer_16"
+    show Int32Type     = "Integer_32"
     show Int64Type     = "Integer_64"
+    show Int128Type    = "Integer_128"
+    show ProcessorType = "<Processor>"
     show CharType      = "Character_8"
     show DoubleType    = "Real_64"
     show BoolType      = "Boolean"

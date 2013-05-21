@@ -15,6 +15,7 @@ import Language.QuickSilver.Syntax hiding (ResultVar)
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.Eval
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Attribute
 import Language.QuickSilver.Generate.Statement
 import Language.QuickSilver.Generate.LLVM.Simple
@@ -46,12 +47,20 @@ allocP fRef d i = do
 allocPs :: ValueRef -> [Decl] -> Build Env
 allocPs fRef ds = unions `fmap` zipWithM (allocP fRef) ds [0..]
 
+genProcDecl :: Build Env
+genProcDecl =
+    do procType <- procTypeM
+       ref <- alloca procType "<CurrentProc>"
+       return (singleEnv' "<CurrentProc>" ref)
+
 routineEnv :: TRoutine -> ValueRef -> Build Env
 routineEnv rout func = 
-    unions <$> sequence [ debug "Routine: generating result" >> routResult rout
+    unions <$> sequence [ debug "Routine: generating result" >>
+                                routResult rout
                         , debug "Routine: generating decls" >> genDecls rout
                         , debug "Routine: genrating args" >>
                                 allocPs func (routineArgs rout)
+                        , debug "Routine: processor" >> genProcDecl
                         ]
 
 genBody :: TRoutine -> Build ()

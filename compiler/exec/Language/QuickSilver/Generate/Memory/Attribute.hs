@@ -18,6 +18,7 @@ import qualified Data.Text as Text
 import qualified Data.HashMap.Strict as Map
 
 import Language.QuickSilver.Syntax
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 
@@ -35,6 +36,7 @@ typeOf e t =
       BoolType -> int1TypeM
       DoubleType -> doubleTypeM
       CharType -> int8TypeM
+      ProcessorType -> procTypeM
       Sep _ _ s -> processClass s
       ClassType s _ -> processClass s
     where

@@ -10,7 +10,9 @@ module Language.QuickSilver.Generate.LLVM.Util
      
      withUpdEnv,
 
-     askBuild, askModule, askEnv, askClassEnv, askContext, singleEnv,
+     askBuild, askModule, askEnv, askClassEnv, askContext,
+
+     singleEnv, singleEnv',
 
      updEnv, insertEnv, fromListEnv, lookupEnv, lookupEnvM,
 
@@ -105,7 +107,10 @@ withPtrArray as f = do
   withStorableArray arr f
 
 singleEnv :: Decl -> ValueRef -> Env
-singleEnv (Decl n _) v = Map.singleton n v
+singleEnv (Decl n _) v = singleEnv' n v
+
+singleEnv' :: Text -> ValueRef -> Env
+singleEnv' n v = Map.singleton n v
 
 withUpdEnv :: (Env -> Env) -> Build a -> Build a
 withUpdEnv = local . updEnv

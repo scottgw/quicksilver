@@ -11,5 +11,5 @@ llvm-link lib/stdlib.bc ${BCFILE} -o ${EBCFILE} ${@:2}
 opt -O3 ${EBCFILE} -o ${OBCFILE}
 llc ${OBCFILE} -o ${SFILE}
 gcc ${SFILE} -c 
-gcc ${OBJFILE} -lgc -lstdc++ -o ${1%.*}
+gcc ${OBJFILE} `pkg-config libqs --libs` -lgc -lstdc++ -o ${1%.*}
 
