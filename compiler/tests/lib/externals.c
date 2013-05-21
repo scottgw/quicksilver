@@ -46,6 +46,7 @@ int8_to_char (int8_t i)
 
 struct string
 {
+  void* proc;
   int64_t length;
   uint8_t* data;
 };
