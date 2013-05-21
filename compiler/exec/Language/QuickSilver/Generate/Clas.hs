@@ -12,14 +12,11 @@ import qualified Data.Text as Text
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
-
--- import Language.QuickSilver.Generate.Builtin.Builtins
 import Language.QuickSilver.Generate.Eval
-import Language.QuickSilver.Generate.Feature
+import Language.QuickSilver.Generate.Routine
 import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.Memory.Type
 import Language.QuickSilver.Generate.Preamble
-
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Types
