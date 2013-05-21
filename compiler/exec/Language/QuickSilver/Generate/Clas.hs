@@ -43,7 +43,6 @@ genClass' clas isMain = do
 
 genMain :: TClass -> Build ()
 genMain clas = do
-  let (<#>) = callByName
   i64T <- int64TypeM
   ptrT <- ptr
   fRef <- addFunc "main" =<< funcType i64T []

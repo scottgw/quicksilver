@@ -51,7 +51,7 @@ declareQsFuncs =
                     )
                   , ("priv_queue_unlock"                    
                     , voidTypeM
-                    , [privQueueTypeM, procTypeM, procTypeM]
+                    , [privQueueTypeM, procTypeM]
                     )
                   , ("priv_queue_routine"
                     , voidTypeM

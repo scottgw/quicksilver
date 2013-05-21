@@ -1,3 +1,4 @@
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Statement (genStmt) where
 
@@ -10,6 +11,7 @@ import Language.QuickSilver.Util
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.Eval
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
@@ -113,8 +115,9 @@ genStmt (Loop setup _invs cond body _varMb) = do
   return ()
 
 genStmt (Separate args body) =
-  do -- FIXME: add preparation for the args before generating the body
+  do privQs <- lockSeps args
      genStmt (contents body)
+     unlockQueues privQs
   
 genStmt (Create _typeMb vr fName args) = do
   var <- lookupVarAccess (contents vr)
@@ -130,12 +133,34 @@ genStmt (Create _typeMb vr fName args) = do
 -- genStmt BuiltIn = lookupBuiltin
 genStmt s = error $ "genStmt: no pattern for: " ++ show s
 
+lockSeps :: [TExpr] -> Build [ValueRef]
+lockSeps = mapM lockSep
+  where
+    lockSep e@(contents -> Var name t) =
+      do debug "lockSep"
+         e' <- loadEval e
+         debugDump e'
+         currProc <- getCurrProc
+         prc <- getProc e'
+         debugDump prc
+         privQ <- "priv_queue_new" <#> [prc]
+         "priv_queue_lock" <#> [privQ, prc, currProc]
+         return privQ
+
+unlockQueues :: [ValueRef] -> Build ()
+unlockQueues = mapM_ unlockQueue
+  where
+    unlockQueue privQ =
+      do debug "unlockQueues"
+         currProc <- getCurrProc
+         "priv_queue_unlock" <#> [privQ, currProc]
+
+
 -- lookupBuiltin :: Build ()
 -- lookupBuiltin = do
 --   fName <- featureName `fmap` currentFeature
 --   cName <- className `fmap` currentClass
 --   genBuiltin cName fName
-
 
 lookupMalloc :: Typ -> Text -> [TExpr] -> Build ValueRef
 lookupMalloc t  fName _args =

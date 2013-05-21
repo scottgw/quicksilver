@@ -1,6 +1,15 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Language.QuickSilver.Generate.Eval (eval, loadEval, evalUnPos, true, int) where
+module Language.QuickSilver.Generate.Eval
+       ( eval
+       , loadEval
+       , evalUnPos
+       , getCurrProc
+       , getProc
+       , true
+       , int
+       , (<#>)
+       ) where
 
 import Control.Applicative
 import Control.Monad
@@ -20,6 +29,17 @@ import Language.QuickSilver.Generate.LLVM.Values
 import Language.QuickSilver.Generate.Memory.Attribute
 import Language.QuickSilver.Generate.Memory.Class
 import Language.QuickSilver.Generate.Util
+
+
+(<#>) = callByName
+
+getCurrProc :: Build ValueRef
+getCurrProc = lookupEnv "<CurrentProc>" >>= load'
+
+getProc :: ValueRef -> Build ValueRef
+getProc v =
+  do procRef <- gepInt v [0, 0]
+     load procRef "getProc"
 
 castType :: Typ -> ValueRef -> Build ValueRef
 castType Int8Type v =
