@@ -22,6 +22,7 @@ import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -237,34 +238,9 @@ evalUnPos (EqExpr op e1 e2) =
      debug "evalUnPos: eqExpr done"
      simpStore res
 
-evalUnPos (Call trg fName args retVal) = do
-  let cName = case  texpr trg of
-        ClassType cName _ -> cName
-        Sep _ _ cName -> cName
-  trg'  <- loadEval trg
-  debugDump trg'
-  args' <- mapM loadEval args
-  debug (show trg)
-  f <- getNamedFunction (fullNameStr cName fName)
-  debug (concat ["eval: call -> " 
-                ,Text.unpack $ fullNameStr cName fName 
-                ,",", show f, " with "
-                ,show (countParams f)
-                ," parameters " 
-                ,show (trg:args)])
-  debugDump f
-
-  -- FIXME: separate calls must be done differently.
-  -- Separate status is determined by type (also important for result, below)
-
-  r <- call' f (trg':args') ("call: " ++ Text.unpack fName)
-  debug "eval: call -> done"
-  -- setInstructionCallConv r Fast
-  
-  -- FIXME: separate results, if they are non-separate and non-basic,
-  -- should inherit the processor of the target.
-
-  if retVal /= NoType then simpStore r else return r
+evalUnPos (Call trg fName args retVal)
+    |  isSeparate (texpr trg) = separateCall trg fName args retVal
+    |  otherwise              = nonSeparateCall trg fName args retVal
 
 evalUnPos (LitInt i _t)   = int (fromIntegral i) >>= simpStore
 evalUnPos (LitDouble d)   = dbl d >>= simpStore
@@ -322,3 +298,94 @@ evalUnPos (LitString s) = do
   debug "Creating string done"
   simpStore strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
+
+
+nonSeparateCall trg fName args retVal =
+    do let cName = classTypeName (texpr trg)
+
+       trg'  <- loadEval trg
+       debugDump trg'
+       args' <- mapM loadEval args
+       debug (show trg)
+       f <- getNamedFunction (fullNameStr cName fName)
+       debug (concat ["eval: call -> " 
+                     ,Text.unpack $ fullNameStr cName fName 
+                     ,",", show f, " with "
+                     ,show (countParams f)
+                     ," parameters " 
+                     ,show (trg:args)])
+       debugDump f
+
+       r <- call' f (trg':args') ("nonsep call: " ++ Text.unpack fName)
+       debug "eval: nonsep call -> done"
+       -- setInstructionCallConv r Fast
+
+       if retVal /= NoType then simpStore r else return r
+
+separateCall trg fName args retVal =
+    do let cName = classTypeName (texpr trg)
+       debug "generating separate call"
+       trg'  <- loadEval trg
+       debugDump trg'
+       args' <- mapM loadEval args
+       debug (show trg)
+       f <- getNamedFunction (fullNameStr cName fName)
+       debug (concat ["sepCall: call -> " 
+                     ,Text.unpack $ fullNameStr cName fName 
+                     ,",", show f, " with "
+                     ,show (countParams f)
+                     ," parameters " 
+                     ,show (trg:args)])
+       debugDump f
+       
+       funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
+       closRetType <- closType retVal
+       argCount <- int (length args)
+       argArray <- join (alloca <$> (pointer0 <$> pointer0 <$> voidPtrType)
+                                <*> pure "allocating argArray")
+       argTypeArray <- join (alloca <$> (pointer0 <$> closTypeTypeM)
+                                    <*> pure "allocating arg type array")
+
+       closure <-
+           "closure_new" <#> [ funcPtr
+                             , closRetType
+                             , argCount
+                             , argArray
+                             , argTypeArray
+                             ]
+
+       let storeType t idx =
+               do closT <- closType t
+                  argTypes <- load' argTypeArray
+                  argRef <- gepInt argTypes [0, idx]
+                  store closT argRef
+
+           storeArg (t, val) idx =
+               do ptr <- join (bitcast val <$> voidPtrType <*> pure "bitcast")
+                  args <- load' argArray
+                  argRef <- gepInt args [0, idx]
+                  store ptr argRef
+
+           types = map texpr args
+
+       zipWithM storeType types [0 .. length types - 1]
+       zipWithM storeArg (zip types args') [0 .. length args' - 1]
+
+       r <- call' f (trg':args') ("sep-call: " ++ Text.unpack fName)
+
+
+       debug "eval: sep call -> done"
+       -- setInstructionCallConv r Fast
+  
+       -- FIXME: separate results, if they are non-separate and non-basic,
+       -- should inherit the processor of the target.
+
+       if retVal /= NoType then simpStore r else return r
+
+
+closType :: Typ -> Build ValueRef
+closType t =
+    case t of
+      Int64Type -> "closure_sint_type" <#> []
+      ClassType _ _ -> "closure_pointer_type" <#> []
+      NoType -> "closure_void_type" <#> []

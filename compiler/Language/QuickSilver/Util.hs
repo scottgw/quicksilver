@@ -247,6 +247,11 @@ isBasic t = case t of
               DoubleType -> True
               _ -> False
 
+-- | Is this a separate type?
+isSeparate :: Typ -> Bool
+isSeparate (Sep _ _ _) = True
+isSeparate _ = False
+
 -- | A list of the number of integer bits (8, 16, ...)
 intBits :: [Integer]
 intBits = [8, 16, 32, 64]
