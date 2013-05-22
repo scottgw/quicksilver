@@ -62,6 +62,7 @@ data UnPosTExpr
   | Tuple [TExpr]
   | ResultVar Typ
   | CurrentVar Typ
+  | CurrentProc
   | Box Typ TExpr
   | Unbox Typ TExpr
   | Cast Typ TExpr
@@ -181,6 +182,7 @@ texprTyp (Var _ t)   = t
 texprTyp (Cast t _)  = t
 texprTyp (ResultVar t) = t
 texprTyp (CurrentVar t) = t
+texprTyp CurrentProc = ProcessorType
 texprTyp (Call _ _ _ t) = t
 texprTyp (Access _ _ t) = t
 texprTyp (EqExpr{}) = boolType
