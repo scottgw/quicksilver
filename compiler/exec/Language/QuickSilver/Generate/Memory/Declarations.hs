@@ -1,7 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
-module Language.QuickSilver.Generate.Memory.Type
+module Language.QuickSilver.Generate.Memory.Declarations
     ( genClassStructs
     , modClas
     , modTRoutineArgs
@@ -23,9 +23,8 @@ import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.LibQs
-import Language.QuickSilver.Generate.Memory.Attribute
-import Language.QuickSilver.Generate.Memory.Class
-import Language.QuickSilver.Generate.Memory.Feature
+import Language.QuickSilver.Generate.Memory.Types
+import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -131,3 +130,10 @@ mkCreateFunc c f = featDeclType f' >>= addFunc crName >> return ()
 
 featureAsCreate :: Text -> Text -> Text
 featureAsCreate cName fName = Text.concat ["__", cName, fName, "_create"]
+
+
+newtype ClasTable = ClasTable {unClasTable :: [TypeRef]}
+
+mkClasTable :: ClasInterface -> Build ClasTable
+mkClasTable c = 
+    ClasTable <$> mapM (typeOfDecl . attrDecl) (view attributes c)

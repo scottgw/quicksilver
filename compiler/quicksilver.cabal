@@ -85,10 +85,9 @@ Executable qs
                        Language.QuickSilver.Generate.LLVM.Types
                        Language.QuickSilver.Generate.LLVM.Util
                        Language.QuickSilver.Generate.LLVM.Values
-                       Language.QuickSilver.Generate.Memory.Attribute
-                       Language.QuickSilver.Generate.Memory.Class
-                       Language.QuickSilver.Generate.Memory.Feature
-                       Language.QuickSilver.Generate.Memory.Type
+                       Language.QuickSilver.Generate.Memory.Declarations
+                       Language.QuickSilver.Generate.Memory.Object
+                       Language.QuickSilver.Generate.Memory.Types
 
 Library
   -- Modules exported by the library.

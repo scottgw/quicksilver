@@ -14,8 +14,8 @@ import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.Routine
-import Language.QuickSilver.Generate.Memory.Class
-import Language.QuickSilver.Generate.Memory.Type
+import Language.QuickSilver.Generate.Memory.Object
+import Language.QuickSilver.Generate.Memory.Declarations
 import Language.QuickSilver.Generate.Preamble
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
@@ -119,7 +119,7 @@ genCreate fName = do
   -- v <- if needsBuiltinCreate cName fName
   --   then genBuiltinCreate cName fName
   --   else unClasRef <$> mallocClas cName
-  v <- unClasRef <$> mallocClas cName
+  v <- mallocObject cName
   ret v
 
 atNewBlock :: ValueRef -> Text -> Build ()

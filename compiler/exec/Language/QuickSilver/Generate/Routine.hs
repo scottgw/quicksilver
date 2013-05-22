@@ -16,7 +16,7 @@ import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.LibQs
-import Language.QuickSilver.Generate.Memory.Attribute
+import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Statement
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types

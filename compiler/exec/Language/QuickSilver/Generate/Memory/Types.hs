@@ -1,17 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
-
-module Language.QuickSilver.Generate.Memory.Attribute 
+module Language.QuickSilver.Generate.Memory.Types
     (typeOf, 
      typeOfM, 
      typeOfDecl,
      isSpecialClass,
      isSpecialClassName,
-     mkSpecialClassType
+     mkSpecialClassType,
+     featDeclType
      ) 
     where
 
 import Control.Applicative
 import Control.Lens
+import Control.Monad
 
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -20,6 +21,7 @@ import qualified Data.HashMap.Strict as Map
 
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Generate.LibQs
+import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 
@@ -73,3 +75,16 @@ mkSpecialClassType name =
       Just t -> t
       Nothing ->
           error $ "mkSpecialClassType: non special type: " ++ Text.unpack name
+
+
+featDeclType :: RoutineI -> Build TypeRef
+featDeclType f = join $ (liftM2 funcType) (featResTyp f) (featArgTyps f)
+
+featResTyp :: RoutineI -> Build TypeRef
+featResTyp = typeOfM . routineResult
+
+featArgTyps :: RoutineI -> Build [TypeRef]
+featArgTyps = mapM typeOfDecl . routineArgs
+
+structType' :: [TypeRef] -> Build TypeRef
+structType' = flip structType False

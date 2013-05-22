@@ -27,8 +27,8 @@ import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Values
-import Language.QuickSilver.Generate.Memory.Attribute
-import Language.QuickSilver.Generate.Memory.Class
+import Language.QuickSilver.Generate.Memory.Types
+import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.Util
 
 
@@ -290,7 +290,7 @@ evalUnPos (LitString s) = do
   debugDump rawStrPtr
   debugDump n
   debug "Creating string.. hold on!"
-  strPtr <- unClasRef <$> mallocClas "String"
+  strPtr <- mallocObject "String"
   debugDump strPtr
  --  str <- load strPtr "loading created string"
   -- debugDump str

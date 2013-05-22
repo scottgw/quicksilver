@@ -12,7 +12,7 @@ import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.LibQs
-import Language.QuickSilver.Generate.Memory.Class
+import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
 
@@ -165,18 +165,10 @@ unlockQueues = mapM_ unlockQueue
 lookupMalloc :: Typ -> Text -> [TExpr] -> Build ValueRef
 lookupMalloc t  fName _args =
   case t of
-    ClassType cName _ -> processClass cName
-    Sep _ _ cName -> processClass cName
+    ClassType cName _ -> mallocObject cName
+    -- FIXME: Add separate wrapper datatype
+    Sep _ _ cName -> mallocObject cName
     _ -> error ("lookupMalloc: called on non-class type: " ++ show t)
- where
-   processClass cName =
-      do isCreate <- lookupCreate cName fName
-         if isCreate
-           then do
-             -- args' <- mapM loadEval args
-             unClasRef `fmap` mallocClas cName 
-             -- callByName (featureAsCreate cName fName) args'
-           else unClasRef `fmap` mallocClas cName 
 
 lookupCreate :: Text -> Text -> Build Bool
 lookupCreate cName fName = isCreateName fName `fmap` lookupClas cName

@@ -14,7 +14,7 @@ import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 
 import Language.QuickSilver.Generate.DepGen
-import Language.QuickSilver.Generate.Memory.Type
+import Language.QuickSilver.Generate.Memory.Declarations
 import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
