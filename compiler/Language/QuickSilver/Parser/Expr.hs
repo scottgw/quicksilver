@@ -36,9 +36,7 @@ factor :: Parser Expr
 factor = attachTokenPos factorUnPos
 
 factorUnPos :: Parser UnPosExpr
-factorUnPos = choice [ tuple
-                     , onceString
-                     , address
+factorUnPos = choice [ address
                      , agent
                      , across
                      , question
@@ -67,11 +65,6 @@ unaryExpr =
       contents <$> factor
   in notP <|> oldP <|> negP <|> unAddP
 
-onceString = do
-  keyword TokOnce
-  s <- anyStringTok
-  return (OnceStr s)
-
 address = do
   opNamed "$"
   p <- getPosition
@@ -84,7 +77,6 @@ manifest = choice [ doubleLit
                   , stringLit
                   , charLit
                   , arrayLit
-                  , typeLitOrManifest
                   ]   
 
 arrayLit = do
@@ -102,8 +94,6 @@ across = do
   body <- expr
   keyword TokEnd
   return (AcrossExpr e i quant body)
-
-tuple = Tuple <$> squares (expr `sepBy` comma)
 
 question = do
   symbol '?'
@@ -128,15 +118,11 @@ varOrCall =
         i <- identifier
         (UnqualCall i <$> argsP) <|> return (VarOrCall i)
       specialStart = resultVar <|> currentVar 
-      
-      bracketCall = do
-        p <- getPosition
-        t <- manifest <|> tuple
-        call' (attachPos p t)
+
   in do
     p <- getPosition
     t <- specialStart <|> identStart <|> try staticCall <|> 
-         (contents <$> (parens expr)) <|> bracketCall
+         (contents <$> (parens expr))
     call' (attachPos p t)
 
 call' :: Expr -> Parser UnPosExpr
@@ -167,11 +153,6 @@ staticCall = do
 
 stringLit = LitString <$> anyStringTok
 charLit = LitChar <$> charTok
-
-typeLitOrManifest = do
-  t <- braces typ
-  p <- getPosition
-  ManifestCast t <$> attachPos p <$> manifest <|> return (LitType t)
 
 attached :: Parser UnPosExpr
 attached = do

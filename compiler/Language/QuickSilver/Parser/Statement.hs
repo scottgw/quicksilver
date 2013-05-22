@@ -19,7 +19,6 @@ stmt = attachTokenPos bareStmt
 bareStmt = do
      s <- choice [ across
                  , assign
-                 , assignAttempt
                  , check
                  , retry
                  , create
@@ -165,12 +164,6 @@ assign = do
   i <- try assignId
   e <- expr <?> "assignment expression"
   return $ Assign i e
-  
-assignAttempt :: Parser UnPosStmt
-assignAttempt = do
-  i <- try assignAttemptId
-  e <- expr <?> "assignment attempt expression"
-  return $ AssignAttempt i e  
 
 debug :: Parser UnPosStmt
 debug = do

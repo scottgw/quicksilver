@@ -59,14 +59,12 @@ data UnPosTExpr
   | CreateExpr Typ Text [TExpr]
   | Attached (Maybe Typ) TExpr (Maybe Text)
   | StaticCall Typ Text [TExpr] Typ
-  | Tuple [TExpr]
   | ResultVar Typ
   | CurrentVar Typ
   | CurrentProc
   | Box Typ TExpr
   | Unbox Typ TExpr
   | Cast Typ TExpr
-  | LitType Typ
   | LitArray [TExpr]
   | LitChar Char
   | LitString Text
@@ -161,7 +159,6 @@ untypeExpr' (LitInt i _t) = E.LitInt i
 untypeExpr' (LitBool b) =  E.LitBool b
 untypeExpr' (LitVoid _) = E.LitVoid
 untypeExpr' (LitDouble d) = E.LitDouble d
-untypeExpr' (Tuple es) = E.Tuple (map untypeExpr es)
 untypeExpr' (Agent trg name args _) 
   = E.Agent $ 
     takePos trg $ 
@@ -193,7 +190,6 @@ texprTyp (StaticCall _ _ _ t) = t
 texprTyp (LitChar _) = charType
 texprTyp (Attached{}) = boolType
 texprTyp (LitString _) = stringType
-texprTyp (LitType t) = ClassType "TYPE" [t]
 texprTyp (LitInt _ t)  = t
 texprTyp (LitBool _) = boolType
 texprTyp (LitDouble _) = realType

@@ -192,10 +192,6 @@ expr (CreateExpr typ name args) = do
       args'   <- mapM typeOfExpr args
       argsConform args' (map declType (routineArgs feat))
       tagPos (T.CreateExpr typ name args')
-expr (LitType t) = tagPos (T.LitType t)
-expr (ManifestCast t e) = do
-  e' <- typeOfExpr e
-  tagPos (T.Cast t e')
 expr (Lookup targ args) = do
   targ' <- typeOfExpr targ
   cls <- getFlat' (T.texpr targ')

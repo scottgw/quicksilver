@@ -218,7 +218,6 @@ clause (Clause nameMb e) = maybe empty (\n -> ttext n <> colon) nameMb <+> expr 
 stmt = stmt' . contents
 
 stmt' (Assign l e) = expr l <+> text ":=" <+> expr e
-stmt' (AssignAttempt l e) = expr l <+> text "?=" <+> expr e
 stmt' (CallStmt e) = expr e
 stmt' (If cond body elseParts elseMb) = 
   let elsePart = case elseMb of
@@ -332,8 +331,6 @@ expr' _ (CreateExpr t n es) =
 expr' _ (StaticCall t i args) = 
   braces (type' t) <> char '.' <> ttext i <+> actArgs args
 expr' _ (LitArray es) = text "<<" <+> commaSep (map expr es) <+> text ">>"
-expr' _ (ManifestCast t e) = braces (type' t) <+> expr e
-expr' _ (OnceStr s)   = text "once" <+> ttext s
 expr' _ (Address e)   = text "$" <> expr e
 expr' _ (VarOrCall s) = ttext s
 expr' _ ResultVar     = text "Result"
@@ -344,8 +341,6 @@ expr' i (LitString s) = condParens (i >= 13) $ anyStringLiteral s
 expr' i (LitInt int') = condParens (i >= 13) $ integer int'
 expr' i (LitBool b)   = condParens (i >= 13) $ text (show b)
 expr' i (LitDouble d) = condParens (i >= 13) $ double d
-expr' i (LitType t)   = condParens (i >= 13) $ braces (type' t)
-expr' _ (Tuple es)    = brackets (hcat $ punctuate comma (map expr es))
 expr' _ (Agent e)     = text "agent" <+> case contents e of
   QualCall t n es -> case contents t of
     VarOrCall _name -> expr e

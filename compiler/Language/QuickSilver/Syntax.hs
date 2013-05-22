@@ -144,13 +144,10 @@ data UnPosExpr =
   | AcrossExpr Expr Text Quant Expr
   | Agent Expr
   | CreateExpr Typ Text [Expr]
-  | Tuple [Expr]
   | InlineAgent [Decl] (Maybe Typ) [Stmt] [Expr]
-  | ManifestCast Typ Expr
   | TypedVar Text Typ
   | VarOrCall Text
   | ResultVar
-  | OnceStr Text
   | CurrentVar
   | StaticCall Typ Text [Expr]
   | LitArray [Expr]
@@ -160,7 +157,7 @@ data UnPosExpr =
   | LitBool Bool
   | LitVoid
   | LitDouble Double 
-  | LitType Typ deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
+    deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
 
 data Quant = All | Some deriving (Eq, Ord, Show, G.Generic, D.Data, T.Typeable)
 
@@ -187,11 +184,9 @@ instance Show UnPosExpr where
       "across " ++ show c ++ " as " ++ show as ++ " " 
       ++ show quant ++ " " ++ show e
     show (TypedVar var t) = "(" ++ show var ++ ": " ++ show t ++ ")"
-    show (ManifestCast t e) = "{" ++ show t ++ "} " ++ show e
     show (StaticCall t i args) = "{" ++ show t ++ "}." 
                                  ++ show i ++ argsShow args
     show (Address e) = "$" ++ show e
-    show (OnceStr s) = "once " ++ show s
     show (VarOrCall s) = show s
     show ResultVar  = "Result"
     show CurrentVar = "Current"
@@ -200,8 +195,6 @@ instance Show UnPosExpr where
     show (LitInt i)  = show i
     show (LitBool b) = show b
     show (LitDouble d) = show d
-    show (LitType t) = "({" ++ show t ++ "})"
-    show (Tuple es) = show es
     show (LitArray es) = "<<" ++ commaSepShow es ++ ">>"
     show (Agent e)  = "agent " ++ show e
     show (InlineAgent ds r ss args) = 
@@ -288,9 +281,7 @@ type Stmt = PosAbsStmt Expr
 type UnPosStmt = AbsStmt Expr
 type PosAbsStmt a = Pos (AbsStmt a)
 data AbsStmt a = Assign a a
-               | AssignAttempt a a
                | If a (PosAbsStmt a) [ElseIfPart a] (Maybe (PosAbsStmt a))
-               | Malloc ClassName
                | Create (Maybe Typ) a Text [a]
                | Across a Text (PosAbsStmt a)
                | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
@@ -328,10 +319,8 @@ instance Show a => Show (AbsStmt a) where
         concat ["create ", braced t, show trg, ".", show fName, show args]
     show (CallStmt e) = show e
     show (Assign i e) = show i ++ " := " ++ show e ++ "\n"
-    show (AssignAttempt i e) = show i ++ " ?= " ++ show e ++ "\n"
     show (Loop fr _ un l var) = "from" ++ show fr ++ " until" ++ show un ++
                           " loop " ++ show l ++ "variant" ++ show var ++ "end"
-    show (Malloc s) = "Malloc: " ++ show s
     show (Debug str stmt) = "debug (" ++ show str ++ ")\n" 
                             ++ show stmt ++ "end\n"
     show BuiltIn = "built_in"
