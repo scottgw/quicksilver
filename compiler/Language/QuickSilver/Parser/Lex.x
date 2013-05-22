@@ -200,9 +200,7 @@ operatorMap =
   , ("<=", BinOpInfo (RelOp Lte NoType) 6 AssocLeft)
   , ("<",  BinOpInfo (RelOp Lt  NoType) 6 AssocLeft)
   , ("=",  BinOpInfo (RelOp Eq  NoType) 6 AssocLeft)
-  , ("~",  BinOpInfo (RelOp TildeEq  NoType) 6 AssocLeft)
   , ("/=", BinOpInfo (RelOp Neq NoType) 6 AssocLeft)
-  , ("/~",  BinOpInfo (RelOp TildeNeq  NoType) 6 AssocLeft)
   , (">",  BinOpInfo (RelOp Gt  NoType) 6 AssocLeft)
   , (">=", BinOpInfo (RelOp Gte NoType) 6 AssocLeft)
   ]

@@ -147,14 +147,6 @@ type' (ClassType str gens) = ttext (ups str) <+> genDoc gens
 type' VoidType   = text "NONE"
 type' NoType     = empty
 type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> ttext str
-type' (TupleType typeDecls) = 
-  let typeArgs = 
-        case typeDecls of
-          Left types -> commaSep (map type' types)
-          Right decls -> hcat (punctuate (text ";") (map decl decls))
-      tupleGen | isEmpty typeArgs = empty
-               | otherwise        = text "[" <> typeArgs <> text "]"
-  in text "TUPLE" <+> tupleGen
 type' t = text (show t)
 
 routineDoc :: (body -> Doc) -> AbsRoutine body Expr -> Doc
@@ -396,8 +388,6 @@ relop Gt  = ">"
 relop Gte = ">="
 relop Eq  = "="
 relop Neq = "/="
-relop TildeEq = "~"
-relop TildeNeq = "/~"
 
 actArgs [] = empty
 actArgs es = parens $ hsep $ punctuate comma (map expr es)

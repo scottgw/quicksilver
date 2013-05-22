@@ -120,9 +120,7 @@ data BinOp = Add
 data ROp = Lte
          | Lt 
          | Eq 
-         | TildeEq
          | Neq
-         | TildeNeq
          | Gt 
          | Gte
            deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
@@ -208,11 +206,9 @@ data Typ = ClassType ClassName [Typ]
          | Int16Type
          | Int32Type
          | Int64Type
-         | Int128Type
          | BoolType
          | DoubleType
          | CharType
-         | TupleType (Either [Typ] [Decl])
          | ProcessorType
          | Sep (Maybe Proc) [Proc] Text
          | VoidType
@@ -231,9 +227,7 @@ instance Hashable Typ where
       Int16Type -> 7
       Int32Type -> 8
       Int64Type -> 9
-      Int128Type -> 10
       ProcessorType -> 11
-      TupleType ei -> either (hashWithSalt salt) (hashWithSalt salt) ei
       Sep _ _ name -> hashWithSalt salt name
       ClassType name _ -> hashWithSalt salt name
 
@@ -267,13 +261,11 @@ instance Show Typ where
     show Int16Type     = "Integer_16"
     show Int32Type     = "Integer_32"
     show Int64Type     = "Integer_64"
-    show Int128Type    = "Integer_128"
     show ProcessorType = "<Processor>"
     show CharType      = "Character_8"
     show DoubleType    = "Real_64"
     show BoolType      = "Boolean"
     show (ClassType s gs) = show s ++ show gs
-    show (TupleType typesDecls) = "TUPLE " ++ show typesDecls
 
 type ClassName = Text
 

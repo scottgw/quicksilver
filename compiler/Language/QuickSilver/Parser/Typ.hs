@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Parser.Typ where
 
-import           Control.Applicative ((<$>))
-
 import           Data.Text (Text)
 
 import           Language.QuickSilver.Syntax
@@ -35,16 +33,6 @@ basicType = choice $ map tyFunc nameAndType
 
     tyFunc :: (Text, Typ) -> Parser Typ
     tyFunc (name, ty) = identifierNamed name >> return ty
-       
-
-tupleTyp :: Parser Typ
-tupleTyp = do
-  identifierNamed "TUPLE"
-  let typeDeclP =
-        Right <$> concat <$> try (decl `sepBy1` semicolon) <|>
-        Left <$> (typ `sepBy1` comma)
-  typeOrDecls <- option (Left []) (squares typeDeclP)
-  return (TupleType typeOrDecls)
 
 detTyp :: Parser Typ
 detTyp = keyword TokDetachable >> (sepTyp <|> baseTyp)
@@ -56,7 +44,7 @@ typ :: Parser Typ
 typ = detTyp <|> attTyp <|> sepTyp <|> baseTyp
 
 baseTyp :: Parser Typ
-baseTyp = basicType <|> tupleTyp <|> classTyp
+baseTyp = basicType <|> classTyp
 
 sepTyp :: Parser Typ
 sepTyp = do

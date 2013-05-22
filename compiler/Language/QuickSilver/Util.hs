@@ -217,8 +217,6 @@ opAlias (RelOp o _) = rel o
 equalityOp :: BinOp -> Bool
 equalityOp (RelOp Eq _) = True
 equalityOp (RelOp Neq _) = True
-equalityOp (RelOp TildeEq _) = True
-equalityOp (RelOp TildeNeq _) = True
 equalityOp _ = False
 
 
@@ -242,6 +240,8 @@ isBasic t = case t of
               BoolType -> True
               AnyIntType -> True
               Int8Type -> True
+              Int16Type -> True
+              Int32Type -> True
               Int64Type -> True
               CharType -> True
               DoubleType -> True

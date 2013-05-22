@@ -32,20 +32,15 @@ type UnPosTStmt = AbsStmt TExpr
 type TExpr = Pos UnPosTExpr
 
 
-data EqOp = Eq | Neq | TildeEq | TildeNeq
+data EqOp = Eq | Neq
             deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
 
 eqOp (RelOp E.Eq _) = Eq
 eqOp (RelOp E.Neq _) = Neq
-eqOp (RelOp E.TildeEq _) = TildeEq
-eqOp (RelOp E.TildeNeq _) = TildeNeq
 eqOp r = error $ "eqOp: " ++ show r
 
 binEqOp Eq = RelOp E.Eq NoType
 binEqOp Neq = RelOp E.Neq NoType
-binEqOp TildeEq = RelOp E.TildeEq NoType
-binEqOp TildeNeq = RelOp E.TildeNeq NoType
-
 
 data UnPosTExpr 
   = Call TExpr Text [TExpr] Typ

@@ -26,10 +26,6 @@ lookupClassM :: ClassReader r m body expr =>
                 Typ -> m (Maybe (AbsClas body expr))
 lookupClassM (ClassType cn _) = Map.lookup cn `liftM` askClassEnv
 lookupClassM (Sep _ _ cn)     = lookupClassM (ClassType cn [])
-lookupClassM (TupleType ls)    = lookupClassM (ClassType "TUPLE" ts)
-  where getTypes (Left xs) = xs
-        getTypes (Right dcls) = map declType dcls
-        ts = getTypes ls
 lookupClassM t = error $ "lookupClassM: can't lookup a " ++ show t ++ " type"
 
 lookupClass :: ClassReader r m body expr => Typ -> m (AbsClas body expr)

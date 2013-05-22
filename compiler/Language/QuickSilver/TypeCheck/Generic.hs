@@ -45,11 +45,6 @@ updateTyp :: GenUpd Typ
 updateTyp g t t'@(ClassType name types)
   | g == t' = t
   | otherwise = ClassType name (map (updateTyp g t) types)
-updateTyp g t t'@(TupleType typesOrDecls)
-  | g == t' = t
-  | otherwise = case typesOrDecls of
-    Left types -> TupleType (Left $ map (updateTyp g t) types)
-    Right decls -> TupleType (Right $ map (updateDecl g t) decls)
 updateTyp g t t' 
   | g == t' = t
   | otherwise =  t'
