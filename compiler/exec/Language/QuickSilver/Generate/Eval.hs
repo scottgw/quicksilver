@@ -190,7 +190,7 @@ evalUnPos (Cast t e) =
   do debug $ "evalUnPos: cast " ++ show (t, e)
      v <- loadEval e
      castType t v
-evalUnPos (StaticCall t@(ClassType moduleType _) name args retVal) =
+evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
     do debug "evalUnPos: static call"
        Just rout <- findAbsRoutine <$> lookupClas moduleType <*> pure name
        pre <- case routineImpl rout of
@@ -362,8 +362,8 @@ separateCall trg fName args retVal =
 
            storeArg (t, val) idx =
                do ptr <- join (bitcast val <$> voidPtrType <*> pure "bitcast")
-                  args <- load' argArray
-                  argRef <- gepInt args [0, idx]
+                  argArr <- load' argArray
+                  argRef <- gepInt argArr [0, idx]
                   store ptr argRef
 
            types = map texpr args
@@ -386,6 +386,10 @@ separateCall trg fName args retVal =
 closType :: Typ -> Build ValueRef
 closType t =
     case t of
+      AnyIntType -> "closure_sint_type" <#> []
+      Int8Type -> "closure_sint8_type" <#> []
+      Int16Type -> "closure_sint16_type" <#> []
+      Int32Type -> "closure_sint32_type" <#> []
       Int64Type -> "closure_sint_type" <#> []
       ClassType _ _ -> "closure_pointer_type" <#> []
       NoType -> "closure_void_type" <#> []

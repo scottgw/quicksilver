@@ -10,7 +10,7 @@ module Language.QuickSilver.Generate.Memory.Declarations
     ) where
 
 import Control.Applicative
-import Control.Lens
+import Control.Lens hiding (pre)
 import Control.Monad
 import Control.Monad.Reader
 
@@ -24,7 +24,6 @@ import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Types
-import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -85,6 +84,8 @@ setClasType pcMap (ClassInfo cls (Left t)) =
                return (pointer0 t)
           else return t
     return (ClassInfo cls (Right t'))
+setClasType _pcMap (ClassInfo _cls (Right _t)) =
+    error "setClasType: found 'Right', should not be possible"
 
 -- Adding first `Current' argument to functions
 modClas :: ClasInterface -> ClasInterface

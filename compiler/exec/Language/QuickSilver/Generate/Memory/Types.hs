@@ -35,6 +35,8 @@ typeOf e t =
       VoidType -> pointer0 <$> int8TypeM
       AnyIntType -> int64TypeM
       Int8Type -> int8TypeM
+      Int16Type -> int16TypeM
+      Int32Type -> int32TypeM
       Int64Type -> int64TypeM
       BoolType -> int1TypeM
       DoubleType -> doubleTypeM
@@ -85,6 +87,3 @@ featResTyp = typeOfM . routineResult
 
 featArgTyps :: RoutineI -> Build [TypeRef]
 featArgTyps = mapM typeOfDecl . routineArgs
-
-structType' :: [TypeRef] -> Build TypeRef
-structType' = flip structType False

@@ -7,11 +7,9 @@ import Control.Monad
 import Data.Text (Text)
 
 import Language.QuickSilver.Syntax
-import Language.QuickSilver.Util
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.Eval
-import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
@@ -22,10 +20,6 @@ fetchCurrentAttr ident = do
   clas <- currentClass
   obj  <- load curr "lookupVarOrAttr load"
   getAttribute clas ident obj
-
-lookupVarOrAttr :: Text -> Build ValueRef
-lookupVarOrAttr ident =
-  lookupEnvM ident >>= maybe (fetchCurrentAttr ident) return
 
 lookupVarAccess :: UnPosTExpr -> Build ValueRef
 lookupVarAccess (Var i _) = lookupEnv i
@@ -136,7 +130,7 @@ genStmt s = error $ "genStmt: no pattern for: " ++ show s
 lockSeps :: [TExpr] -> Build [ValueRef]
 lockSeps = mapM lockSep
   where
-    lockSep e@(contents -> Var name t) =
+    lockSep e@(contents -> Var _name _t) =
       do debug "lockSep"
          e' <- loadEval e
          debugDump e'
@@ -146,6 +140,7 @@ lockSeps = mapM lockSep
          privQ <- "priv_queue_new" <#> [prc]
          "priv_queue_lock" <#> [privQ, prc, currProc]
          return privQ
+    lockSep _ = error "lockSep: found non-variable expression"
 
 unlockQueues :: [ValueRef] -> Build ()
 unlockQueues = mapM_ unlockQueue
@@ -163,12 +158,10 @@ unlockQueues = mapM_ unlockQueue
 --   genBuiltin cName fName
 
 lookupMalloc :: Typ -> Text -> [TExpr] -> Build ValueRef
-lookupMalloc t  fName _args =
+lookupMalloc t  _fName _args =
   case t of
     ClassType cName _ -> mallocObject cName
     -- FIXME: Add separate wrapper datatype
     Sep _ _ cName -> mallocObject cName
     _ -> error ("lookupMalloc: called on non-class type: " ++ show t)
 
-lookupCreate :: Text -> Text -> Build Bool
-lookupCreate cName fName = isCreateName fName `fmap` lookupClas cName

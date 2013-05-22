@@ -15,7 +15,6 @@ import Language.QuickSilver.Syntax hiding (ResultVar)
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.Eval
-import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Statement
 import Language.QuickSilver.Generate.LLVM.Simple
@@ -58,11 +57,11 @@ allocPs fRef ds = unions `fmap` zipWithM (allocP fRef) ds [0..]
 --        ref <- alloca procType "<CurrentProc>"
 --        return (singleEnv' "<CurrentProc>" ref)
 
-routHasCurrent :: TRoutine -> Bool
-routHasCurrent rout =
-    case routineArgs rout of
-      Decl "Current" _ : _ -> True
-      _ -> False
+-- routHasCurrent :: TRoutine -> Bool
+-- routHasCurrent rout =
+--     case routineArgs rout of
+--       Decl "Current" _ : _ -> True
+--       _ -> False
 
 routineEnv :: TRoutine -> ValueRef -> Build Env
 routineEnv rout func = 

@@ -2,8 +2,6 @@
 
 module Language.QuickSilver.Parser.Statement where
 
-import           Control.Applicative ((<$>))
-
 import qualified Data.Text as Text
 
 import           Language.QuickSilver.Syntax

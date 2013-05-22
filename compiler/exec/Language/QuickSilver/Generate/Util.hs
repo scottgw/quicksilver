@@ -4,7 +4,6 @@ module Language.QuickSilver.Generate.Util where
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Values
-import Language.QuickSilver.Generate.LLVM.Util
 
 mallocSz :: ValueRef -> Build ValueRef
 mallocSz = call "GC_malloc" . (:[])

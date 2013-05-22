@@ -9,7 +9,8 @@ module Language.QuickSilver.Generate.LLVM.Types
 
      getTypeKind, getElementType, getTypeByName,
 
-     int1TypeM, int8TypeM, int32TypeM, int64TypeM, doubleTypeM, voidTypeM,
+     int1TypeM, int8TypeM, int16TypeM,
+     int32TypeM, int64TypeM, doubleTypeM, voidTypeM,
 
      pointer0, pointerType, arrayType
      -- int1Type, int8Type, int32Type, doubleType,
@@ -77,6 +78,7 @@ countStructElementTypes = fromIntegral . L.countStructElementTypes
 
 int1TypeM = withContext0 L.int1TypeInContext
 int8TypeM = withContext0 L.int8TypeInContext
+int16TypeM = withContext0 L.int16TypeInContext
 int32TypeM = withContext0 L.int32TypeInContext
 int64TypeM = withContext0 L.int64TypeInContext
 doubleTypeM = withContext0 L.doubleTypeInContext
