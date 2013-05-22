@@ -241,7 +241,6 @@ evalUnPos (Call trg fName args retVal) = do
   let cName = case  texpr trg of
         ClassType cName _ -> cName
         Sep _ _ cName -> cName
-
   trg'  <- loadEval trg
   debugDump trg'
   args' <- mapM loadEval args
@@ -254,10 +253,17 @@ evalUnPos (Call trg fName args retVal) = do
                 ," parameters " 
                 ,show (trg:args)])
   debugDump f
+
+  -- FIXME: separate calls must be done differently.
+  -- Separate status is determined by type (also important for result, below)
+
   r <- call' f (trg':args') ("call: " ++ Text.unpack fName)
   debug "eval: call -> done"
   -- setInstructionCallConv r Fast
   
+  -- FIXME: separate results, if they are non-separate and non-basic,
+  -- should inherit the processor of the target.
+
   if retVal /= NoType then simpStore r else return r
 
 evalUnPos (LitInt i _t)   = int (fromIntegral i) >>= simpStore

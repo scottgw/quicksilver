@@ -96,7 +96,7 @@ getFlat' !t =
   do cfMb <- getFlat t
      cMb <- if isBasic t
             then error "getFlat': basic type"
-            else (Map.lookup (classNameType t) . interfaces) <$> ask
+            else (Map.lookup (classTypeName t) . interfaces) <$> ask
      case cfMb <|> cMb of
        Just c -> return c
        Nothing -> error $ "getFlat': couldn't find " ++ show t

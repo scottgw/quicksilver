@@ -76,7 +76,7 @@ routineEnv rout func =
 
 routHasNonSpecialCurrent rout =
     case routineArgs rout of
-      Decl "Current" t : _ -> not (isSpecialClassName (classNameType t))
+      Decl "Current" t : _ -> not (isSpecialClassName (classTypeName t))
       _ -> False
 
 genBody :: TRoutine -> Build ()

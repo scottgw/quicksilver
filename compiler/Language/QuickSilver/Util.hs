@@ -266,7 +266,7 @@ typeBounds t = error $ "typeBounds: won't work on " ++ show t
 
 -- | Boolean type test.
 isBooleanType :: Typ -> Bool
-isBooleanType = (== "BOOLEAN") . classNameType
+isBooleanType = (== "BOOLEAN") . classTypeName
 
 -- | Integer type test.
 isIntegerType :: Typ -> Bool
@@ -309,10 +309,10 @@ charTypeNames :: [Text]
 charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 
 -- | Given a type give the name of the class as a string.
-classNameType :: Typ -> Text
-classNameType (ClassType cn _) = cn 
-classNameType (Sep _ _ cn) = cn
-classNameType t = error $ "Non-class type " ++ show t
+classTypeName :: Typ -> Text
+classTypeName (ClassType cn _) = cn 
+classTypeName (Sep _ _ cn) = cn
+classTypeName t = error $ "Non-class type " ++ show t
 
 -- | The default integer type.
 intType :: Typ
