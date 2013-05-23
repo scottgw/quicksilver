@@ -162,24 +162,9 @@ expr (QualCall trg name args) = do
     Just feat -> do
       let formArgs = map declType (routineArgs feat)
           res = routineResult feat
-      catchError 
-         (do args'' <- argsConform args' formArgs
-             tagPos (T.Call trg' name args'' res)
-         )
-         (\e -> case args' of
-             [arg] -> 
-               if contents arg `numericCanBe` targetType
-               then do -- check to see if the numeric types can 
-                       -- be casted to one another
-                 arg' <- tagPos (T.Cast targetType arg)
-                 tagPos (T.Call trg' name [arg'] res)
-               else if contents trg' `numericCanBe` T.texpr arg 
-                    then do 
-                      trg'' <- tagPos (T.Cast (T.texpr arg) trg')
-                      tagPos (T.Call trg'' name [arg] res)
-                    else throwError $ e ++ " AND! " ++ show (trg',name,args, targetType)
-             _ -> throwError e
-         )
+      args'' <- argsConform args' formArgs
+      tagPos (T.Call trg' name args'' res)
+
 expr (CreateExpr typ name args) = do
   -- this comes basically from the above 
   -- see if the call is valid wth the args proposed
