@@ -158,6 +158,14 @@ make_processor(sync_data_t sync_data)
   return proc;
 }
 
+
+processor_t
+make_processor_from(processor_t other_proc)
+{
+  return make_processor(other_proc->task->sync_data);
+}
+
+
 processor_t
 make_root_processor(sync_data_t sync_data, void (*root)(processor_t))
 {
