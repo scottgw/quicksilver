@@ -116,6 +116,7 @@ Library
                        text,
                        containers,
                        mtl,
+                       syb,
                        unordered-containers
   
   -- Modules not exported by this package.
