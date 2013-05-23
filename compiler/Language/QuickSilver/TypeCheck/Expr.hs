@@ -161,9 +161,15 @@ expr (QualCall trg name args) = do
                           ]
     Just feat -> do
       let formArgs = map declType (routineArgs feat)
-          res = routineResult feat
+          resType = routineResult feat
       args'' <- argsConform args' formArgs
-      tagPos (T.Call trg' name args'' res)
+      baseCall <- tagPos (T.Call trg' name args'' resType)
+      case targetType of
+        Sep _ _ _ ->
+            if not (isBasic resType)
+            then tagPos (T.InheritProc trg' baseCall)
+            else return baseCall
+        _ -> return baseCall
 
 expr (CreateExpr typ name args) = do
   -- this comes basically from the above 

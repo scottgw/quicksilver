@@ -48,6 +48,7 @@ data UnPosTExpr
   | UnOpExpr E.UnOp TExpr Typ
   | Access TExpr Text Typ
   | Agent TExpr Text [TExpr] Typ
+  | InheritProc TExpr TExpr
   | Old TExpr
   | Var Text Typ
   | EqExpr EqOp TExpr TExpr
