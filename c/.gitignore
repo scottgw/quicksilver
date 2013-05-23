@@ -1,5 +1,9 @@
 # autoconf generated files
+*.lai
+*.0
 *.m4
+*.lo
+*.la
 Makefile.in
 configure.in
 m4/
@@ -12,3 +16,4 @@ depcomp
 install-sh
 ltmain.sh
 libtool
+libqs.pc
