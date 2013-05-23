@@ -25,7 +25,7 @@ askClassEnv = classEnv `liftM` ask
 lookupClassM :: ClassReader r m body expr => 
                 Typ -> m (Maybe (AbsClas body expr))
 lookupClassM (ClassType cn _) = Map.lookup cn `liftM` askClassEnv
-lookupClassM (Sep _ _ cn)     = lookupClassM (ClassType cn [])
+lookupClassM (Sep _ _ t)     = lookupClassM t
 lookupClassM t = error $ "lookupClassM: can't lookup a " ++ show t ++ " type"
 
 lookupClass :: ClassReader r m body expr => Typ -> m (AbsClas body expr)

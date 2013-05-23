@@ -14,7 +14,7 @@ import           Util.Monad
 resolveIFace :: (Data body, Typeable body)
              => Typ -> TypingBody body (AbsClas body Expr)
 resolveIFace t@(ClassType _ ts) = updateGenerics ts `fmap` lookupClass t
-resolveIFace (Sep _ _ t)  = resolveIFace (ClassType t [])
+resolveIFace (Sep _ _ t)  = resolveIFace t
 resolveIFace t = error $ "resolveIFace: called on " ++ show t
 
 type GenUpd a = Typ -> Typ -> a -> a

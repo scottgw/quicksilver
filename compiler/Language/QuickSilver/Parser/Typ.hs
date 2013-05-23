@@ -41,7 +41,7 @@ attTyp :: Parser Typ
 attTyp = keyword TokAttached >> baseTyp
 
 typ :: Parser Typ
-typ = detTyp <|> attTyp <|> sepTyp <|> baseTyp
+typ = detTyp <|> attTyp <|> baseTyp <|> sepTyp
 
 baseTyp :: Parser Typ
 baseTyp = basicType <|> classTyp
@@ -51,8 +51,8 @@ sepTyp = do
   keyword TokSeparate
   p   <- return Nothing -- optionMaybe (angles procGen)
   ps  <- return [] -- option [] procGens
-  cn  <- identifier
-  return $ Sep p ps cn
+  t   <- typ
+  return $ Sep p ps t
 
 decl :: Parser [Decl]
 decl = do

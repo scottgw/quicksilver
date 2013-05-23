@@ -210,7 +210,7 @@ data Typ = ClassType ClassName [Typ]
          | DoubleType
          | CharType
          | ProcessorType
-         | Sep (Maybe Proc) [Proc] Text
+         | Sep (Maybe Proc) [Proc] Typ
          | VoidType
          | NoType deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
 

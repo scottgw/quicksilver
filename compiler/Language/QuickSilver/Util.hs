@@ -316,7 +316,7 @@ charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 -- | Given a type give the name of the class as a string.
 classTypeName :: Typ -> Text
 classTypeName (ClassType cn _) = cn 
-classTypeName (Sep _ _ cn) = cn
+classTypeName (Sep _ _ t) = classTypeName t
 classTypeName t = error $ "Non-class type " ++ show t
 
 -- | The default integer type.

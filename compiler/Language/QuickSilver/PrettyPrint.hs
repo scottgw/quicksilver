@@ -146,7 +146,7 @@ type' :: Typ -> Doc
 type' (ClassType str gens) = ttext (ups str) <+> genDoc gens
 type' VoidType   = text "NONE"
 type' NoType     = empty
-type' (Sep mP ps str) = sepDoc <+> procM mP <+> procs ps <+> ttext str
+type' (Sep mP ps t) = sepDoc <+> procM mP <+> procs ps <+> type' t
 type' t = text (show t)
 
 routineDoc :: (body -> Doc) -> AbsRoutine body Expr -> Doc

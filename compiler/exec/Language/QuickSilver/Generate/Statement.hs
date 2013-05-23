@@ -9,6 +9,7 @@ import Data.Text (Text)
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
+import Language.QuickSilver.Util
 import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Object
@@ -116,16 +117,16 @@ genStmt (Separate args body) =
   
 genStmt (Create _typeMb var fName args) =
   case texpr var of
-    varType@(Sep _ _ name) ->
+    varType@(Sep _ _ t) ->
       do debug "creating separate object"
          varRef <- lookupVarAccess (contents var)
-         newSep <- mallocSeparate name
+         newSep <- mallocSeparate t
          debugDump newSep
 
          currProc <- getCurrProc
          newProc <- "make_processor_from" <#> [currProc]
 
-         newInst <- lookupMalloc (ClassType name []) fName args
+         newInst <- lookupMalloc t fName args
 
          debug "creating separate: storing new proc"
          procLoc <- gepInt newSep [0, 0]
@@ -188,6 +189,6 @@ lookupMalloc t  _fName _args =
   case t of
     ClassType cName _ -> mallocObject cName
     -- FIXME: Add separate wrapper datatype
-    Sep _ _ cName -> mallocObject cName
+    Sep _ _ t -> mallocObject (classTypeName t)
     _ -> error ("lookupMalloc: called on non-class type: " ++ show t)
 
