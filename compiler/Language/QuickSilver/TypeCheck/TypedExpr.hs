@@ -7,10 +7,11 @@ module Language.QuickSilver.TypeCheck.TypedExpr where
 
 import           Control.Applicative
 
+import qualified Data.Data as D
 import           Data.DeriveTH
 import           Data.Binary
+import           Data.Hashable
 import           Data.Text (Text)
-import qualified Data.Data as D
 import qualified Data.Typeable as T
 
 import qualified GHC.Generics as G
@@ -34,6 +35,8 @@ type TExpr = Pos UnPosTExpr
 
 data EqOp = Eq | Neq
             deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
+
+instance Hashable EqOp
 
 eqOp (RelOp E.Eq _) = Eq
 eqOp (RelOp E.Neq _) = Neq
@@ -67,7 +70,10 @@ data UnPosTExpr
   | LitInt Integer Typ
   | LitBool Bool
   | LitVoid Typ
-  | LitDouble Double deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
+  | LitDouble Double 
+    deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
+
+instance Hashable UnPosTExpr
 
 $( derive makeBinary ''EqOp )
 $( derive makeBinary ''UnPosTExpr )
@@ -175,6 +181,7 @@ texprTyp (Var _ t)   = t
 texprTyp (Cast t _)  = t
 texprTyp (ResultVar t) = t
 texprTyp (CurrentVar t) = t
+texprTyp (InheritProc _inh base) = Sep Nothing [] (texpr base)
 texprTyp CurrentProc = ProcessorType
 texprTyp (Call _ _ _ t) = t
 texprTyp (Access _ _ t) = t

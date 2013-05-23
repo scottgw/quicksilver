@@ -203,8 +203,9 @@ uStmt (Create typeMb vr fName args) = do
   call <- tagPos (QualCall vr fName args) >>= typeOfExpr
   let call' = case contents call of
                 T.Cast _ c -> c
+                T.InheritProc _ c -> c
                 T.Call {} -> call
-                _ -> error "uStmt: create only on casts or calls"
+                _ -> error $ "uStmt: create only on casts or calls " ++ show call
   let T.Call trg _ tArgs res = contents call'
   let ClassType _ _ = T.texpr trg
   guardThrow (res == NoType) 

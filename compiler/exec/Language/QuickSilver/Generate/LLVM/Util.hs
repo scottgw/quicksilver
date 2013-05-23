@@ -24,7 +24,7 @@ module Language.QuickSilver.Generate.LLVM.Util
      currentClass, setCurrent,
      currentRoutine, setRoutine,
 
-     lookupClas, lookupValue,
+     lookupClas, lookupValue, lookupQueueFor, updateQueues,
      lookupClasLType,
 
      writeModuleToFile,
@@ -40,10 +40,12 @@ import           Control.Applicative
 import           Control.Monad.Reader
 
 import           Language.QuickSilver.Syntax
+import           Language.QuickSilver.TypeCheck.TypedExpr
 
 import           Data.Array.Storable
 import           Data.Hashable
 import qualified Data.HashMap.Strict as Map
+import           Data.List (lookup)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
@@ -82,7 +84,8 @@ data BuildState =
       bsModule   :: ModuleRef,
       bsContext  :: ContextRef,
       bsEnv      :: Env,
-      bsRoutine  :: RoutineI, 
+      bsRoutine  :: RoutineI,
+      bsQueues   :: [(TExpr, ValueRef)],
       bsCurrent  :: ClasInterface,
       bsClassEnv :: ClassEnv,
       bsTypeEnv  :: Map Text TypeRef, -- For special types like processor.
@@ -152,6 +155,7 @@ runBuild debg moduleName b = do
                 , bsContext  = context
                 , bsCurrent  = error "Current class not set"
                 , bsRoutine  = error "Current routine not set"
+                , bsQueues   = []
                 , bsEnv      = Map.empty
                 , bsClassEnv = Map.empty
                 , bsTypeEnv  = Map.empty
@@ -183,6 +187,20 @@ insertNamedType name typ bs =
 
 lookupNamedType :: Text -> Build (Maybe TypeRef)
 lookupNamedType name = Map.lookup name <$> bsTypeEnv <$> ask
+
+lookupQueueFor :: TExpr -> Build ValueRef
+lookupQueueFor e =
+    do m <- bsQueues <$> ask
+       case lookup e m of
+         Just v -> return v
+         Nothing -> error $ "lookupQueueFor: not found " ++ show e ++
+                            " in " ++ show m
+      
+updateQueues :: [(TExpr, ValueRef)] -> BuildState -> BuildState
+updateQueues qs bs =
+    bs { bsQueues = upd (bsQueues bs) }
+    where
+      upd = (qs ++) -- Map.union (Map.fromList qs)
 
 setClassEnv :: ClassEnv -> (BuildState -> BuildState)
 setClassEnv = updClassEnv . const

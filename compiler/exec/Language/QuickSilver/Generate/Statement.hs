@@ -3,6 +3,7 @@
 module Language.QuickSilver.Generate.Statement (genStmt) where
 
 import Control.Monad
+import Control.Monad.Reader
 
 import Data.Text (Text)
 
@@ -112,7 +113,8 @@ genStmt (Loop setup _invs cond body _varMb) = do
 
 genStmt (Separate args body) =
   do privQs <- lockSeps args
-     genStmt (contents body)
+     local (updateQueues (zip args privQs))
+           (genStmt (contents body))
      unlockQueues privQs
   
 genStmt (Create _typeMb var fName args) =
@@ -139,10 +141,15 @@ genStmt (Create _typeMb var fName args) =
          store newInst' instLoc
          
          store newSep varRef
+         debug ("genStmt: sep create " ++ show var)
+         let newCall = CallStmt (attachPos (position var) 
+                                 (Call var fName args NoType))
 
-         genStmt (CallStmt $
-                  attachPos (position var) (Call var fName args NoType)
-                 )
+         newQ <- lockSep' newProc
+         local (updateQueues [(var, newQ)])
+                   (genStmt newCall)
+         unlockQueue newQ
+         return ()
     varType ->     
       do varRef <- lookupVarAccess (contents var)
          newInst <- lookupMalloc varType fName args
@@ -161,21 +168,26 @@ lockSeps = mapM lockSep
       do debug "lockSep"
          e' <- loadEval e
          debugDump e'
-         currProc <- getCurrProc
          prc <- getProc e'
+         lockSep' prc
          debugDump prc
-         privQ <- "priv_queue_new" <#> [prc]
-         "priv_queue_lock" <#> [privQ, prc, currProc]
-         return privQ
+         lockSep' prc
     lockSep _ = error "lockSep: found non-variable expression"
+
+lockSep' prc =
+    do currProc <- getCurrProc
+       privQ <- "priv_queue_new" <#> [prc]
+       "priv_queue_lock" <#> [privQ, prc, currProc]
+       return privQ
+
+
+unlockQueue privQ =
+    do debug "unlockQueues"
+       currProc <- getCurrProc
+       "priv_queue_unlock" <#> [privQ, currProc]
 
 unlockQueues :: [ValueRef] -> Build ()
 unlockQueues = mapM_ unlockQueue
-  where
-    unlockQueue privQ =
-      do debug "unlockQueues"
-         currProc <- getCurrProc
-         "priv_queue_unlock" <#> [privQ, currProc]
 
 
 -- lookupBuiltin :: Build ()

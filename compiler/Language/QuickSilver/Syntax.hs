@@ -117,6 +117,8 @@ data BinOp = Add
            | SymbolOp Text
              deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
 
+instance Hashable BinOp
+
 data ROp = Lte
          | Lt 
          | Eq 
@@ -125,10 +127,14 @@ data ROp = Lte
          | Gte
            deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
 
+instance Hashable ROp
+
 data UnOp = Not
           | Neg
           | Old
             deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
+
+instance Hashable UnOp
 
 data UnPosExpr =
     UnqualCall Text [Expr]
@@ -157,7 +163,11 @@ data UnPosExpr =
   | LitDouble Double 
     deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
 
+instance Hashable UnPosExpr
+
 data Quant = All | Some deriving (Eq, Ord, Show, G.Generic, D.Data, T.Typeable)
+
+instance Hashable Quant
 
 commaSepShow es = intercalate "," (map show es)
 argsShow args = "(" ++ commaSepShow args ++ ")"
@@ -287,8 +297,13 @@ data AbsStmt a = Assign a a
                | Debug Text (PosAbsStmt a)
                | BuiltIn deriving (Ord, Eq, G.Generic, D.Data, T.Typeable)
 
+instance Hashable a => Hashable (AbsStmt a)
+
 data ElseIfPart a = ElseIfPart a (PosAbsStmt a)
                     deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
+
+
+instance Hashable a => Hashable (ElseIfPart a)
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss
@@ -335,6 +350,8 @@ data Clause a = Clause
     { clauseName :: Maybe Text
     , clauseExpr :: a
     } deriving (Show, Ord, Eq, G.Generic, D.Data, T.Typeable)
+
+instance Hashable a => Hashable (Clause a)
 
 instance Binary Text where
   put = put . Text.encodeUtf8

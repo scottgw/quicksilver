@@ -31,6 +31,7 @@ import Control.DeepSeq
 
 import Data.DeriveTH
 import Data.Binary
+import Data.Hashable
 import qualified Data.Data as D
 import qualified Data.Typeable as T
 
@@ -43,6 +44,8 @@ import Text.Parsec.ByteString
 
 data Pos a = Pos SourcePos a
              deriving (Ord, G.Generic, D.Data, T.Typeable)
+
+instance Hashable a => Hashable (Pos a)
 
 instance Eq a => Eq (Pos a) where
     (==) p1 p2 = contents p1 == contents p2
@@ -83,6 +86,9 @@ contents (Pos _ a) = a
 instance Binary SourcePos where
   get = return (newPos "filename lost" 0 0)
   put _p = return ()
+
+instance Hashable SourcePos where
+    hashWithSalt s pos = hashWithSalt s (show pos)
 
 -- instance Binary SourcePos where
 --     get = do (line, col, name) <- get

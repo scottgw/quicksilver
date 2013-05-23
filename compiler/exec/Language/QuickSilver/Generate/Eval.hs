@@ -268,6 +268,8 @@ evalUnPos (Access trg attr typ) = do
     Just index -> gepInt trgV [0, index] 
     Nothing -> error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
 
+evalUnPos (InheritProc _ e) = eval e
+
 evalUnPos (Box c e) = do
   v    <- loadEval e
   vPtr <- mallocTyp =<< typeOfM (texpr e)
@@ -377,16 +379,17 @@ separateCall trg fName args retVal =
 
        debug "sepCall: calling underlying function"
 
-       privQ <- error "sepCall: privQ unimplemented"
+       currProc <- getCurrProc
+       privQ <- getQueueFor trg
 
        if retVal == NoType
-         then "priv_queue_routine" <#> [privQ, closure]
+         then "priv_queue_routine" <#> [privQ, closure, currProc]
          else
            do resType <- typeOfM retVal
               resLoc <- alloca resType "closure_result"
               voidPtr <- voidPtrType
               resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
-              "priv_queue_function" <#> [privQ, closure, resLocCast]
+              "priv_queue_function" <#> [privQ, closure, resLocCast, currProc]
               if isBasic retVal || isSeparate retVal
                 then return resLoc
                      -- Basic and results that are declared separate do not
@@ -394,6 +397,13 @@ separateCall trg fName args retVal =
                      -- their target.
                 else
                   do error "sepCall: FIXME: wrap result in target's processor"
+
+
+getQueueFor :: TExpr -> Build ValueRef
+getQueueFor e =
+    case contents e of
+      InheritProc inh _ -> getQueueFor inh
+      _ -> lookupQueueFor e
 
 closType :: Typ -> Build ValueRef
 closType t =
