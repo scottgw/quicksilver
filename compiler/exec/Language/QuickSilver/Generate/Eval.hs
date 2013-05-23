@@ -343,10 +343,19 @@ separateCall trg fName args retVal =
                      ," parameters " 
                      ,show (trg:args)])
        debugDump f
-       
+
+       nonSepTrgRef <- gepInt trg' [0, 1]
+       nonSepTrg <- load' nonSepTrgRef
+
+       currProc <- getCurrProc
+       let Sep _ _ nonSepTrgType = texpr trg
+           allTypes = ProcessorType : nonSepTrgType : map texpr args 
+           allEvald = currProc : nonSepTrg : args'
+           n = length allTypes
+
        funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
        closRetType <- closType retVal
-       argCount <- int (length args + 1)
+       argCount <- int n
        argArray <- join (alloca <$> (pointer0 <$> pointer0 <$> voidPtrType)
                                 <*> pure "allocating argArray")
        argTypeArray <- join (alloca <$> (pointer0 <$> closTypeTypeM)
@@ -361,25 +370,26 @@ separateCall trg fName args retVal =
                              ]
        debug "sepCall: filling type and arg arrays"
        let storeType t idx =
-               do closT <- closType t
+               do debug $ "storeType: " ++ show (t, idx)
+                  closT <- closType t
+                  -- argTypesRef <- load' argTypeArray
                   argTypes <- load' argTypeArray
-                  argRef <- gepInt argTypes [0, idx]
+                  debugDump argTypes
+                  argRef <- gepInt argTypes [idx]
                   store closT argRef
 
            storeArg (t, val) idx =
-               do ptr <- join (bitcast val <$> voidPtrType <*> pure "bitcast")
+               do debug $ "storeArg: " ++ show (t, val, idx)
+                  ptr <- join (bitcast val <$> (pointer0 <$> voidPtrType) <*> pure "bitcast")
                   argArr <- load' argArray
-                  argRef <- gepInt argArr [0, idx]
+                  argRef <- gepInt argArr [idx]
                   store ptr argRef
 
-           types = map texpr args
-
-       zipWithM storeType types [0 .. length types]
-       zipWithM storeArg (zip types args') [0 .. length args']
+       zipWithM storeType allTypes [0 ..]
+       zipWithM storeArg (zip allTypes allEvald) [0 ..]
 
        debug "sepCall: calling underlying function"
 
-       currProc <- getCurrProc
        privQ <- getQueueFor trg
 
        if retVal == NoType
@@ -415,3 +425,6 @@ closType t =
       Int64Type -> "closure_sint_type" <#> []
       ClassType _ _ -> "closure_pointer_type" <#> []
       NoType -> "closure_void_type" <#> []
+      ProcessorType -> "closure_pointer_type" <#> []
+      Sep _ _ _ -> "closure_pointer_type" <#> []
+      _ -> error $ "closType: " ++ show t
