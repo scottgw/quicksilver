@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Memory.Object
     ( mallocObject
+    , mallocSeparate
     , getAttribute
     , attributeIndex
     ) where
@@ -27,6 +28,15 @@ getAttribute c attrName obj = do
   zero <- int 0
   off  <- int offset
   gep obj [zero, off]
+
+
+mallocSeparate :: ClassName -> Build ValueRef
+mallocSeparate c = do
+  sepTyp <- typeOfM (Sep Nothing [] c)
+  t <- getElementType sepTyp
+  inst <- mallocTyp t
+  bitcast inst sepTyp "casting char ptr to sep struct ptr"
+
 
 mallocObject :: ClassName -> Build ValueRef
 mallocObject c = do

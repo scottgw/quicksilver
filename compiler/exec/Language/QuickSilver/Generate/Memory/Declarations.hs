@@ -78,9 +78,8 @@ setClasType pcMap (ClassInfo cls (Left t)) =
     -- special classes have already been done in 'nameClassInfo'
     t' <- if (not $ isSpecialClass cls) 
           then
-            do procType <- procTypeM
-               ts <- unClasTable <$> mkClasTable cls
-               structSetBody t (procType:ts) False
+            do ts <- unClasTable <$> mkClasTable cls
+               structSetBody t ts False
                return (pointer0 t)
           else return t
     return (ClassInfo cls (Right t'))
@@ -112,13 +111,9 @@ modRoutineArgs go ci rout =
         ts        = map (flip ClassType [] . genericName) (view generics ci)
         currDecl  = Decl "Current" (ClassType cName ts)
         procDecl  = Decl "<CurrentProc>" ProcessorType
-        pre
-            | isMod = go rout procDecl
-            | otherwise = [currDecl]
+        pre | isMod     = go rout procDecl
+            | otherwise = go rout procDecl ++ [currDecl]
     in rout {routineArgs = pre ++ routineArgs rout}
-
-
-
 
 -- Creation routines
 mkCreateFunc :: ClasInterface -> RoutineI -> Build ()

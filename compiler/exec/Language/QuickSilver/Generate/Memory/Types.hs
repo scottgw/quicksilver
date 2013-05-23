@@ -10,20 +10,22 @@ module Language.QuickSilver.Generate.Memory.Types
      ) 
     where
 
-import Control.Applicative
-import Control.Lens
-import Control.Monad
+import           Control.Applicative
+import           Control.Lens
+import           Control.Monad
+
+import           Foreign.Ptr
 
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import qualified Data.HashMap.Strict as Map
 
-import Language.QuickSilver.Syntax
-import Language.QuickSilver.Generate.LibQs
-import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Util
+import           Language.QuickSilver.Syntax
+import           Language.QuickSilver.Generate.LibQs
+import           Language.QuickSilver.Generate.LLVM.Simple
+import           Language.QuickSilver.Generate.LLVM.Types
+import           Language.QuickSilver.Generate.LLVM.Util
 
 typeOfDecl :: Decl -> Build TypeRef
 typeOfDecl = typeOfM . declType
@@ -42,9 +44,20 @@ typeOf e t =
       DoubleType -> doubleTypeM
       CharType -> int8TypeM
       ProcessorType -> procTypeM
-      Sep _ _ s -> processClass s
+      Sep _ _ s -> sepClass s
       ClassType s _ -> processClass s
     where
+      sepClass s =
+        do sepTypeRef <- getTypeByName "separate_wrapper"
+           if sepTypeRef == nullPtr
+             then
+               do sepStruct <- structCreateNamed "separate_wrapper"
+                  procTypeRef <- procTypeM
+                  voidPtrRef <- voidPtrType
+                  structSetBody sepStruct [procTypeRef, voidPtrRef] True
+                  return (pointer0 sepStruct)
+             else return (pointer0 sepTypeRef)
+
       processClass s =
         case Map.lookup s e of
           Just (ClassInfo cls typeValEi) ->

@@ -22,6 +22,7 @@ declareQsFuncs =
           funcType' resType argTypes >>= addFunc name
 
       functions = [ ("make_processor", procTypeM, [syncDataTypeM])
+                  , ("make_processor_from", procTypeM, [procTypeM])
                   , ("make_root_processor"
                     , procTypeM
                     , [ syncDataTypeM

@@ -30,12 +30,7 @@ allocDeclEnv d = singleEnv d `fmap` allocDecl d
 genDecls :: TRoutine -> Build Env
 genDecls r = 
   case routineImpl r of 
-    RoutineBody locals _ _ -> unions <$> mapM allocDeclEnv locals'
-      where
-        locals'
-           | routHasNonSpecialCurrent r =
-               Decl "<CurrentProc>" ProcessorType : locals
-           | otherwise = locals
+    RoutineBody locals _ _ -> unions <$> mapM allocDeclEnv locals
     _ -> return empty
 
 allocP :: ValueRef -> Decl -> Int -> Build Env
@@ -43,8 +38,8 @@ allocP fRef d i = do
   debug "Routine: allocating decl for arg"
   vr <- allocDecl d
   debug "Routine: storing parameter from function ref"
-  debugDump fRef
   store (getParam fRef i) vr
+  debugDump fRef
   debug "Routine: returning new env"
   return (singleEnv d vr)
 
@@ -81,16 +76,7 @@ routHasNonSpecialCurrent rout =
 genBody :: TRoutine -> Build ()
 genBody r =
   case routineImpl r of
-    RoutineBody _ _ body ->
-        do when (routHasNonSpecialCurrent r) $
-                do currRef <- lookupEnv "Current"
-                   curr <- load currRef "loading current to get processor"
-                   procRef <- gepInt curr [0, 0]
-                   proc <- load procRef "loading processor"
-                   procLoc <- lookupEnv "<CurrentProc>"
-                   store proc procLoc
-                   return ()
-           genStmt (contents body)
+    RoutineBody _ _ body -> genStmt (contents body)
     RoutineExternal name _ -> genExternal name
 
 genExternal name =

@@ -190,6 +190,7 @@ evalUnPos (Cast t e) =
   do debug $ "evalUnPos: cast " ++ show (t, e)
      v <- loadEval e
      castType t v
+
 evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
     do debug "evalUnPos: static call"
        Just rout <- findAbsRoutine <$> lookupClas moduleType <*> pure name
@@ -197,7 +198,8 @@ evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
                 -- externals do not have an implicit processor parameter
                 -- in modules.
                 EmptyExternal _ _ -> return []
-                _ -> do procRef <- lookupEnv "<CurrentProc>"
+                _ -> do debug "evalUnPos: static call forwards current proc"
+                        procRef <- lookupEnv "<CurrentProc>"
                         proc <- load procRef "loading proc for static call"
                         return [proc]
        fn <- getNamedFunction (fullNameStr moduleType name)
@@ -263,7 +265,7 @@ evalUnPos (Access trg attr typ) = do
   clas <- lookupClas cname
   case attributeIndex clas attr of
     -- Add 1 to skip the processor in every object.
-    Just index -> gepInt trgV [0, index + 1] 
+    Just index -> gepInt trgV [0, index] 
     Nothing -> error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
 
 evalUnPos (Box c e) = do
@@ -284,6 +286,7 @@ evalUnPos (LitString s) = do
   rawStr <- getNamedGlobal (s `Text.append` "_global")
   n <- int (Text.length s)
   f <- getNamedFunction (fullNameStr "String" "make_with_pointer")
+  currProc <- getCurrProc
   charPtrType <- pointer0 <$> int8TypeM
   rawStrPtr <- bitcast rawStr charPtrType "char8 cast"
   debugDump f
@@ -294,7 +297,7 @@ evalUnPos (LitString s) = do
   debugDump strPtr
  --  str <- load strPtr "loading created string"
   -- debugDump str
-  call' f [strPtr, n, rawStrPtr] ("call: string constructor")
+  call' f [currProc, strPtr, n, rawStrPtr] ("call: string constructor")
   debug "Creating string done"
   simpStore strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
@@ -303,6 +306,7 @@ evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
 nonSeparateCall trg fName args retVal =
     do let cName = classTypeName (texpr trg)
 
+       currProc <- getCurrProc
        trg'  <- loadEval trg
        debugDump trg'
        args' <- mapM loadEval args
@@ -316,7 +320,7 @@ nonSeparateCall trg fName args retVal =
                      ,show (trg:args)])
        debugDump f
 
-       r <- call' f (trg':args') ("nonsep call: " ++ Text.unpack fName)
+       r <- call' f (currProc:trg':args') ("nonsep call: " ++ Text.unpack fName)
        debug "eval: nonsep call -> done"
        -- setInstructionCallConv r Fast
 
@@ -340,7 +344,7 @@ separateCall trg fName args retVal =
        
        funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
        closRetType <- closType retVal
-       argCount <- int (length args)
+       argCount <- int (length args + 1)
        argArray <- join (alloca <$> (pointer0 <$> pointer0 <$> voidPtrType)
                                 <*> pure "allocating argArray")
        argTypeArray <- join (alloca <$> (pointer0 <$> closTypeTypeM)
@@ -353,7 +357,7 @@ separateCall trg fName args retVal =
                              , argArray
                              , argTypeArray
                              ]
-
+       debug "sepCall: filling type and arg arrays"
        let storeType t idx =
                do closT <- closType t
                   argTypes <- load' argTypeArray
@@ -368,20 +372,28 @@ separateCall trg fName args retVal =
 
            types = map texpr args
 
-       zipWithM storeType types [0 .. length types - 1]
-       zipWithM storeArg (zip types args') [0 .. length args' - 1]
+       zipWithM storeType types [0 .. length types]
+       zipWithM storeArg (zip types args') [0 .. length args']
 
-       r <- call' f (trg':args') ("sep-call: " ++ Text.unpack fName)
+       debug "sepCall: calling underlying function"
 
+       privQ <- error "sepCall: privQ unimplemented"
 
-       debug "eval: sep call -> done"
-       -- setInstructionCallConv r Fast
-  
-       -- FIXME: separate results, if they are non-separate and non-basic,
-       -- should inherit the processor of the target.
-
-       if retVal /= NoType then simpStore r else return r
-
+       if retVal == NoType
+         then "priv_queue_routine" <#> [privQ, closure]
+         else
+           do resType <- typeOfM retVal
+              resLoc <- alloca resType "closure_result"
+              voidPtr <- voidPtrType
+              resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
+              "priv_queue_function" <#> [privQ, closure, resLocCast]
+              if isBasic retVal || isSeparate retVal
+                then return resLoc
+                     -- Basic and results that are declared separate do not
+                     -- need to be re-wrapped with the processor of
+                     -- their target.
+                else
+                  do error "sepCall: FIXME: wrap result in target's processor"
 
 closType :: Typ -> Build ValueRef
 closType t =

@@ -10,6 +10,7 @@ import Language.QuickSilver.Syntax
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.Eval
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
@@ -113,17 +114,42 @@ genStmt (Separate args body) =
      genStmt (contents body)
      unlockQueues privQs
   
-genStmt (Create _typeMb vr fName args) = do
-  var <- lookupVarAccess (contents vr)
-  newInst <- lookupMalloc (texpr vr) fName args
-  loc <- gepInt newInst [0, 0]
-  procRef <- lookupEnv "<CurrentProc>"
-  proc <- load procRef "Loading <CurrentProc>"
-  store proc loc
-  store newInst var
+genStmt (Create _typeMb var fName args) =
+  case texpr var of
+    varType@(Sep _ _ name) ->
+      do debug "creating separate object"
+         varRef <- lookupVarAccess (contents var)
+         newSep <- mallocSeparate name
+         debugDump newSep
 
-  genStmt (CallStmt $ attachPos (position vr) (Call vr fName args NoType))
-  return ()
+         currProc <- getCurrProc
+         newProc <- "make_processor_from" <#> [currProc]
+
+         newInst <- lookupMalloc (ClassType name []) fName args
+
+         debug "creating separate: storing new proc"
+         procLoc <- gepInt newSep [0, 0]
+         store newProc procLoc
+
+         debug "creating separate: storing base class"
+         instLoc <- gepInt newSep [0, 1]
+         voidPtr <- voidPtrType
+         newInst' <- bitcast newInst voidPtr "voidPtrInstance"
+         store newInst' instLoc
+         
+         store newSep varRef
+
+         genStmt (CallStmt $
+                  attachPos (position var) (Call var fName args NoType)
+                 )
+    varType ->     
+      do varRef <- lookupVarAccess (contents var)
+         newInst <- lookupMalloc varType fName args
+         store newInst varRef
+         genStmt (CallStmt $
+                  attachPos (position var) (Call var fName args NoType)
+                 )
+         return ()
 -- genStmt BuiltIn = lookupBuiltin
 genStmt s = error $ "genStmt: no pattern for: " ++ show s
 
