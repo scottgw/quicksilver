@@ -177,6 +177,12 @@ uStmt (If cond body elseIfs elsePart) = do
               Just e  -> Just `fmap` stmt e
   tagPos (If cond' body' elseIfs' else')
 
+uStmt (Shutdown e) =
+  do e' <- typeOfExpr e
+     case T.texpr e' of
+       Sep _ _ _ -> tagPos (Shutdown e')
+       _ -> throwError "Shutdown can be only applied to separate types"
+
 uStmt (Separate args body) =
   do args' <- mapM typeOfExpr args
      let varOrAccess e =

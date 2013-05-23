@@ -111,6 +111,13 @@ genStmt (Loop setup _invs cond body _varMb) = do
   positionAtEnd afterB
   return ()
 
+genStmt (Shutdown e) =
+  do e' <- loadEval e
+     currProc <- getCurrProc
+     eProc <- getProc e'
+     "proc_shutdown" <#> [eProc, currProc]
+     return ()
+
 genStmt (Separate args body) =
   do privQs <- lockSeps args
      local (updateQueues (zip args privQs))
@@ -169,7 +176,6 @@ lockSeps = mapM lockSep
          e' <- loadEval e
          debugDump e'
          prc <- getProc e'
-         lockSep' prc
          debugDump prc
          lockSep' prc
     lockSep _ = error "lockSep: found non-variable expression"

@@ -286,7 +286,8 @@ data AbsStmt a = Assign a a
                | If a (PosAbsStmt a) [ElseIfPart a] (Maybe (PosAbsStmt a))
                | Create (Maybe Typ) a Text [a]
                | Across a Text (PosAbsStmt a)
-               | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a) 
+               | Loop (PosAbsStmt a) [Clause a] a (PosAbsStmt a) (Maybe a)
+               | Shutdown a
                | CallStmt a
                | Separate [a] (PosAbsStmt a)
                | Retry
@@ -307,6 +308,7 @@ instance Hashable a => Hashable (ElseIfPart a)
 
 instance Show a => Show (AbsStmt a) where
     show (Block ss) = intercalate ";\n" . map show $ ss
+    show (Shutdown e) = "shutdown " ++ show e
     show (If b body elseifs elseMb) = concat
         [ "if ", show b, "\n"
         , "then ", show body, "\n"

@@ -27,6 +27,7 @@ bareStmt = do
                  , inspect
                  , loop
                  , debug
+                 , shutdown
                  , try callStmt
                  ]
      optional semicolon
@@ -36,6 +37,11 @@ stmts :: Parser [Stmt]
 stmts = many stmt
 
 stmts' = many bareStmt
+
+shutdown =
+  do keyword TokShutdown
+     e <- expr
+     return (Shutdown e)
 
 separate =
   do keyword TokSeparate
