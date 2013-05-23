@@ -12,5 +12,10 @@ create make
     do
       {Prelude}.print("Separate Hello!%N")
     end
+
+  bar(): Integer
+    do
+      Result := 42
+    end
 end
 

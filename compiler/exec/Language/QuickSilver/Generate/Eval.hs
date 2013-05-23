@@ -344,13 +344,14 @@ separateCall trg fName args retVal =
                      ,show (trg:args)])
        debugDump f
 
+       trgProcRef <- gepInt trg' [0, 0]
+       trgProc <- load' trgProcRef
        nonSepTrgRef <- gepInt trg' [0, 1]
        nonSepTrg <- load' nonSepTrgRef
 
-       currProc <- getCurrProc
        let Sep _ _ nonSepTrgType = texpr trg
            allTypes = ProcessorType : nonSepTrgType : map texpr args 
-           allEvald = currProc : nonSepTrg : args'
+           allEvald = trgProc : nonSepTrg : args'
            n = length allTypes
 
        funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
@@ -392,6 +393,8 @@ separateCall trg fName args retVal =
 
        privQ <- getQueueFor trg
 
+       currProc <- getCurrProc
+
        if retVal == NoType
          then "priv_queue_routine" <#> [privQ, closure, currProc]
          else
@@ -406,7 +409,15 @@ separateCall trg fName args retVal =
                      -- need to be re-wrapped with the processor of
                      -- their target.
                 else
-                  do error "sepCall: FIXME: wrap result in target's processor"
+                  do sepInst <- mallocSeparate retVal
+                     procRef <- gepInt sepInst [0, 0]
+                     objRef <- gepInt sepInst [0, 1]
+                     res <- load' resLoc
+                     store trgProc procRef
+                     store res objRef
+
+                     sepRef <- join (alloca <$> typeOfVal sepInst <*> pure "sepInstRef")
+                     store sepInst sepRef
 
 
 getQueueFor :: TExpr -> Build ValueRef
