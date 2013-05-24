@@ -1,4 +1,8 @@
 #!/bin/bash
+
+# exit on the first error
+set -e
+
 BCFILE=${1%.*}.bc
 EBCFILE=${1%.*}.ebc
 OBCFILE=${1%.*}.obc
