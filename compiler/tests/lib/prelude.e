@@ -25,8 +25,36 @@ module Prelude
     external "int8_to_char"
     end
 
+  char_to_int8(c: Character_8): Integer_8
+    external "char_to_int8"
+    end
+
+  int8_to_int(i: Integer_8): Integer
+    external "int8_to_int"
+    end
+
+  int_to_int8(i: Integer): Integer_8
+    external "int_to_int8"
+    end
+
   int_to_str(i: Integer): String
+    local
+      str: String
+      digit: Integer_8
+      rest: Integer
+      val_0: Integer_8
     do
-      Result := "24"
+      str := ""
+      val_0 := char_to_int8 ('0')
+
+      from rest := i
+      until rest = 0
+      loop
+        digit := int_to_int8 (rest \\ 10)
+        rest := rest / 10
+        str := str.prepend_char (int8_to_char (val_0 + digit))
+      end
+
+      Result := str
     end
 end

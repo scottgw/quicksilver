@@ -43,6 +43,23 @@ int8_to_char (int8_t i)
   return i;
 }
 
+int8_t
+char_to_int8 (char c)
+{
+  return c;
+}
+
+int64_t
+int8_to_int (int8_t i)
+{
+  return (int64_t) i;
+}
+
+int8_t
+int_to_int8 (int64_t i)
+{
+  return (int8_t) i;
+}
 
 struct string
 {

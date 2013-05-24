@@ -119,6 +119,45 @@ class String
       end
     end
 
+  prepend_char (c: Character_8): String
+    local
+      ptr: Pointer_8
+      i: Integer
+    do
+      create Result.make(length + 1)
+
+      ptr := Result.data
+      
+      ptr.put (0, c)
+
+      from i := 1
+      until i > length
+      loop
+        ptr.put (i, item (i))
+        i := i + 1
+      end
+    end
+
+
+  append_char (c: Character_8): String
+    local
+      ptr: Pointer_8
+      i: Integer
+    do
+      create Result.make(length + 1)
+
+      ptr := Result.data
+
+      from i := 1
+      until i > length
+      loop
+        ptr.put (i - 1, item (i))
+        i := i + 1
+      end
+
+      ptr.put (i - 1, c)
+    end
+
   substring (start: Integer; finish: Integer): String
     local
       ptr: Pointer_8
