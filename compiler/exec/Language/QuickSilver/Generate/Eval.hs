@@ -85,6 +85,10 @@ genBinOp op e1 e2 _resType =
     opFuncs =
       [ (Add, strictApply add)
       , (Sub, strictApply sub)
+      , (Rem, strictApply srem)
+      , (Div, if isIntegerType (texpr e1)
+              then strictApply sdiv
+              else strictApply fdiv)
       , (Or, strictApply orr)
       , (And, strictApply andd)
       , (OrElse, orElse)

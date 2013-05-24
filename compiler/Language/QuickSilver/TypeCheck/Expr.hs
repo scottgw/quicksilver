@@ -35,7 +35,7 @@ checkBinOp op e1 e2
                                 ]
 
       isEqOp   = op `elem` (map (flip RelOp NoType) [Eq, Neq])
-      isNumOp  = op `elem` [Add, Sub, Mul, Div]
+      isNumOp  = op `elem` [Add, Sub, Mul, Div, Rem]
       isBoolOp  = op `elem` [And, Or, OrElse, AndThen]
       isCompOp = op `elem` (map (flip RelOp NoType) [Gt, Lt, Gte, Lte])
 
@@ -148,6 +148,10 @@ expr (QualCall trg name args) = do
   trg' <- typeOfExpr trg
   let targetType = T.texpr trg'
   args' <- mapM typeOfExpr args
+
+  when (isBasic targetType)
+       (throwError "Qualified call on basic type")
+
   flatCls  <- getFlat' targetType
 
   case findAbsRoutine flatCls name of

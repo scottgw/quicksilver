@@ -24,6 +24,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
      extractValue, insertValue,
 
      add, sub, mul, fdiv, neg, fneg,
+     sdiv, srem,
      nott, andd, orr,
      condBr, br,
      icmp, fcmp,
@@ -332,6 +333,8 @@ orr = opWrap L.buildOr
 andd = opWrap L.buildAnd
 mul = opWrap L.buildMul
 fdiv = opWrap L.buildFDiv
+sdiv = opWrap L.buildSDiv
+srem = opWrap L.buildSRem
 
 nott, neg :: ValueRef -> String -> Build ValueRef
 nott = unOpWrap L.buildNot
