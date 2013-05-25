@@ -22,6 +22,23 @@ reset_stack_to(void (*f)(void*), processor_t proc)
   task_set_func(proc->task, f, proc);
 }
 
+priv_queue_t
+proc_get_queue(processor_t proc, processor_t supplier_proc)
+{
+  assert (proc != NULL);
+  assert (supplier_proc != NULL);
+
+  priv_queue_t q = g_hash_table_lookup(proc->privq_cache, supplier_proc);
+
+  if (q == NULL)
+    {
+      q = priv_queue_new(supplier_proc);
+      g_hash_table_insert(proc->privq_cache, supplier_proc, q);
+    }
+
+  return q;
+}
+
 void
 proc_maybe_yield(processor_t proc)
 {
@@ -157,7 +174,6 @@ proc_new_from_other(processor_t other_proc)
   return proc_new(other_proc->task->sync_data);
 }
 
-
 processor_t
 proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 {
@@ -170,6 +186,8 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
   proc->mutex = task_mutex_new();
   proc->cv = task_condition_new();
 
+  proc->privq_cache = g_hash_table_new(NULL, NULL);
+
   reset_stack_to((void (*)(void*)) root, proc);
 
   sync_data_register_proc(sync_data);
@@ -177,7 +195,6 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 
   return proc;
 }
-
 
 void
 proc_shutdown(processor_t proc, processor_t wait_proc)
