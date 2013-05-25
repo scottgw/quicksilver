@@ -58,7 +58,7 @@ task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
 
   task_mutex_unlock(mutex, vproc);
   logs(2, "%p moving to executor in cv %p\n", proc, cv);
-  yield_to_executor(vproc);
+  proc_yield_to_executor(vproc);
   logs(2, "%p resumed in cv %p\n", proc, cv);
   task_mutex_lock(mutex, vproc);
 }

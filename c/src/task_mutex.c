@@ -101,7 +101,7 @@ task_mutex_lock(volatile task_mutex_t mutex, volatile processor_t proc)
       assert(success);
 
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-      yield_to_executor(proc);
+      proc_yield_to_executor(proc);
       logs(2, "%p retries mutex %p\n", proc, mutex);
     }
 

@@ -154,7 +154,7 @@ priv_queue_function(priv_queue_t pq,
       priv_queue_link_enqueue(pq, promise_clos, proc);
 
       proc->task->state = TASK_TRANSITION_TO_WAITING;
-      yield_to_executor(proc);
+      proc_yield_to_executor(proc);
     }
   else
     {

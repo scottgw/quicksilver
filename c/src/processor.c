@@ -15,14 +15,21 @@
 
 int global_id = 0;
 
+static
 void
-maybe_yield(processor_t proc)
+reset_stack_to(void (*f)(void*), processor_t proc)
+{
+  task_set_func(proc->task, f, proc);
+}
+
+void
+proc_maybe_yield(processor_t proc)
 {
   if (time_is_up == 1)
     {
       time_is_up = 0;
       task_set_state(proc->task, TASK_TRANSITION_TO_RUNNABLE);
-      yield_to_executor(proc);
+      proc_yield_to_executor(proc);
     }
 }
 
@@ -50,14 +57,14 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
   task_mutex_unlock(waitee->mutex, waiter);
 }
 
+static
 void
-proc_loop(void* ptr)
+proc_loop(processor_t proc)
 {
-  processor_t proc = (processor_t)ptr;
   logs(1, "%p starting\n", proc);
   while (true)
     {
-      maybe_yield(proc);
+      proc_maybe_yield(proc);
 
       // Dequeue a private queue from the queue of queues.
       priv_queue_t priv_queue;
@@ -125,7 +132,7 @@ proc_wake(processor_t proc)
 }
 
 void
-yield_to_executor(processor_t proc)
+proc_yield_to_executor(processor_t proc)
 {
   logs(2, "%p yielding to executor %p\n", proc, proc->executor);
   yield_to(proc->task, proc->executor->task);
@@ -139,35 +146,20 @@ proc_sleep(processor_t proc, struct timespec duration)
 }
 
 processor_t
-make_processor(sync_data_t sync_data)
+proc_new(sync_data_t sync_data)
 {
-  processor_t proc = (processor_t) malloc(sizeof(struct processor));
-  proc->qoq = bqueue_new(25000);
-  proc->task = task_make(sync_data);
-  proc->id = global_id++;
+  return proc_new_root (sync_data, proc_loop);
+}
 
-  proc->available = true;
-  proc->mutex = task_mutex_new();
-  proc->cv = task_condition_new();
-
-  reset_stack_to(proc_loop, proc);
-
-  sync_data_register_proc(sync_data);
-  sync_data_enqueue_runnable(sync_data, proc);
-
-  return proc;
+processor_t
+proc_new_from_other(processor_t other_proc)
+{
+  return proc_new(other_proc->task->sync_data);
 }
 
 
 processor_t
-make_processor_from(processor_t other_proc)
-{
-  return make_processor(other_proc->task->sync_data);
-}
-
-
-processor_t
-make_root_processor(sync_data_t sync_data, void (*root)(processor_t))
+proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
   proc->qoq = bqueue_new(25000);
@@ -205,10 +197,4 @@ proc_free(processor_t proc)
   bqueue_free(proc->qoq);
 
   free (proc);
-}
-
-void
-reset_stack_to(void (*f)(void*), processor_t proc)
-{
-  task_set_func(proc->task, f, proc);
 }

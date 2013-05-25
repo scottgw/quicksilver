@@ -58,7 +58,7 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
     {
       q->waiter = proc;
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-      yield_to_executor(proc);
+      proc_yield_to_executor(proc);
 
       bool success = queue_impl_enqueue(q->impl, data);
       assert(success);
@@ -92,7 +92,7 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
     {
       q->waiter = proc;
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-      yield_to_executor(proc);
+      proc_yield_to_executor(proc);
 
       bool success = queue_impl_dequeue(q->impl, data);
       assert(success);

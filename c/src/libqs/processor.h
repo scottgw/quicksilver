@@ -33,25 +33,26 @@ struct processor
 };
 
 processor_t
-make_processor(sync_data_t sync_data);
+proc_new(sync_data_t sync_data);
 
 processor_t
-make_processor_from(processor_t other_proc);
+proc_new_from_other(processor_t other_proc);
 
 processor_t
-make_root_processor(sync_data_t sync_data, void (*root)(processor_t));
+proc_new_root(sync_data_t sync_data, void (*root)(processor_t));
 
-void
-reset_stack_to(void (*)(void*), processor_t);
+/* Scheduled for deletion */
+/* void */
+/* reset_stack_to(void (*)(void*), processor_t); */
 
 void
 proc_wake(processor_t proc);
 
 void
-yield_to_processor(executor_t, processor_t);
+proc_yield_to_other(executor_t, processor_t);
 
 void
-yield_to_executor(processor_t);
+proc_yield_to_executor(processor_t);
 
 void
 proc_wait_for_available(processor_t waitee, processor_t waiter);
@@ -72,6 +73,6 @@ void
 proc_shutdown(processor_t, processor_t);
 
 void
-maybe_yield(processor_t);
+proc_maybe_yield(processor_t);
 
 #endif // __PROCESSOR_H_
