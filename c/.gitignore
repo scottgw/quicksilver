@@ -1,4 +1,5 @@
 # autoconf generated files
+build/
 *.lai
 *.0
 *.m4
