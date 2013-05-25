@@ -15,8 +15,8 @@ HEADER_FILES = executor.h list.h task.h processor.h notifier.h \
 pkginclude_HEADERS = $(addprefix libqs/, $(HEADER_FILES))
 
 FLAGS = -pthread -U_FORTIFY_SOURCE -Wall -Werror -Wno-unused-variable
-libqs_la_CFLAGS = -std=gnu99 $(FLAGS)
-libqs_la_CXXFLAGS = -std=c++11 $(FLAGS)
+libqs_la_CFLAGS = -std=gnu99 $(FLAGS) $(DEPS_CFLAGS)
+libqs_la_CXXFLAGS = -std=c++11 $(FLAGS) $(DEPS_CFLAGS)
 
 # TODO: add dependencies for (?) LIBS=rt qs lfds :libffi.so.6 tbb
 # TODO: investigate how to use compilation optimization options, debugging info
