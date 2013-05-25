@@ -4,10 +4,27 @@
 #include <stdio.h>
 #include <unistd.h>
 
+
 #include <netinet/in.h>
 
 #include <sys/socket.h>
 #include <sys/stat.h>
+
+#define GC_THREADS
+#include <gc.h>
+
+void
+qs_init()
+{
+  GC_INIT();
+}
+
+void*
+qs_malloc(size_t sz)
+{
+  return GC_MALLOC(sz);
+}
+
 
 void
 exit_with(int64_t i)

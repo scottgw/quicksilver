@@ -6,7 +6,8 @@ import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Values
 
 mallocSz :: ValueRef -> Build ValueRef
-mallocSz = call "GC_malloc" . (:[])
+-- mallocSz = call "GC_malloc" . (:[])
+mallocSz = call "qs_malloc" . (:[])
 
 mallocTyp :: TypeRef -> Build ValueRef
 mallocTyp t = do

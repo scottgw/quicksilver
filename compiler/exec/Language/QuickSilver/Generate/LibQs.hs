@@ -21,9 +21,9 @@ declareQsFuncs =
       genDecl (name, resType, argTypes) =
           funcType' resType argTypes >>= addFunc name
 
-      functions = [ ("make_processor", procTypeM, [syncDataTypeM])
-                  , ("make_processor_from", procTypeM, [procTypeM])
-                  , ("make_root_processor"
+      functions = [ ("proc_new", procTypeM, [syncDataTypeM])
+                  , ("proc_new_from_other", procTypeM, [procTypeM])
+                  , ("proc_new_root"
                     , procTypeM
                     , [ syncDataTypeM
                       , pointer0 <$> funcType' voidTypeM [procTypeM]

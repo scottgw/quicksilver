@@ -133,7 +133,7 @@ genStmt (Create _typeMb var fName args) =
          debugDump newSep
 
          currProc <- getCurrProc
-         newProc <- "make_processor_from" <#> [currProc]
+         newProc <- "proc_new_from_other" <#> [currProc]
 
          newInst <- lookupMalloc t fName args
 

@@ -44,7 +44,7 @@ genMain clas = do
   fRef <- addFunc "main" =<< funcType i64T []
   atNewBlock fRef "mainStart"
 
-  call "GC_init" []
+  call "qs_init" []
   let mainName  = fullNameStr (view className clas) "main"
 
   mainFunc <- getNamedFunction mainName
@@ -53,7 +53,7 @@ genMain clas = do
   numExecs <- int 4
 
   syncData <- "sync_data_new" <#> [maxProcs]
-  rootProc <- "make_root_processor" <#> [syncData, mainFunc]
+  rootProc <- "proc_new_root" <#> [syncData, mainFunc]
   "create_executors" <#> [syncData, numExecs]
 
   notifier <- "notifier_spawn" <#> [syncData]

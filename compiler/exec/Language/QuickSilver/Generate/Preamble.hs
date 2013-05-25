@@ -44,6 +44,9 @@ constDecls =
     [ ("llvm.sqrt.f64", funcType' doubleTypeM [doubleTypeM])
     , ("GC_init",       funcType' voidTypeM [])   
     , ("GC_malloc",     funcType' ptr [int64TypeM])
+    , ("qs_init",     funcType' ptr [])
+    , ("qs_malloc",     funcType' ptr [int64TypeM])
+    , ("malloc",     funcType' ptr [int64TypeM])
     , ("__cxa_throw",   cxaThrowType)
     , ("__cxa_allocate_exception", 
                         funcType' ptr [int32TypeM])
