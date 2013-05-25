@@ -14,6 +14,8 @@ struct priv_queue
   spsc_queue_t q;
   closure_t last;
 
+  processor_t supplier_proc;
+
   bool last_was_func;
 };
 
@@ -25,6 +27,9 @@ priv_queue_new(processor_t proc)
   pq->last_was_func = false;
   pq->last = NULL;
   pq->q = spsc_new(2048);
+  pq->supplier_proc = proc;
+
+  __sync_fetch_and_add(&proc->ref_count, 1);
 
   return pq;
 }
@@ -43,22 +48,18 @@ priv_queue_free(priv_queue_t pq)
 }
 
 void
-priv_queue_shutdown(priv_queue_t pq,
-                    processor_t supplier,
-                    processor_t client)
+priv_queue_shutdown(priv_queue_t pq, processor_t client)
 {
-  priv_queue_lock(pq, supplier, client);
+  priv_queue_lock(pq, client);
   spsc_enqueue_wait(pq->q, closure_new_end(), client);
   priv_queue_unlock(pq, client);
 }
 
 void
-priv_queue_lock(priv_queue_t pq,
-                processor_t supplier,
-                processor_t client)
+priv_queue_lock(priv_queue_t pq, processor_t client)
 {
   pq->last_was_func = false;
-  bqueue_enqueue_wait(supplier->qoq, pq, client);
+  bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
 }
 
 void

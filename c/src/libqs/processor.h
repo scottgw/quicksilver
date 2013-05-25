@@ -31,6 +31,9 @@ struct processor
   // Private queue cache
   GHashTable *privq_cache;
 
+  // Reference count
+  uint32_t ref_count;
+
   // Identifier
   int id;  
 };
@@ -46,6 +49,9 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t));
 
 priv_queue_t
 proc_get_queue(processor_t proc, processor_t supplier_proc);
+
+void
+proc_deref_priv_queues(processor_t proc);
 
 void
 proc_wake(processor_t proc);

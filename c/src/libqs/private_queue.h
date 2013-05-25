@@ -12,10 +12,10 @@ void
 priv_queue_free(priv_queue_t q);
 
 void
-priv_queue_shutdown(priv_queue_t q, processor_t proc, processor_t wait_proc);
+priv_queue_shutdown(priv_queue_t q, processor_t wait_proc);
 
 void
-priv_queue_lock(priv_queue_t q, processor_t proc, processor_t wait_proc);
+priv_queue_lock(priv_queue_t q, processor_t wait_proc);
 
 void
 priv_queue_unlock(priv_queue_t q, processor_t proc);

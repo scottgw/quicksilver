@@ -76,10 +76,28 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
 
 static
 void
+destroy_priv_queue(gpointer key, gpointer value, gpointer user_data)
+{
+  processor_t supplier_proc = (processor_t) key;
+  priv_queue_t q = (priv_queue_t) value;
+  processor_t client_proc = (processor_t) user_data;
+
+  priv_queue_shutdown(q, client_proc);
+}
+
+void
+proc_deref_priv_queues(processor_t proc)
+{
+  g_hash_table_foreach (proc->privq_cache, destroy_priv_queue, proc);
+}
+
+
+static
+void
 proc_loop(processor_t proc)
 {
   logs(1, "%p starting\n", proc);
-  while (true)
+  while (proc->ref_count > 0)
     {
       proc_maybe_yield(proc);
 
@@ -89,11 +107,20 @@ proc_loop(processor_t proc)
 
       if (priv_queue == NULL)
         {
-          break;
+          // This decrement corresponds to shutting down the processor.
+          // If the refcount is still above 0 then there may still be
+          // outstanding private queues that want to log their work.
+          int ref_count = __sync_sub_and_fetch(&proc->ref_count, 1);
+          proc_deref_priv_queues(proc);
+          assert (ref_count >= 0);
+          if (ref_count == 0)
+            {
+              break;
+            }
         }
 
       closure_t clos = NULL;
-      while (true)
+      while (priv_queue != NULL)
         {
           // Dequeue a closure to perform
           if (clos == NULL)
@@ -113,6 +140,10 @@ proc_loop(processor_t proc)
           if (closure_is_end(clos))
             {
               free(clos);
+              // The end of a private queue decrements the ref_count again.
+              // This should have been incremented initially when the private
+              // queue was bound to this processor.
+              int n = __sync_sub_and_fetch(&proc->ref_count, 1);
               priv_queue_free(priv_queue);
               notify_available(proc);
               break;
@@ -188,6 +219,8 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 
   proc->privq_cache = g_hash_table_new(NULL, NULL);
 
+  proc->ref_count = 1;
+
   reset_stack_to((void (*)(void*)) root, proc);
 
   sync_data_register_proc(sync_data);
@@ -212,6 +245,12 @@ proc_free(processor_t proc)
   task_mutex_free(proc->mutex);
 
   bqueue_free(proc->qoq);
+
+
+  // Since *this* processor won't push any more work into its
+  // private queues, we shut them down.
+
+  g_hash_table_destroy(proc->privq_cache);
 
   free (proc);
 }
