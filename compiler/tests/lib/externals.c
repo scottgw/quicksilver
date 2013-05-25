@@ -16,13 +16,13 @@
 void
 qs_init()
 {
-  GC_INIT();
+  //  GC_INIT();
 }
 
 void*
 qs_malloc(size_t sz)
 {
-  return GC_MALLOC(sz);
+  return malloc(sz);
 }
 
 
