@@ -34,7 +34,7 @@ genClass' clas isMain = do
   -- debug "Generating Creation routines"
   -- genCreates (allCreates clas)
   debug "Generating routines"
-  genRoutines (view routines clas)
+  genRoutines isMain (view routines clas)
   debug "Generating main routine (if required)"
   when isMain (genMain clas)
 

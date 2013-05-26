@@ -46,11 +46,11 @@ shutdown =
 separate =
   do keyword TokSeparate
      args <- many expr
-     -- FIXME: add 'require' handling
+     clauses <- option [] (keyword TokRequire >> many clause)
      keyword TokDo
      ss <- attachTokenPos block
      keyword TokEnd
-     return (Separate args ss)
+     return (Separate args clauses ss)
 
 retry = do
   keyword TokRetry

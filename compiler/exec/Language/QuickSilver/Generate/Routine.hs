@@ -102,9 +102,6 @@ genExternal name =
 start :: TRoutine -> Build ()
 start r = getInsertBlock >>= positionAtEnd >> genBody r
 
-evalClause :: Clause TExpr -> Build ValueRef
-evalClause (Clause _n e) = loadEval e
-
 clause :: Clause TExpr -> Build ()
 clause c = do
   func <- getInsertBlock >>= getBasicBlockParent
@@ -142,8 +139,8 @@ throw = do
 preCond :: TRoutine -> Build ()
 preCond = mapM_ clause . contractClauses . routineReq
 
-genRoutine :: TRoutine -> Build ()
-genRoutine rout = do
+genRoutine :: Bool -> TRoutine -> Build ()
+genRoutine isMain rout = do
   clas <- currentClass
   let cname = view className clas
   funcRef <- getNamedFunction (fullNameStr cname (routineName rout))
@@ -159,7 +156,17 @@ genRoutine rout = do
                  , show funcRef
                  ]
   withUpdEnv (union env) (local (setRoutine (makeRoutineI $ untypeRout rout))
-                              (preCond rout >> start rout >> routReturn rout))
+                          (do preCond rout
+                              start rout
+                              if isMain && routineName rout == "main"
+                                then
+                                  do currProc <- getCurrProc
+                                     "proc_deref_priv_queues" <#> [currProc]
+                                     return ()
+                                else return ()
+                              routReturn rout
+                          )
+                         )
 
 routStartBlock :: AbsRoutine body exp -> ValueRef -> Build ()
 routStartBlock (AbsRoutine {routineName = fName}) funcRef =
@@ -175,6 +182,6 @@ routReturn rout =
     NoType -> retVoid
     t      -> evalUnPos (ResultVar t) >>= (`load` "") >>= ret
 
-genRoutines :: [TRoutine] -> Build ()
-genRoutines = mapM_ genRoutine
+genRoutines :: Bool -> [TRoutine] -> Build ()
+genRoutines isMain = mapM_ (genRoutine isMain)
 

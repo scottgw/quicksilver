@@ -29,8 +29,13 @@ declareQsFuncs =
                       , pointer0 <$> funcType' voidTypeM [procTypeM]
                       ]
                     )
+                  , ("proc_get_queue", privQueueTypeM, [procTypeM, procTypeM])
+                  , ("proc_deref_priv_queues", voidTypeM, [procTypeM])
                   , ("proc_shutdown", voidTypeM, [procTypeM, procTypeM])
-
+                  , ( "proc_wait_for_available"
+                    , voidTypeM
+                    , [procTypeM, procTypeM]
+                    )                    
                   , ( "closure_new"
                     , closureTypeM
                     , [ voidPtrType
@@ -47,7 +52,7 @@ declareQsFuncs =
                   , ("priv_queue_new", privQueueTypeM, [procTypeM])
                   , ("priv_queue_lock"
                     , voidTypeM
-                    , [privQueueTypeM, procTypeM, procTypeM]
+                    , [privQueueTypeM, procTypeM]
                     )
                   , ("priv_queue_unlock"                    
                     , voidTypeM
@@ -63,7 +68,7 @@ declareQsFuncs =
                     )
                   , ("priv_queue_shutdown"
                     , voidTypeM
-                    , [privQueueTypeM, procTypeM, procTypeM]
+                    , [privQueueTypeM, procTypeM]
                     )
 
                   , ("create_executors"

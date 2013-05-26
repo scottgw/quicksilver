@@ -8,6 +8,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
 
      askModule, writeModuleToFile, runBuild,
      withUpdEnv, lookupEnv, fromListEnv,
+
      alloca, load, store,
 
      addGlobal, setInitializer, setGlobalConstant, getNamedGlobal,
@@ -31,7 +32,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
 
      sext, trunc,
      
-     ptrToInt, siToFP, bitcast,
+     ptrToInt, intToPtr, siToFP, bitcast,
      constPtrToInt,
 
      ret, retVoid,
@@ -118,6 +119,12 @@ ptrToInt :: ValueRef -> TypeRef -> String -> Build ValueRef
 ptrToInt v t str = do
   b <- askBuild
   lift $ withCString str (L.buildPtrToInt b v t)
+
+intToPtr :: ValueRef -> TypeRef -> String -> Build ValueRef
+intToPtr v t str = do
+  b <- askBuild
+  lift $ withCString str (L.buildIntToPtr b v t)
+
 
 countParamTypes :: TypeRef -> Build Int
 countParamTypes t = fromIntegral `fmap` (lift $ L.countParamTypes t)

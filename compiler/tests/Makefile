@@ -1,8 +1,11 @@
+odd_even_test: odd_even_test.e data.ebc incr.ebc lib/stdlib.bc
+	./qsc $< data.ebc incr.ebc
+
 separate_test: separate_test.e c.ebc lib/stdlib.bc	
 	./qsc $< c.ebc
 
-c.ebc: c.e
-	qs c.e -o c.ebc
+%.ebc: %.e
+	qs $< -o $@
 
 http_test: http_test.e lib/stdlib.bc
 	./qsc $<

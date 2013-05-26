@@ -183,8 +183,9 @@ uStmt (Shutdown e) =
        Sep _ _ _ -> tagPos (Shutdown e')
        _ -> throwError "Shutdown can be only applied to separate types"
 
-uStmt (Separate args body) =
+uStmt (Separate args clauses body) =
   do args' <- mapM typeOfExpr args
+     clauses' <- mapM clause clauses
      let varOrAccess e =
            case contents e of
              T.Var _ _ -> True
@@ -193,7 +194,7 @@ uStmt (Separate args body) =
      mapM_ (\e -> guardThrow (varOrAccess e)
                   "Separate didn't contain var or access expression") args'
      body' <- stmt body
-     tagPos (Separate args' body')
+     tagPos (Separate args' clauses' body')
 
 uStmt (Loop setup invs cond body var) = do
   setup' <- stmt setup

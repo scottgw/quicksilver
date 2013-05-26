@@ -118,8 +118,28 @@ genStmt (Shutdown e) =
      "proc_shutdown" <#> [eProc, currProc]
      return ()
 
-genStmt (Separate args body) =
-  do privQs <- lockSeps args
+genStmt (Separate args clauses body) =
+  do startB  <- getInsertBlock
+     func    <- getBasicBlockParent startB
+
+     lockB   <- appendBasicBlock func "lock block"
+     sepBodyB <- appendBasicBlock func "sep body block"
+     retryB  <- appendBasicBlock func "wait cond retry block"
+     br lockB
+
+     positionAtEnd lockB
+     privQs <- lockSeps args
+     -- FIXME: raise exception/exit on non-separate failure
+     cond <- local (updateQueues (zip args privQs))
+                   (evalClauses clauses)
+     condBr cond sepBodyB retryB
+
+     positionAtEnd retryB
+     unlockQueues privQs
+     mapM_ waitOnSeparate args
+     br lockB
+
+     positionAtEnd sepBodyB
      local (updateQueues (zip args privQs))
            (genStmt (contents body))
      unlockQueues privQs
@@ -171,19 +191,24 @@ genStmt s = error $ "genStmt: no pattern for: " ++ show s
 lockSeps :: [TExpr] -> Build [ValueRef]
 lockSeps = mapM lockSep
   where
-    lockSep e@(contents -> Var _name _t) =
-      do debug "lockSep"
-         e' <- loadEval e
-         debugDump e'
-         prc <- getProc e'
-         debugDump prc
-         lockSep' prc
-    lockSep _ = error "lockSep: found non-variable expression"
+    lockSep e =
+      case contents e of
+        Var _ _ -> go
+        Access _ _ _ -> go -- 
+        _ -> error $ "lockSep: found non-variable expression " ++ show e
+      where
+        go =
+          do debug "lockSep"
+             e' <- loadEval e
+             debugDump e'
+             prc <- getProc e'
+             debugDump prc
+             lockSep' prc
 
 lockSep' prc =
     do currProc <- getCurrProc
-       privQ <- "priv_queue_new" <#> [prc]
-       "priv_queue_lock" <#> [privQ, prc, currProc]
+       privQ <- "proc_get_queue" <#> [currProc, prc]
+       "priv_queue_lock" <#> [privQ, currProc]
        return privQ
 
 
@@ -195,8 +220,17 @@ unlockQueue privQ =
 unlockQueues :: [ValueRef] -> Build ()
 unlockQueues = mapM_ unlockQueue
 
+waitOnSeparate :: TExpr -> Build ()
+waitOnSeparate e =
+  do e' <- loadEval e
+     -- FIXME: probably shouldn't re-evaluate the whole expression
+     prc <- getProc e'
+     currProc <- getCurrProc
+     "proc_wait_for_available" <#> [prc, currProc]
+     return ()
 
--- lookupBuiltin :: Build ()
+
+-- lookupbuiltin :: Build ()
 -- lookupBuiltin = do
 --   fName <- featureName `fmap` currentFeature
 --   cName <- className `fmap` currentClass

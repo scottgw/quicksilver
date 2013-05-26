@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Generate.Eval
        ( eval
+       , evalClause
+       , evalClauses
        , loadEval
        , evalUnPos
        , getCurrProc
@@ -18,7 +20,8 @@ import Control.Monad
 import qualified Data.Text as Text
 
 import Language.QuickSilver.Syntax
-    (Typ (..), BinOp(..), UnOp(..), ROp(..), AbsRoutine(..), EmptyBody(..))
+    (Typ (..), BinOp(..), UnOp(..), ROp(..)
+    , AbsRoutine(..), EmptyBody(..), Clause(..))
 import Language.QuickSilver.Util
 import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
@@ -33,6 +36,16 @@ import Language.QuickSilver.Generate.Util
 
 
 (<#>) = callByName
+
+
+evalClause :: Clause TExpr -> Build ValueRef
+evalClause (Clause _n e) = loadEval e
+
+evalClauses :: [Clause TExpr] -> Build ValueRef
+evalClauses cs =
+  do vals <- mapM evalClause cs
+     tr <- true
+     foldM (\ acc v -> andd acc v "clause eval fold") tr vals
 
 getCurrProc :: Build ValueRef
 getCurrProc = lookupEnv "<CurrentProc>" >>= load'
@@ -265,7 +278,7 @@ evalUnPos (Access trg attr typ) = do
   debug $ "Access: " ++ show (trg, attr, typ)
   trgV <- loadEval trg
   debugDump trgV
-  let (ClassType cname _) = texprTyp (contents trg)
+  let cname = classTypeName (texprTyp (contents trg))
   clas <- lookupClas cname
   case attributeIndex clas attr of
     -- Add 1 to skip the processor in every object.
@@ -361,33 +374,35 @@ separateCall trg fName args retVal =
        funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
        closRetType <- closType retVal
        argCount <- int n
-       argArray <- join (alloca <$> (pointer0 <$> pointer0 <$> voidPtrType)
+       argArrayPtrRef <- join (alloca <$> (pointer0 <$> pointer0 <$> voidPtrType)
                                 <*> pure "allocating argArray")
-       argTypeArray <- join (alloca <$> (pointer0 <$> closTypeTypeM)
+       argTypeArrayRef <- join (alloca <$> (pointer0 <$> closTypeTypeM)
                                     <*> pure "allocating arg type array")
 
        closure <-
            "closure_new" <#> [ funcPtr
                              , closRetType
                              , argCount
-                             , argArray
-                             , argTypeArray
+                             , argArrayPtrRef
+                             , argTypeArrayRef
                              ]
        debug "sepCall: filling type and arg arrays"
        let storeType t idx =
                do debug $ "storeType: " ++ show (t, idx)
                   closT <- closType t
-                  -- argTypesRef <- load' argTypeArray
-                  argTypes <- load' argTypeArray
-                  debugDump argTypes
-                  argRef <- gepInt argTypes [idx]
+                  argTypeArray <- load' argTypeArrayRef
+                  debugDump argTypeArray
+                  argRef <- gepInt argTypeArray [idx]
                   store closT argRef
 
            storeArg (t, val) idx =
                do debug $ "storeArg: " ++ show (t, val, idx)
-                  ptr <- join (bitcast val <$> (pointer0 <$> voidPtrType) <*> pure "bitcast")
-                  argArr <- load' argArray
-                  argRef <- gepInt argArr [idx]
+                  ptr <- if isBasic t
+                         then join (intToPtr val <$> voidPtrType <*> pure "ptrtoint")
+                         else join (bitcast val <$> voidPtrType <*> pure "arg store bitcast")
+                  argArrayPtr <- load' argArrayPtrRef
+                  argArray <- load' argArrayPtr
+                  argRef <- gepInt argArray [idx]
                   store ptr argRef
 
        zipWithM storeType allTypes [0 ..]
@@ -422,7 +437,6 @@ separateCall trg fName args retVal =
 
                      sepRef <- join (alloca <$> typeOfVal sepInst <*> pure "sepInstRef")
                      store sepInst sepRef
-
 
 getQueueFor :: TExpr -> Build ValueRef
 getQueueFor e =
