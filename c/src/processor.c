@@ -193,20 +193,9 @@ proc_sleep(processor_t proc, struct timespec duration)
   yield_to(proc->task, proc->executor->task);
 }
 
-processor_t
-proc_new(sync_data_t sync_data)
-{
-  return proc_new_root (sync_data, proc_loop);
-}
 
 processor_t
-proc_new_from_other(processor_t other_proc)
-{
-  return proc_new(other_proc->task->sync_data);
-}
-
-processor_t
-proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
+proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
   proc->qoq = bqueue_new(25000);
@@ -221,13 +210,33 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 
   proc->ref_count = 1;
 
-  reset_stack_to((void (*)(void*)) root, proc);
+  reset_stack_to((void (*)(void*))func, proc);
 
   sync_data_register_proc(sync_data);
   sync_data_enqueue_runnable(sync_data, proc);
 
   return proc;
 }
+
+
+processor_t
+proc_new(sync_data_t sync_data)
+{
+  return proc_new_with_func (sync_data, proc_loop);
+}
+
+processor_t
+proc_new_from_other(processor_t other_proc)
+{
+  return proc_new(other_proc->task->sync_data);
+}
+
+processor_t
+proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
+{
+  return proc_new_with_func (sync_data, root);
+}
+
 
 void
 proc_shutdown(processor_t proc, processor_t wait_proc)
