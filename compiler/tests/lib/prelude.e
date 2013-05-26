@@ -43,13 +43,18 @@ module Prelude
       digit: Integer_8
       rest: Integer
       val_0: Integer_8
+      printed_first: Boolean
     do
       str := ""
       val_0 := char_to_int8 ('0')
 
-      from rest := i
-      until rest = 0
+      from 
+        rest := i
+        printed_first := False
+      until
+        rest = 0 and printed_first
       loop
+        printed_first := True
         digit := int_to_int8 (rest \\ 10)
         rest := rest / 10
         str := str.prepend_char (int8_to_char (val_0 + digit))
