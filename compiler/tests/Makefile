@@ -1,3 +1,5 @@
+all: array_test odd_even_test separate_test http_test socket_test helloworld
+
 array_test: array_test.e c.ebc lib/stdlib.bc
 	./qsc $< c.ebc
 

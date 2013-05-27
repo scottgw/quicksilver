@@ -45,13 +45,13 @@ array_make(void* proc, char*** array, int64_t size)
 char*
 array_item(void* proc, char*** array, int64_t i)
 {
-  return *array[i];
+  return (*array)[i];
 }
 
 void
 array_put(void* proc, char*** array, int64_t i, char* elem)
 {
-  *array[i] = elem;
+  (*array)[i] = elem;
 }
 
 
