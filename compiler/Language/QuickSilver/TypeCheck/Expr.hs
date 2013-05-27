@@ -159,28 +159,38 @@ expr (QualCall trg name args) = do
   when (isBasic targetType)
        (throwError "Qualified call on basic type")
 
-  flatCls  <- resolveIFace targetType -- getFlat' targetType
+  -- instantiated class 
+  instClass  <- resolveIFace targetType
 
-  case findAbsRoutine flatCls name of
+  case findAbsRoutine instClass name of
     Nothing ->
-      case findAttrInt flatCls name of
+      case findAttrInt instClass name of
         Just a -> tagPos (T.Access trg' name (declType $ attrDecl a))
         Nothing -> throwError $
                    concat ["expr.QualCall: ", show trg, ": "
                           , Text.unpack name, show args'
-                          , show (map (routineName) $ view routines flatCls)
+                          , show (map (routineName) $ view routines instClass)
                           ]
     Just feat -> do
+      origClass <- getFlat' targetType
+       
       let formArgs = map declType (routineArgs feat)
           resType = routineResult feat
-      args'' <- argsConform args' formArgs
-      baseCall <- tagPos (T.Call trg' name args'' resType)
+          Just originalResType =
+              routineResult <$> findAbsRoutine origClass name
+          Just originalArgTypes =
+              map declType <$> routineArgs <$> findAbsRoutine origClass name
+      castedArgs <- argsConform args' originalArgTypes
+      baseCall <- tagPos (T.Call trg' name castedArgs resType)
       case targetType of
+        -- FIXME: Separate target with a generic parameter?
         Sep _ _ _ ->
             if not (isBasic resType)
             then tagPos (T.InheritProc trg' baseCall)
             else return baseCall
-        _ -> return baseCall
+        _ -> if isAnyRefType originalResType
+             then tagPos (T.Cast resType baseCall)
+             else return baseCall
 
 expr (CreateExpr typ name args) = do
   -- this comes basically from the above 
@@ -227,9 +237,14 @@ argsConform args formArgs
         throwError $ "Argument types differ: " ++ show (args, formArgs)
     where
       checkArg e typ 
-          | T.texpr e == typ = return e
-          | T.texpr e == AnyIntType && isIntegerType typ
+          | eType == typ = return e
+          | eType == AnyIntType && isIntegerType typ
               = tagPos (T.Cast typ e)
-          | not (isBasicType T.texpr e) && isAnyRefType typ
+          | not (isBasic $ T.texpr e) && isAnyRefType typ
               = tagPos (T.Cast typ e)
-          | otherwise = throwError $ "Argument type doesn't match: " ++ show (e, typ)
+          | not (isBasic typ) && isAnyRefType eType
+              = tagPos (T.Cast typ e)
+          | otherwise =
+              throwError $ "Argument type doesn't match: " ++ show (e, typ)
+          where
+            eType = T.texpr e

@@ -4,8 +4,10 @@ module Language.QuickSilver.Parser.Class (clas, absClas, clasInterfaceP) where
 
 import           Control.Applicative ((<$>), (<*), (*>))
 
-import           Language.QuickSilver.Syntax
+import           Data.Generics
 
+import           Language.QuickSilver.Syntax
+import           Language.QuickSilver.Util
 import           Language.QuickSilver.Parser.Lex
 import           Language.QuickSilver.Parser.Clause
 import           Language.QuickSilver.Parser.Expr
@@ -14,17 +16,11 @@ import           Language.QuickSilver.Parser.Typ
 
 import           Text.Parsec
 
-genericsP :: Parser [Generic]
+genericsP :: Parser [Typ]
 genericsP = squares (sepBy genericP comma)
 
-genericP :: Parser Generic
-genericP = do
-  name <- identifier
-  typs <- option [] (do opNamed "->" 
-                        braces (typ `sepBy1` comma) <|> fmap (replicate 1) typ)
-  creations <- optionMaybe 
-              (keyword TokCreate *> (identifier `sepBy1` comma) <* keyword TokEnd)
-  return (Generic name typs creations)
+genericP :: Parser Typ
+genericP = AnyRefType <$> identifier
 
 invariants :: Parser [Clause Expr]
 invariants = keyword TokInvariant >> many clause
@@ -40,7 +36,8 @@ importt =
   do keyword TokImport
      Import <$> identifier
 
-absClas :: Parser body -> Parser (AbsClas body Expr)
+absClas :: (Data body, Typeable body)
+           => Parser body -> Parser (AbsClas body Expr)
 absClas routineP = do
   impts <- many importt
   isMod <- (keyword TokClass >> return False) <|>
@@ -51,7 +48,7 @@ absClas routineP = do
   (rts, attrs, cnsts)  <- classElems routineP
   invs <- option [] invariants
   keyword TokEnd
-  return ( AbsClas 
+  return ( updGenerics gen $ AbsClas 
            { _imports    = impts
            , _className  = name
            , _generics   = gen 
@@ -63,7 +60,9 @@ absClas routineP = do
            , _isModule   = isMod
            }
          )
-
+  where
+    updGenerics gs c = 
+        foldr (\ t@(AnyRefType n) -> replaceType (ClassType n []) t) c gs
 
 data ClassElem body expr =
   RoutElem (AbsRoutine body expr)

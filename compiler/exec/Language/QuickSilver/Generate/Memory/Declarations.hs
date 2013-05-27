@@ -22,7 +22,6 @@ import qualified Data.Traversable as Traverse
 import Language.QuickSilver.Syntax
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
-import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
@@ -108,7 +107,7 @@ modRoutineIArgs = modRoutineArgs go
 modRoutineArgs go ci rout =
     let cName     = view className ci
         isMod     = view isModule ci
-        ts        = map (flip ClassType [] . genericName) (view generics ci)
+        ts        = view generics ci
         currDecl  = Decl "Current" (ClassType cName ts)
         procDecl  = Decl "<CurrentProc>" ProcessorType
         pre | isMod     = go rout procDecl

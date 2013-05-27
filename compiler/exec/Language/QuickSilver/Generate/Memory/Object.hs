@@ -33,10 +33,9 @@ getAttribute c attrName obj = do
 mallocSeparate :: Typ -> Build ValueRef
 mallocSeparate t = do
   sepTyp <- typeOfM (Sep Nothing [] t)
-  t <- getElementType sepTyp
-  inst <- mallocTyp t
+  elemType <- getElementType sepTyp
+  inst <- mallocTyp elemType
   bitcast inst sepTyp "casting char ptr to sep struct ptr"
-
 
 mallocObject :: ClassName -> Build ValueRef
 mallocObject c = do

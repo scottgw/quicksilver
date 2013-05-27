@@ -69,6 +69,9 @@ castType Int64Type v = simpStore v
 --   v' <- load' v
 --   dblT <- doubleTypeM
 --   siToFP v' dblT "intToDouble" >>= simpStore
+castType (AnyRefType _) v = do
+  ptrType <- voidPtrType
+  bitcast v ptrType ("castToAnyRef") >>= simpStore
 castType t@(ClassType c _) v = do
   tRep <- typeOfM t
   bitcast v tRep ("castTo" ++ Text.unpack c) >>= simpStore

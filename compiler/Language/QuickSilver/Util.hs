@@ -12,9 +12,10 @@ module Language.QuickSilver.Util where
 import           Control.Applicative hiding (getConst)
 import           Control.Lens hiding (from, lens)
 
-import           Data.Maybe
-import           Data.List
+import           Data.Generics
 import qualified Data.HashMap.Strict as Map
+import           Data.List
+import           Data.Maybe
 import qualified Data.Text as Text
 import           Data.Text (Text)
 
@@ -149,10 +150,10 @@ fullNameStr cName fName = Text.concat ["__", cName, "_", fName]
 genericStubs :: AbsClas body exp -> [AbsClas body' exp']
 genericStubs = map makeGenericStub . view generics
 
--- | Given a generic, construct a class for the generic.
-makeGenericStub :: Generic -> AbsClas body exp
-makeGenericStub (Generic g _constrs _) = 
-  AbsClas { _className  = g
+-- | Given an AnyRefType, construct a class for the name.
+makeGenericStub :: Typ -> AbsClas body exp
+makeGenericStub (AnyRefType name) = 
+  AbsClas { _className  = name
           , _imports    = []
           , _isModule   = False
           , _generics   = []
@@ -230,9 +231,7 @@ unOpAlias Old = "unOpAlias: `old' is not a user-operator."
 
 -- | Convert a class into its type.
 classToType :: AbsClas body exp -> Typ
-classToType clas = 
-  ClassType (view className clas) (map genType (view generics clas))
-  where genType g = ClassType (genericName g) []
+classToType clas = ClassType (view className clas) (view generics clas)
 
 -- | Whether a type is basic (where basic meaning its an integer, natural, real or boolean).
 isBasic :: Typ -> Bool
@@ -251,6 +250,11 @@ isBasic t = case t of
 isSeparate :: Typ -> Bool
 isSeparate (Sep _ _ _) = True
 isSeparate _ = False
+
+-- | Is this any reference type?
+isAnyRefType :: Typ -> Bool
+isAnyRefType (AnyRefType _) = True
+isAnyRefType _ = False
 
 -- | A list of the number of integer bits (8, 16, ...)
 intBits :: [Integer]
@@ -346,6 +350,22 @@ anyType = namedType "ANY"
 -- | Construct a simple type from a classname.
 namedType :: ClassName -> Typ
 namedType name = ClassType name []
+
+
+
+type GenUpd a = Typ -> Typ -> a -> a
+
+-- | Replace one type with another in a class.type in a class.
+replaceType :: (Data body, Typeable body) => GenUpd (AbsClas body Expr)
+replaceType oldType newType = everywhere (mkT updateType)
+    where
+      updateType t
+          | t == oldType = newType
+          | otherwise =
+              case t of
+                ClassType name types -> ClassType name (map updateType types)
+                _ -> t
+
 
 -- * Declaration
 

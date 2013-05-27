@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.TypeCheck.Generic 
-       (resolveIFace, updateGeneric, updateGenerics) where
+       (resolveIFace, replaceType, updateGenerics) where
 
 import           Control.Lens
 
@@ -8,6 +8,7 @@ import           Data.Generics
 
 import           Language.QuickSilver.TypeCheck.Context
 import           Language.QuickSilver.Syntax
+import           Language.QuickSilver.Util
 
 import           Util.Monad
 
@@ -17,23 +18,11 @@ resolveIFace t@(ClassType _ ts) = updateGenerics ts `fmap` lookupClass t
 resolveIFace (Sep _ _ t)  = resolveIFace t
 resolveIFace t = error $ "resolveIFace: called on " ++ show t
 
-type GenUpd a = Typ -> Typ -> a -> a
-
 updateGenerics :: (Data body, Typeable body)
                => [Typ] -> AbsClas body Expr -> AbsClas body Expr
 updateGenerics ts ci =
-    let gs = map (\ gen -> ClassType (genericName gen) []) (view generics ci)
-        f  = foldl (.) id (zipWith updateGeneric gs ts)
+    let gs = view generics ci
+        f  = foldl (.) id (zipWith replaceType gs ts)
         newClass = f ci
     in newClass -- { generics = [] }
-
-updateGeneric :: (Data body, Typeable body) => GenUpd (AbsClas body Expr)
-updateGeneric g t = everywhere (mkT updateType)
-    where
-      updateType t'@(ClassType name types)
-          | g == t' = t
-          | otherwise = ClassType name (map updateType types)
-      updateType t' 
-          | g == t' = t
-          | otherwise =  t'
 

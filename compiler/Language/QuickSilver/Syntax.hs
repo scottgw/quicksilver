@@ -34,7 +34,7 @@ type ClasI exp = AbsClas (RoutineBody exp) exp
 data AbsClas body exp =
   AbsClas { _imports    :: [Import]
           , _className  :: ClassName
-          , _generics   :: [Generic]
+          , _generics   :: [Typ]
           , _creates    :: [CreateClause]
           , _attributes :: [Attribute]
           , _routines   :: [AbsRoutine body exp]
@@ -42,12 +42,6 @@ data AbsClas body exp =
           , _invnts     :: [Clause exp]
           , _isModule   :: Bool
           } deriving (Eq, Show, G.Generic, D.Data, T.Typeable)
-
-data Generic = 
-  Generic { genericName :: ClassName 
-          , genericConstType :: [Typ]
-          , genericCreate :: Maybe [Text]
-          } deriving (Show, Eq, G.Generic, D.Data, T.Typeable)
 
 data CreateClause = 
   CreateClause { createExportNames :: [ClassName]
@@ -389,7 +383,6 @@ $( derive makeBinary ''Contract )
 
 $( derive makeBinary ''Proc )
 $( derive makeBinary ''ProcDecl )
-$( derive makeBinary ''Generic )
 $( derive makeBinary ''Clause )
 $( derive makeBinary ''CreateClause )
 $( derive makeBinary ''AbsClas )
@@ -418,7 +411,6 @@ $( derive makeNFData ''Contract )
 
 $( derive makeNFData ''Proc )
 $( derive makeNFData ''ProcDecl )
-$( derive makeNFData ''Generic )
 $( derive makeNFData ''Clause )
 $( derive makeNFData ''CreateClause )
 $( derive makeNFData ''AbsClas )

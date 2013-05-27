@@ -104,17 +104,8 @@ procDoc (Proc s) = ttext s
 procDoc Dot = text "<procdot>"
 
 genericsDoc [] = empty
-genericsDoc gs = brackets (commaSep (map go gs))
-  where go (Generic name constr createsMb) = 
-          ttext name <+> constraints constr <+> maybe empty create createsMb
-        constraints []  = empty
-        constraints [t] = text "->" <+> type' t
-        constraints ts  = text "->" <+> braces (commaSep (map type' ts))
-        create cs = hsep [ text "create"
-                          , commaSep (map ttext cs)
-                          , text"end"
-                          ]
-
+genericsDoc ts = brackets (commaSep (map go ts))
+  where go (AnyRefType name) = ttext name
 invars is = text "invariant" $?$ clausesDoc is
 
 procGenDoc [] = empty

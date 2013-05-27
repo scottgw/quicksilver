@@ -37,8 +37,8 @@ runTyping cs curr m =
   idErrorRead m (mkCtx (maybeCurrType curr) cs)
 
 maybeCurrType cls
-  | view isModule cls = Left (cType cls)
-  | otherwise = Right (cType cls)
+  | view isModule cls = Left (classToType cls)
+  | otherwise = Right (classToType cls)
 
 clasM :: (Data ctxBody, Typeable ctxBody)
          => [AbsClas ctxBody Expr] 
@@ -85,11 +85,6 @@ interface :: (Data ctxBody, Typeable ctxBody)
              => AbsClas EmptyBody Expr 
              -> TypingBody ctxBody (AbsClas EmptyBody T.TExpr)
 interface curr = clas curr return
-
-cType :: AbsClas body exp -> Typ
-cType !c =
-  ClassType (view className c) 
-            (map (\ g -> ClassType (genericName g) []) (view generics c))
 
 typedPre :: [ClasInterface] -> ClasInterface 
             -> Text -> Either String (Contract T.TExpr)
@@ -169,9 +164,11 @@ uStmt (CallStmt e) = do
 uStmt (Assign var e) = do
   var'  <- typeOfExpr var
   e'  <- typeOfExpr e
-  e'' <- if (T.texpr e' == AnyIntType && isIntegerType (T.texpr var')) ||
-            (T.texpr e' == VoidType && not (isBasic (T.texpr var')))
-         then tagPos (T.Cast (T.texpr var') e') 
+  let eType = T.texpr e'
+      varType = T.texpr var'
+  e'' <- if (eType == AnyIntType && isIntegerType varType) ||
+            (eType == VoidType && not (isBasic varType))
+         then tagPos (T.Cast varType e') 
          else if T.texpr e' == T.texpr var' 
               then return e'
               else throwError "Assignment: source and target don't match"

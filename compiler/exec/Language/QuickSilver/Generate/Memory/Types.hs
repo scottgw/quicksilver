@@ -43,6 +43,7 @@ typeOf e t =
       BoolType -> int1TypeM
       DoubleType -> doubleTypeM
       CharType -> int8TypeM
+      AnyRefType _ -> pointer0 <$> int8TypeM
       ProcessorType -> procTypeM
       Sep _ _ s -> sepClass s
       ClassType s _ -> processClass s
