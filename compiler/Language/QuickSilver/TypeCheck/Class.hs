@@ -7,6 +7,7 @@ import           Control.Lens hiding (pre)
 import           Control.Monad.Error
 import           Control.Monad.Reader
 
+import           Data.Generics
 import qualified Data.HashMap.Strict as Map
 import           Data.Text (Text)
 
@@ -19,7 +20,8 @@ import           Language.QuickSilver.TypeCheck.TypedExpr (TStmt, TClass)
 import           Language.QuickSilver.TypeCheck.Context
 import           Language.QuickSilver.TypeCheck.Expr
 
-routineStmt :: RoutineBody Expr -> TypingBody body TStmt
+routineStmt :: (Data body, Typeable body)
+         => RoutineBody Expr -> TypingBody body TStmt
 routineStmt = stmt . routineBody
 
 routineEnv :: AbsRoutine body Expr
@@ -38,12 +40,14 @@ maybeCurrType cls
   | view isModule cls = Left (cType cls)
   | otherwise = Right (cType cls)
 
-clasM :: [AbsClas ctxBody Expr] 
+clasM :: (Data ctxBody, Typeable ctxBody)
+         => [AbsClas ctxBody Expr] 
          -> AbsClas (RoutineBody Expr) Expr 
          -> Either String TClass
 clasM cs c = runTyping cs c (clas c routineWithBody)
 
-clas :: AbsClas t Expr
+clas :: (Data body, Typeable body, Data ctxBody, Typeable ctxBody)
+        => AbsClas t Expr
         -> (t -> TypingBody ctxBody body) 
         -> TypingBody ctxBody (AbsClas body T.TExpr)
 clas c rtnBodyCheck = 
@@ -77,8 +81,9 @@ typeInterfaces inters =
         return (Right inters')
      
 
-interface :: AbsClas EmptyBody Expr 
-             -> TypingBody ctxBoxy (AbsClas EmptyBody T.TExpr)
+interface :: (Data ctxBody, Typeable ctxBody)
+             => AbsClas EmptyBody Expr 
+             -> TypingBody ctxBody (AbsClas EmptyBody T.TExpr)
 interface curr = clas curr return
 
 cType :: AbsClas body exp -> Typ
@@ -109,15 +114,18 @@ typedPre cis classInt name = idErrorRead go (mkCtx (maybeCurrType classInt) cis)
 attr :: Attribute -> TypingBody body Attribute
 attr a = return a
 
-contract :: Contract Expr -> TypingBody body (Contract T.TExpr)
+contract :: (Data body, Typeable body)
+         => Contract Expr -> TypingBody body (Contract T.TExpr)
 contract (Contract inher cs) = Contract inher `fmap` mapM clause cs
 
-constt :: Constant Expr -> TypingBody body (Constant T.TExpr)
+constt :: (Data body, Typeable body)
+         => Constant Expr -> TypingBody body (Constant T.TExpr)
 constt (Constant d e) = Constant d `fmap` typeOfExpr e
 -- TODO: Match the type of the expression with the 
 -- delcared type of the constant.
 
-routine :: (body -> TypingBody ctxBody body')
+routine :: (Data ctxBody, Typeable ctxBody)
+           => (body -> TypingBody ctxBody body')
            -> AbsRoutine body Expr 
            -> TypingBody ctxBody (AbsRoutine body' T.TExpr)
 routine checkBody f = 
@@ -134,20 +142,25 @@ routine checkBody f =
                      }
           )
 
-rescue :: Maybe [Stmt] -> TypingBody ctxBody (Maybe [TStmt])
+rescue :: (Data ctxBody, Typeable ctxBody)
+         => Maybe [Stmt] -> TypingBody ctxBody (Maybe [TStmt])
 rescue Nothing = return Nothing
 rescue (Just ss) = Just <$> mapM stmt ss
 
-routineWithBody :: RoutineBody Expr -> TypingBody body (RoutineBody T.TExpr)
+routineWithBody :: (Data body, Typeable body)
+                   => RoutineBody Expr
+                   -> TypingBody body (RoutineBody T.TExpr)
 routineWithBody (RoutineExternal var varMb) = return $ RoutineExternal var varMb
 routineWithBody body = do
   statement <- local (addDecls (routineLocal body)) (routineStmt body)
   return (body {routineBody = statement})
 
-stmt :: Stmt -> TypingBody body TStmt
+stmt :: (Data body, Typeable body)
+        => Stmt -> TypingBody body TStmt
 stmt s = setPosition (position s) (uStmt (contents s))
 
-uStmt :: UnPosStmt -> TypingBody body TStmt
+uStmt :: (Data body, Typeable body)
+         => UnPosStmt -> TypingBody body TStmt
 
 uStmt (CallStmt e) = do
   e' <- typeOfExpr e

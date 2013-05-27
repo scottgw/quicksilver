@@ -220,6 +220,7 @@ data Typ = ClassType ClassName [Typ]
          | DoubleType
          | CharType
          | ProcessorType
+         | AnyRefType Text
          | Sep (Maybe Proc) [Proc] Typ
          | VoidType
          | NoType deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
@@ -237,6 +238,7 @@ instance Hashable Typ where
       Int16Type -> 7
       Int32Type -> 8
       Int64Type -> 9
+      AnyRefType _ -> 10
       ProcessorType -> 11
       Sep _ _ name -> hashWithSalt salt name
       ClassType name _ -> hashWithSalt salt name
@@ -275,6 +277,7 @@ instance Show Typ where
     show CharType      = "Character_8"
     show DoubleType    = "Real_64"
     show BoolType      = "Boolean"
+    show (AnyRefType n) = "<AnyRef " ++ show n ++ ">"
     show (ClassType s gs) = show s ++ show gs
 
 type ClassName = Text

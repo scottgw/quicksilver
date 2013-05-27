@@ -1,4 +1,4 @@
-EFILES=pointer_8 prelude pointer string socket_util socket socket_buffer file
+EFILES=pointer_8 prelude pointer string socket_util socket socket_buffer file array
 EBCFILES=$(EFILES:=.ebc)
 
 stdlib.bc: externals.cbc ${EBCFILES}

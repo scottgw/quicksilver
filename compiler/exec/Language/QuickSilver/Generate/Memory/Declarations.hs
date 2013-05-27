@@ -112,7 +112,7 @@ modRoutineArgs go ci rout =
         currDecl  = Decl "Current" (ClassType cName ts)
         procDecl  = Decl "<CurrentProc>" ProcessorType
         pre | isMod     = go rout procDecl
-            | otherwise = go rout procDecl ++ [currDecl]
+            | otherwise = [procDecl] ++ [currDecl]
     in rout {routineArgs = pre ++ routineArgs rout}
 
 -- Creation routines

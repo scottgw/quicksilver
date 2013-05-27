@@ -32,6 +32,29 @@ exit_with(int64_t i)
   exit(i);
 }
 
+/*******************************/
+/* Array creation and routines */
+/*******************************/
+
+void
+array_make(void* proc, char*** array, int64_t size)
+{
+  *array = (char**) malloc(size * sizeof(char*));
+}
+
+char*
+array_item(void* proc, char*** array, int64_t i)
+{
+  return *array[i];
+}
+
+void
+array_put(void* proc, char*** array, int64_t i, char* elem)
+{
+  *array[i] = elem;
+}
+
+
 /***********************************/
 /* Character and pointer functions */
 /***********************************/

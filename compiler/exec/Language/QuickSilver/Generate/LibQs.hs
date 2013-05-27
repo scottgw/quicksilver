@@ -32,11 +32,11 @@ declareQsFuncs =
                   , ("proc_get_queue", privQueueTypeM, [procTypeM, procTypeM])
                   , ("proc_deref_priv_queues", voidTypeM, [procTypeM])
                   , ("proc_shutdown", voidTypeM, [procTypeM, procTypeM])
-                  , ( "proc_wait_for_available"
+                  , ("proc_wait_for_available"
                     , voidTypeM
                     , [procTypeM, procTypeM]
                     )                    
-                  , ( "closure_new"
+                  , ("closure_new"
                     , closureTypeM
                     , [ voidPtrType
                       , closTypeTypeM

@@ -12,6 +12,8 @@ import           Control.Lens hiding (op)
 import           Control.Monad.Error
 import           Control.Monad.Reader
 
+
+import           Data.Generics
 import qualified Data.Text as Text
 
 import           Language.QuickSilver.Syntax
@@ -21,6 +23,7 @@ import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
 import           Language.QuickSilver.TypeCheck.TypedExpr (TExpr)
 import           Language.QuickSilver.TypeCheck.BasicTypes
 import           Language.QuickSilver.TypeCheck.Context
+import           Language.QuickSilver.TypeCheck.Generic
 
 checkBinOp :: BinOp -> TExpr -> TExpr -> TypingBody body TExpr
 checkBinOp op e1 e2 
@@ -78,23 +81,27 @@ checkBinOp op e1 e2
                tagPos (T.BinOpExpr op e1 e2' BoolType)
         | otherwise = err
 
-clause :: Clause Expr -> TypingBody body (Clause TExpr)
+clause :: (Data body, Typeable body)
+          => Clause Expr -> TypingBody body (Clause TExpr)
 clause (Clause n e) =
   Clause n <$> typeOfExprIs boolType e
 
-typeOfExpr :: Expr -> TypingBody body TExpr
+typeOfExpr :: (Data body, Typeable body)
+           => Expr -> TypingBody body TExpr
 typeOfExpr e = setPosition (position e) 
                (catchError (expr (contents e))
                            (\str -> throwError $ 
                                     str ++ " at " ++ show (position e)))
 
-typeOfExprIs :: Typ -> Expr -> TypingBody body TExpr
+typeOfExprIs :: (Data body, Typeable body)
+                => Typ -> Expr -> TypingBody body TExpr
 typeOfExprIs typ e = do
   e' <- typeOfExpr e
   _  <- guardTypeIs typ e'
   return e'
 
-expr :: forall body . UnPosExpr -> TypingBody body TExpr
+expr :: (Data body, Typeable body)
+     => UnPosExpr -> TypingBody body TExpr
 expr (LitInt i)    = tagPos (T.LitInt i AnyIntType)
 expr (LitDouble d) = tagPos (T.LitDouble d)
 expr (LitBool b)   = tagPos (T.LitBool b)
@@ -152,7 +159,7 @@ expr (QualCall trg name args) = do
   when (isBasic targetType)
        (throwError "Qualified call on basic type")
 
-  flatCls  <- getFlat' targetType
+  flatCls  <- resolveIFace targetType -- getFlat' targetType
 
   case findAbsRoutine flatCls name of
     Nothing ->
@@ -222,5 +229,7 @@ argsConform args formArgs
       checkArg e typ 
           | T.texpr e == typ = return e
           | T.texpr e == AnyIntType && isIntegerType typ
+              = tagPos (T.Cast typ e)
+          | not (isBasicType T.texpr e) && isAnyRefType typ
               = tagPos (T.Cast typ e)
           | otherwise = throwError $ "Argument type doesn't match: " ++ show (e, typ)
