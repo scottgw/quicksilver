@@ -72,6 +72,9 @@ castType Int64Type v = simpStore v
 castType (AnyRefType _) v = do
   ptrType <- voidPtrType
   bitcast v ptrType ("castToAnyRef") >>= simpStore
+castType t@(Sep _ _ s) v = do
+  sepType <- typeOfM t
+  bitcast v sepType ("castToSep") >>= simpStore
 castType t@(ClassType c _) v = do
   tRep <- typeOfM t
   bitcast v tRep ("castTo" ++ Text.unpack c) >>= simpStore
