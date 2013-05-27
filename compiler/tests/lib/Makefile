@@ -8,7 +8,7 @@ stdlib.bc: externals.cbc ${EBCFILES}
 	qs $< -o $@
 
 %.cbc: %.c
-	clang -emit-llvm -c $< -o $@ -Wall
+	clang -pthread -emit-llvm -c $< -o $@ -Wall
 
 clean:
 	@rm -f *.bc *.ebc *.cbc
