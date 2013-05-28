@@ -380,10 +380,8 @@ separateCall trg fName args retVal =
        funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
        closRetType <- closType retVal
        argCount <- int n
-       argArrayPtrRef <- join (alloca <$> (pointer0 <$> pointer0 <$> voidPtrType)
-                                <*> pure "")
-       argTypeArrayRef <- join (alloca <$> (pointer0 <$> closTypeTypeM)
-                                    <*> pure "")
+       argArrayPtrRef <- lookupEnv "<args>"
+       argTypeArrayRef <- lookupEnv "<argTypes>"
 
        closure <-
            "closure_new" <#> [ funcPtr
@@ -396,6 +394,7 @@ separateCall trg fName args retVal =
        debug "sepCall: filling type and arg arrays"
 
        argTypeArray <- load' argTypeArrayRef
+       argArrayPtr <- load' argArrayPtrRef
 
        let storeType t idx =
                do debug $ "storeType: " ++ show (t, idx)
@@ -409,7 +408,6 @@ separateCall trg fName args retVal =
                   ptr <- if isBasic t
                          then join (intToPtr val <$> voidPtrType <*> pure "ptrtoint")
                          else join (bitcast val <$> voidPtrType <*> pure "arg store bitcast")
-                  argArrayPtr <- load' argArrayPtrRef
                   argLoc <- gepInt argArrayPtr [idx]
                   argRef <- load' argLoc
                   store ptr argRef
@@ -431,7 +429,7 @@ separateCall trg fName args retVal =
          then "priv_queue_routine" <#> [privQ, closure, currProc]
          else
            do resType <- typeOfM retVal
-              resLoc <- alloca resType "closure_result"
+              resLoc <- lookupEnv "<closResult>"
               voidPtr <- voidPtrType
               resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
               "priv_queue_function" <#> [privQ, closure, resLocCast, currProc]

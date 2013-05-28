@@ -1,14 +1,12 @@
 import Prelude
 import Data
 
-class Worker
+class Mutex_Worker
 
   data: separate Data
-  sign: Integer
 
-  make(a_sign: Integer; a_data: separate Data)
+  make(a_data: separate Data)
     do
-      sign := a_sign
       data := a_data
     end
 
@@ -17,12 +15,9 @@ class Worker
       i: Integer
     do
       from i := 1
-      until i > 5000 
+      until i > 20000 
       loop
---        {Prelude}.print ("Working%N")
         separate data
-          require
-            data.get_value() \\ 2 = sign
           do
             data.incr()
           end

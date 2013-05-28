@@ -7,13 +7,14 @@ import Control.Lens
 import Control.Monad
 import Control.Monad.Reader
 
-import Data.HashMap.Strict (unions, union, empty)
+import Data.HashMap.Strict (unions, union, empty, fromList)
 import qualified Data.Text as Text
 
 import Language.QuickSilver.Position
 import Language.QuickSilver.Syntax hiding (ResultVar)
 import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
+import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Statement
@@ -46,6 +47,22 @@ allocP fRef d i = do
 allocPs :: ValueRef -> [Decl] -> Build Env
 allocPs fRef ds = unions `fmap` zipWithM (allocP fRef) ds [0..]
 
+genClosureArgs :: Build Env
+genClosureArgs =
+    do argArrayType <- pointer0 <$> pointer0 <$> voidPtrType
+       argArrayPtrRef <- alloca argArrayType "<args>"
+       
+       argTypesType <- pointer0 <$> closTypeTypeM
+       argTypeArrayRef <- alloca argTypesType "<argTypes>"
+
+       i64 <- int64TypeM
+       closResultRef <- alloca i64 "<closResult>"
+       
+       return (fromList [("<args>", argArrayPtrRef)
+                        ,("<argTypes>", argTypeArrayRef)
+                        ,("<closResult>", closResultRef)
+                        ]
+              )
 -- genProcDecl :: Build Env
 -- genProcDecl =
 --     do procType <- procTypeM
@@ -65,7 +82,7 @@ routineEnv rout func =
                         , debug "Routine: generating decls" >> genDecls rout
                         , debug "Routine: genrating args" >>
                                 allocPs func (routineArgs rout)
-                        -- , debug "Routine: processor" >> genProcDecl
+                        , debug "Routine: closure args and arg types" >> genClosureArgs
                         ]
 
 routHasNonSpecialCurrent rout =

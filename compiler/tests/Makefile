@@ -1,4 +1,8 @@
-all: prod_cons_test array_test odd_even_test separate_test http_test socket_test helloworld
+all: prod_cons_test mutex_test\
+	array_test odd_even_test separate_test http_test socket_test helloworld
+
+mutex_test: mutex_test.e data.ebc mutex_worker.ebc lib/stdlib.bc
+	./qsc $< data.ebc mutex_worker.ebc
 
 prod_cons_test: prod_cons_test.e data.ebc worker.ebc lib/stdlib.bc
 	./qsc $< data.ebc worker.ebc

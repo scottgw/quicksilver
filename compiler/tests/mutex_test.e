@@ -1,25 +1,25 @@
 import Data
 import Array
-import Worker
+import Mutex_Worker
 
-module Prod_Cons_Test
+module Mutex_Test
   
   main()
     local
       i: Integer
       data: separate Data
-      workers: Array [separate Worker]
-      worker: separate Worker
+      workers: Array [separate Mutex_Worker]
+      worker: separate Mutex_Worker
       n: Integer
     do
-      n := 64
+      n := 32
       create data.make()
       create workers.make(n)
 
       from i := 0
       until i >= n
       loop
-        create worker.make(i \\ 2, data)
+        create worker.make(data)
         separate worker
           do
             worker.run()
