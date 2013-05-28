@@ -28,12 +28,12 @@ module Prod_Cons_Test
         i := i + 1
       end
 
---      from i := 0
---      until i >= n
---      loop
---        shutdown workers.item(i)
---        i := i + 1
---      end
---      shutdown data
+      from i := 0
+      until i >= n
+      loop
+        shutdown workers.item(i)
+        i := i + 1
+      end
+      shutdown data
     end
 end

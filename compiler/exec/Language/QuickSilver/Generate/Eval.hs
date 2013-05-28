@@ -381,9 +381,9 @@ separateCall trg fName args retVal =
        closRetType <- closType retVal
        argCount <- int n
        argArrayPtrRef <- join (alloca <$> (pointer0 <$> pointer0 <$> voidPtrType)
-                                <*> pure "allocating argArray")
+                                <*> pure "")
        argTypeArrayRef <- join (alloca <$> (pointer0 <$> closTypeTypeM)
-                                    <*> pure "allocating arg type array")
+                                    <*> pure "")
 
        closure <-
            "closure_new" <#> [ funcPtr
@@ -392,11 +392,14 @@ separateCall trg fName args retVal =
                              , argArrayPtrRef
                              , argTypeArrayRef
                              ]
+
        debug "sepCall: filling type and arg arrays"
+
+       argTypeArray <- load' argTypeArrayRef
+
        let storeType t idx =
                do debug $ "storeType: " ++ show (t, idx)
                   closT <- closType t
-                  argTypeArray <- load' argTypeArrayRef
                   debugDump argTypeArray
                   argRef <- gepInt argTypeArray [idx]
                   store closT argRef
@@ -407,9 +410,13 @@ separateCall trg fName args retVal =
                          then join (intToPtr val <$> voidPtrType <*> pure "ptrtoint")
                          else join (bitcast val <$> voidPtrType <*> pure "arg store bitcast")
                   argArrayPtr <- load' argArrayPtrRef
-                  argArray <- load' argArrayPtr
-                  argRef <- gepInt argArray [idx]
+                  argLoc <- gepInt argArrayPtr [idx]
+                  argRef <- load' argLoc
                   store ptr argRef
+                  -- argArray <- load' argArrayPtr
+       
+                  -- argRef <- gepInt argArray [idx]
+                  -- store ptr argRef
 
        zipWithM storeType allTypes [0 ..]
        zipWithM storeArg (zip allTypes allEvald) [0 ..]

@@ -392,7 +392,7 @@ functionType' retType argTypes isVarArg =
 gep :: ValueRef -> [ValueRef] -> Build ValueRef
 gep v idxs = 
   let
-      gepIO b ar = withCString "gep" (L.buildGEP b v ar (toEnum $ length idxs))
+      gepIO b ar = withCString "" (L.buildGEP b v ar (toEnum $ length idxs))
   in
     withBuilder0 $ \ b -> do
       iArr <- newListArray (0, length idxs - 1) idxs
