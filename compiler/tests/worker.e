@@ -17,7 +17,7 @@ class Worker
       i: Integer
     do
       from i := 1
-      until i > 160
+      until i > 200
       loop
 --        {Prelude}.print ("Working%N")
         separate data

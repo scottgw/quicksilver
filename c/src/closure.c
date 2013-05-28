@@ -74,7 +74,7 @@ closure_void_type ()
 clos_type_t
 closure_sint_type ()
 {
-  return (clos_type_t)&ffi_type_sint;
+  return (clos_type_t)&ffi_type_sint64;
 }
 
 clos_type_t

@@ -122,13 +122,18 @@ genStmt (Separate args clauses body) =
   do startB  <- getInsertBlock
      func    <- getBasicBlockParent startB
 
+     getQueuesB <- appendBasicBlock func "get queues block"
      lockB   <- appendBasicBlock func "lock block"
      sepBodyB <- appendBasicBlock func "sep body block"
      retryB  <- appendBasicBlock func "wait cond retry block"
+     br getQueuesB
+
+     positionAtEnd getQueuesB
+     privQs <- mapM (getProcExpr >=> getQueue) args
      br lockB
 
      positionAtEnd lockB
-     privQs <- lockSeps args
+     mapM_ lockSep' privQs
      -- FIXME: raise exception/exit on non-separate failure
      cond <- local (updateQueues (zip args privQs))
                    (evalClauses clauses)
@@ -172,7 +177,8 @@ genStmt (Create _typeMb var fName args) =
          let newCall = CallStmt (attachPos (position var) 
                                  (Call var fName args NoType))
 
-         newQ <- lockSep' newProc
+         newQ <- getQueue newProc
+         lockSep' newQ
          local (updateQueues [(var, newQ)])
                    (genStmt newCall)
          unlockQueue newQ
@@ -188,8 +194,8 @@ genStmt (Create _typeMb var fName args) =
 -- genStmt BuiltIn = lookupBuiltin
 genStmt s = error $ "genStmt: no pattern for: " ++ show s
 
-lockSeps :: [TExpr] -> Build [ValueRef]
-lockSeps = mapM lockSep
+lockSeps :: [TExpr] -> Build ()
+lockSeps = mapM_ lockSep
   where
     lockSep e =
       case contents e of
@@ -199,18 +205,19 @@ lockSeps = mapM lockSep
       where
         go =
           do debug "lockSep"
-             e' <- loadEval e
-             debugDump e'
-             prc <- getProc e'
-             debugDump prc
+             prc <- getProcExpr e
              lockSep' prc
 
-lockSep' prc =
-    do currProc <- getCurrProc
-       privQ <- "proc_get_queue" <#> [currProc, prc]
-       "priv_queue_lock" <#> [privQ, currProc]
-       return privQ
+getProcExpr e = loadEval e >>= getProc
 
+getQueue prc =
+    do currProc <- getCurrProc
+       "proc_get_queue" <#> [currProc, prc]
+
+lockSep' privQ =
+    do currProc <- getCurrProc
+       "priv_queue_lock" <#> [privQ, currProc]
+       return ()
 
 unlockQueue privQ =
     do debug "unlockQueues"
