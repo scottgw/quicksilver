@@ -28,22 +28,35 @@ __Data_incr(processor_t,  struct data*);
 
 
 
-int num_iters = 20000;
+int num_iters = 5000;
+
+
+int64_t
+data_get_value_packed(struct sep* sep_data)
+{
+  return __Data_get_value(sep_data->proc, (struct data*)sep_data->ptr);
+}
+
+
+void
+data_incr_packed(struct sep* sep_data)
+{
+  __Data_incr(sep_data->proc, (struct data*)sep_data->ptr);
+}
 
 void
 worker_stub1(processor_t proc, struct worker* worker)
 {  
-/* void worker(processor_t proc, processor_t shared, int flag)  */
-/* { */
-
-  processor_t shared = worker->sep_data->proc;
-  struct data* data = worker->sep_data->ptr;
+  struct sep* sep_data = worker->sep_data;
   int64_t flag = worker->sign;
+
+  processor_t shared = sep_data->proc;
+  struct data* data = sep_data->ptr;
+
   void ***args;
   clos_type_t *arg_types;
   priv_queue_t q = NULL;
 
-  fprintf(stderr, "%p worker with %d\n", proc, flag);
 
   for (int i = 0; i < num_iters; i++)
     {
@@ -54,16 +67,14 @@ worker_stub1(processor_t proc, struct worker* worker)
       priv_queue_lock(q, proc);
 
       clos =
-        closure_new(__Data_get_value,
+        closure_new(data_get_value_packed,
                     closure_sint_type(),
-                    2,
+                    1,
                     &args,
                     &arg_types);
 
       arg_types[0] = closure_pointer_type();
-      arg_types[1] = closure_pointer_type();
-      *args[0] = shared;
-      *args[1] = data;
+      *args[0] = sep_data;
 
       priv_queue_function(q, clos, &val, proc);
 
@@ -75,37 +86,34 @@ worker_stub1(processor_t proc, struct worker* worker)
           q = proc_get_queue (proc, shared);
           priv_queue_lock(q, proc);
           clos =
-            closure_new(__Data_get_value,
+            closure_new(data_get_value_packed,
                         closure_sint_type(),
-                        2,
+                        1,
                         &args,
                         &arg_types);
 
 
           arg_types[0] = closure_pointer_type();
-          arg_types[1] = closure_pointer_type();
-          *args[0] = shared;
-          *args[1] = data;
+          *args[0] = sep_data;
 
           priv_queue_function(q, clos, &val, proc);
         }
 
       clos =
-        closure_new(__Data_incr,
+        closure_new(data_incr_packed,
                     closure_void_type(),
-                    2,
+                    1,
                     &args,
                     &arg_types);
 
 
       arg_types[0] = closure_pointer_type();
-      arg_types[1] = closure_pointer_type();
-      *args[0] = shared;
-      *args[1] = data;
+      *args[0] = sep_data;
 
       priv_queue_routine(q, clos, proc);
       priv_queue_unlock(q, proc);
     }
+  fprintf(stderr, "%p worker finished with %d\n", proc, flag);
 }
 
 
@@ -120,7 +128,7 @@ worker_stub2(processor_t proc, struct worker* worker)
   int64_t flag = worker->sign;
   priv_queue_t q = NULL;
 
-  fprintf(stderr, "%p worker with %d\n", proc, flag);
+
 
   for (int i = 0; i < num_iters; i++)
     {
@@ -185,4 +193,6 @@ worker_stub2(processor_t proc, struct worker* worker)
         priv_queue_unlock(q, proc);
       }
     }
+
+  fprintf(stderr, "%p worker with %d\n", proc, flag);
 }
