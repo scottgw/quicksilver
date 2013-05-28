@@ -65,6 +65,7 @@ priv_queue_lock(priv_queue_t pq, processor_t client)
 void
 priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
+  pq->last_was_func = false;
   spsc_enqueue_wait(pq->q, NULL, client);
 }
 
