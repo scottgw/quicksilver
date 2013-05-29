@@ -1,5 +1,5 @@
 EFILES=pointer_8 pointer_64 prelude pointer string socket_util \
-			 int_array \
+			 int_array int_matrix \
 			 int_stack int_stack_link \
 			 socket socket_buffer file array
 EBCFILES=$(EFILES:=.ebc)
