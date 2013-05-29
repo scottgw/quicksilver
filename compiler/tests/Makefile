@@ -35,5 +35,7 @@ helloworld: helloworld.e lib/stdlib.bc
 	./qsc $<
 
 clean:
-	@rm -f helloworld socket_test http_test separate_test *.bc *.ebc *.o *.s
+	@rm -f helloworld socket_test http_test separate_test array_test odd_even_test\
+		condition_test mutex_test prodcons_test share_test \
+		*.bc *.ebc *.o *.obc *.s
 
