@@ -1,7 +1,7 @@
 import Prelude
 import Data
 
-class Worker
+class Condition_Worker
 
   data: separate Data
   sign: Integer

@@ -54,6 +54,28 @@ array_put(void* proc, char*** array, int64_t i, char* elem)
   (*array)[i] = elem;
 }
 
+/***********************************/
+/* Character and pointer functions */
+/***********************************/
+
+int64_t*
+new_pointer_64 (int64_t n)
+{
+  return (int64_t*) malloc(sizeof(int64_t) * n);
+}
+
+void
+pointer_64_put (int64_t* p, int64_t i, int64_t c)
+{
+  p[i] = c;
+}
+
+int64_t
+pointer_64_get (int64_t* p, int64_t i)
+{
+  return p[i];
+}
+
 
 /***********************************/
 /* Character and pointer functions */

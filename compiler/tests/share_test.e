@@ -1,25 +1,25 @@
-import Data
+import Int_array
 import Array
-import Worker
+import Share_Worker
 
-module Prod_Cons_Test
+module Share_Test
   
   main()
     local
       i: Integer
-      data: separate Data
-      workers: Array [separate Worker]
-      worker: separate Worker
+      data: separate Int_Array
+      workers: Array [separate Share_Worker]
+      worker: separate Share_Worker
       n: Integer
     do
-      n := 64
-      create data.make()
+      n := 32
+      create data.make(20000)
       create workers.make(n)
 
       from i := 0
       until i >= n
       loop
-        create worker.make(i \\ 2, data)
+        create worker.make(data)
         separate worker
           do
             worker.run()

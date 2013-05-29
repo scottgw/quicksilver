@@ -1,11 +1,17 @@
-all: prod_cons_test mutex_test\
+all: condition_test mutex_test prodcons_test share_test\
 	array_test odd_even_test separate_test http_test socket_test helloworld
+
+share_test: share_test.e data.ebc share_worker.ebc lib/stdlib.bc
+	./qsc $< data.ebc share_worker.ebc
+
+prodcons_test: prodcons_test.e producer_worker.ebc consumer_worker.ebc lib/stdlib.bc
+	./qsc $< producer_worker.ebc consumer_worker.ebc
 
 mutex_test: mutex_test.e data.ebc mutex_worker.ebc lib/stdlib.bc
 	./qsc $< data.ebc mutex_worker.ebc
 
-prod_cons_test: prod_cons_test.e data.ebc worker.ebc lib/stdlib.bc
-	./qsc $< data.ebc worker.ebc
+condition_test: condition_test.e data.ebc condition_worker.ebc lib/stdlib.bc
+	./qsc $< data.ebc condition_worker.ebc
 
 array_test: array_test.e c.ebc lib/stdlib.bc
 	./qsc $< c.ebc
