@@ -21,7 +21,7 @@ fetchCurrentAttr :: Text -> Build ValueRef
 fetchCurrentAttr ident = do
   curr <- lookupEnv  "Current"
   clas <- currentClass
-  obj  <- load curr "lookupVarOrAttr load"
+  obj  <- load curr ""
   getAttribute clas ident obj
 
 lookupVarAccess :: UnPosTExpr -> Build ValueRef
@@ -184,8 +184,11 @@ genStmt (Create _typeMb var fName args) =
          unlockQueue newQ
          return ()
     varType ->     
-      do varRef <- lookupVarAccess (contents var)
+      do debug "nonsep create"
+         varRef <- lookupVarAccess (contents var)
+         debugDump varRef
          newInst <- lookupMalloc varType fName args
+         debugDump newInst
          store newInst varRef
          genStmt (CallStmt $
                   attachPos (position var) (Call var fName args NoType)

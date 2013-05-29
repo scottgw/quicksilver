@@ -25,10 +25,7 @@ attributeIndex c attrName =
 getAttribute :: ClasInterface -> Text -> ValueRef -> Build ValueRef
 getAttribute c attrName obj = do
   let Just offset = attributeIndex c attrName
-  zero <- int 0
-  off  <- int offset
-  gep obj [zero, off]
-
+  gepInt obj [0, offset]
 
 mallocSeparate :: Typ -> Build ValueRef
 mallocSeparate t = do

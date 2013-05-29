@@ -38,7 +38,7 @@ checkBinOp op e1 e2
                                 ]
 
       isEqOp   = op `elem` (map (flip RelOp NoType) [Eq, Neq])
-      isNumOp  = op `elem` [Add, Sub, Mul, Div, Rem]
+      isNumOp  = op `elem` [Add, Sub, Mul, Div, Rem, Quot]
       isBoolOp  = op `elem` [And, Or, OrElse, AndThen]
       isCompOp = op `elem` (map (flip RelOp NoType) [Gt, Lt, Gte, Lte])
 

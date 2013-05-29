@@ -104,7 +104,9 @@ genBinOp op e1 e2 _resType =
     opFuncs =
       [ (Add, strictApply add)
       , (Sub, strictApply sub)
+      , (Mul, strictApply mul)
       , (Rem, strictApply srem)
+      , (Quot, strictApply sdiv)
       , (Div, if isIntegerType (texpr e1)
               then strictApply sdiv
               else strictApply fdiv)
