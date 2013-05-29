@@ -66,6 +66,7 @@ declareQsFuncs =
                     , voidTypeM
                     , [privQueueTypeM, closureTypeM, voidPtrType, procTypeM]
                     )
+                  , ("priv_queue_last_was_func", int1TypeM, [privQueueTypeM])
                   , ("priv_queue_shutdown"
                     , voidTypeM
                     , [privQueueTypeM, procTypeM]

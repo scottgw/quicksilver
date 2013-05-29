@@ -109,6 +109,12 @@ priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
     }
 }
 
+bool
+priv_queue_last_was_func(priv_queue_t pq)
+{
+  return pq->last_was_func;
+}
+
 void
 priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {

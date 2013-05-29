@@ -330,7 +330,7 @@ evalUnPos (LitString s) = do
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
 
 
-nonSeparateCall trg fName args retVal =
+nonSeparateCall trg fName args retType =
     do let cName = classTypeName (texpr trg)
 
        currProc <- getCurrProc
@@ -351,11 +351,21 @@ nonSeparateCall trg fName args retVal =
        debug "eval: nonsep call -> done"
        -- setInstructionCallConv r Fast
 
-       if retVal /= NoType then simpStore r else return r
+       if retType /= NoType then simpStore r else return r
 
-separateCall trg fName args retVal =
-    do let cName = classTypeName (texpr trg)
+separateCall trg fName args retType =
+    do startB <- getInsertBlock
+       func   <- getBasicBlockParent startB
+
+       -- sepCallStartB <- appendBasicBlock func "sepCallStart"
+       directFuncB <- appendBasicBlock func "directFuncCall"
+       sepFuncCallB <- appendBasicBlock func "sepFuncCall"
+       afterSepCallB <- appendBasicBlock func "afterSepCall"
+
+       let cName = classTypeName (texpr trg)
        debug "generating separate call"
+
+       -- positionAtEnd sepCallStartB
        trg'  <- loadEval trg
        debugDump trg'
        args' <- mapM loadEval args
@@ -373,83 +383,100 @@ separateCall trg fName args retVal =
        trgProc <- load' trgProcRef
        nonSepTrgRef <- gepInt trg' [0, 1]
        nonSepTrg <- load' nonSepTrgRef
-
-       let Sep _ _ nonSepTrgType = texpr trg
-           allTypes = ProcessorType : nonSepTrgType : map texpr args 
-           allEvald = trgProc : nonSepTrg : args'
-           n = length allTypes
-
-       funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
-       closRetType <- closType retVal
-       argCount <- int n
-       argArrayPtrRef <- lookupEnv "<args>"
-       argTypeArrayRef <- lookupEnv "<argTypes>"
-
-       closure <-
-           "closure_new" <#> [ funcPtr
-                             , closRetType
-                             , argCount
-                             , argArrayPtrRef
-                             , argTypeArrayRef
-                             ]
-
-       debug "sepCall: filling type and arg arrays"
-
-       argTypeArray <- load' argTypeArrayRef
-       argArrayPtr <- load' argArrayPtrRef
-
-       let storeType t idx =
-               do debug $ "storeType: " ++ show (t, idx)
-                  closT <- closType t
-                  debugDump argTypeArray
-                  argRef <- gepInt argTypeArray [idx]
-                  store closT argRef
-
-           storeArg (t, val) idx =
-               do debug $ "storeArg: " ++ show (t, val, idx)
-                  ptr <- if isBasic t
-                         then join (intToPtr val <$> voidPtrType <*> pure "ptrtoint")
-                         else join (bitcast val <$> voidPtrType <*> pure "arg store bitcast")
-                  argLoc <- gepInt argArrayPtr [idx]
-                  argRef <- load' argLoc
-                  store ptr argRef
-                  -- argArray <- load' argArrayPtr
-       
-                  -- argRef <- gepInt argArray [idx]
-                  -- store ptr argRef
-
-       zipWithM storeType allTypes [0 ..]
-       zipWithM storeArg (zip allTypes allEvald) [0 ..]
-
-       debug "sepCall: calling underlying function"
-
        privQ <- getQueueFor trg
+       if retType == NoType
+          -- This is a procedure call, we have to do the closure
+         then br sepFuncCallB
+         else -- Otherwise we *may* be able to skip it if the last was also a func call
+           do lastWasFunc <- "priv_queue_last_was_func" <#> [privQ]
+              condBr lastWasFunc directFuncB sepFuncCallB
 
+       positionAtEnd directFuncB
+       debug "building direct call"
+       let Sep _ _ baseType = texpr trg
+       baseTypeL <- typeOfM baseType
+       castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
+       call' f (trgProc : castedNonSepTrg : args') ""
+       br afterSepCallB
+
+       positionAtEnd sepFuncCallB
+       closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
+       debug "sepCall: calling underlying function"
        currProc <- getCurrProc
-
-       if retVal == NoType
+       resLoc <- if retType == NoType
          then "priv_queue_routine" <#> [privQ, closure, currProc]
          else
-           do resType <- typeOfM retVal
+           do resType <- typeOfM retType
               resLoc <- lookupEnv "<closResult>"
               voidPtr <- voidPtrType
               resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
               "priv_queue_function" <#> [privQ, closure, resLocCast, currProc]
-              if isBasic retVal || isSeparate retVal
+              if isBasic retType || isSeparate retType
                 then return resLoc
                      -- Basic and results that are declared separate do not
                      -- need to be re-wrapped with the processor of
                      -- their target.
-                else
-                  do sepInst <- mallocSeparate retVal
-                     procRef <- gepInt sepInst [0, 0]
-                     objRef <- gepInt sepInst [0, 1]
-                     res <- load' resLoc
-                     store trgProc procRef
-                     store res objRef
+                else wrapSepResult trgProc retType resLoc
+       br afterSepCallB
 
-                     sepRef <- join (alloca <$> typeOfVal sepInst <*> pure "sepInstRef")
-                     store sepInst sepRef
+       positionAtEnd afterSepCallB
+       return resLoc
+
+prepareClosure retType trg f args trgProc nonSepTrg args' =
+  do let Sep _ _ nonSepTrgType = texpr trg
+         allTypes = ProcessorType : nonSepTrgType : map texpr args 
+         allEvald = trgProc : nonSepTrg : args'
+         n = length allTypes
+
+     funcPtr <- join (bitcast f <$> voidPtrType <*> pure "cast func to ptr")
+     closRetType <- closType retType
+     argCount <- int n
+     argArrayPtrRef <- lookupEnv "<args>"
+     argTypeArrayRef <- lookupEnv "<argTypes>"
+  
+     closure <- "closure_new" <#> [ funcPtr
+                                  , closRetType
+                                  , argCount
+                                  , argArrayPtrRef
+                                  , argTypeArrayRef
+                                  ]
+
+     debug "sepCall: filling type and arg arrays"
+
+     argTypeArray <- load' argTypeArrayRef
+     argArrayPtr <- load' argArrayPtrRef
+
+     let storeType t idx =
+           do debug $ "storeType: " ++ show (t, idx)
+              closT <- closType t
+              debugDump argTypeArray
+              argRef <- gepInt argTypeArray [idx]
+              store closT argRef
+
+         storeArg (t, val) idx =
+           do debug $ "storeArg: " ++ show (t, val, idx)
+              ptr <- if isBasic t
+                     then join (intToPtr val <$> voidPtrType <*> pure "ptrtoint")
+                     else join (bitcast val <$> voidPtrType <*> pure "arg store bitcast")
+              argLoc <- gepInt argArrayPtr [idx]
+              argRef <- load' argLoc
+              store ptr argRef
+
+     zipWithM storeType allTypes [0 ..]
+     zipWithM storeArg (zip allTypes allEvald) [0 ..]
+     return closure
+
+wrapSepResult trgProc retType resultLoc =
+  do sepInst <- mallocSeparate retType
+     procRef <- gepInt sepInst [0, 0]
+     objRef <- gepInt sepInst [0, 1]
+     res <- load' resultLoc
+     store trgProc procRef
+     store res objRef
+
+     sepRef <- join (alloca <$> typeOfVal sepInst <*> pure "sepInstRef")
+     store sepInst sepRef
+     return sepRef
 
 getQueueFor :: TExpr -> Build ValueRef
 getQueueFor e =
