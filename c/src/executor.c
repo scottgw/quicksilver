@@ -23,7 +23,7 @@ switch_to_next_processor(executor_t exec)
 
   if (proc != NULL)
     {
-      logs(2, "%p is dequeued by executor %p\n", proc, exec);
+      DEBUG_LOG(2, "%p is dequeued by executor %p\n", proc, exec);
       proc->executor = exec;
       exec->current_proc = proc;
 
@@ -39,15 +39,15 @@ switch_to_next_processor(executor_t exec)
         {
         case TASK_TRANSITION_TO_RUNNABLE:
           proc->task->state = TASK_RUNNABLE;
-          logs(2, "%p is descheduled by executor %p\n", proc, exec);
+          DEBUG_LOG(2, "%p is descheduled by executor %p\n", proc, exec);
           sync_data_enqueue_runnable(exec->task->sync_data, proc);
           break;
         case TASK_TRANSITION_TO_WAITING:
-          logs(2, "%p is set to wait by executor %p\n", proc, exec);
+          DEBUG_LOG(2, "%p is set to wait by executor %p\n", proc, exec);
           proc->task->state = TASK_WAITING;
           break;
         case TASK_TRANSITION_TO_FINISHED:
-          logs(2, "%p is set to finished by executor %p\n", proc, exec);
+          DEBUG_LOG(2, "%p is set to finished by executor %p\n", proc, exec);
           proc->task->state = TASK_FINISHED;
           proc_free(proc);
           break;

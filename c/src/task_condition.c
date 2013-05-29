@@ -50,15 +50,15 @@ task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
   volatile processor_t vproc = proc;
   assert(task_mutex_owner(mutex) == vproc);
 
-  logs(2, "%p waiting in cv %p\n", proc, cv);
+  DEBUG_LOG(2, "%p waiting in cv %p\n", proc, cv);
 
   task_set_state(vproc->task, TASK_TRANSITION_TO_WAITING);
   bool success = queue_impl_enqueue(cv->wait_queue, vproc);
   assert(success);
 
   task_mutex_unlock(mutex, vproc);
-  logs(2, "%p moving to executor in cv %p\n", proc, cv);
+  DEBUG_LOG(2, "%p moving to executor in cv %p\n", proc, cv);
   proc_yield_to_executor(vproc);
-  logs(2, "%p resumed in cv %p\n", proc, cv);
+  DEBUG_LOG(2, "%p resumed in cv %p\n", proc, cv);
   task_mutex_lock(mutex, vproc);
 }

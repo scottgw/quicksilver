@@ -20,4 +20,11 @@ extern "C"
 }
 #endif
 
+
+#ifdef ENABLE_LOG
+#define DEBUG_LOG(...) logs(__VA_ARGS__)
+#else
+#define DEBUG_LOG ;
+#endif
+
 #endif // _DEBUG_LOG_H

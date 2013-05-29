@@ -96,16 +96,16 @@ priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
         {
           // If we couldn't swap this closure in, queue it up.
           closure_free(last);
-          logs(1, "%p priv enqueue start\n", wait_proc);
+          DEBUG_LOG(1, "%p priv enqueue start\n", wait_proc);
           spsc_enqueue_wait(pq->q, clos, wait_proc);
-          logs(1, "%p priv enqueue end\n", wait_proc);
+          DEBUG_LOG(1, "%p priv enqueue end\n", wait_proc);
         }
     }
   else
     {
-      logs(1, "%p priv enqueue start\n", wait_proc);
+      DEBUG_LOG(1, "%p priv enqueue start\n", wait_proc);
       spsc_enqueue_wait(pq->q, clos, wait_proc);
-      logs(1, "%p priv enqueue end\n", wait_proc);
+      DEBUG_LOG(1, "%p priv enqueue end\n", wait_proc);
     }
 }
 

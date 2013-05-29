@@ -112,7 +112,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data, void* exec)
   if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
     {
       usleep(500);
-      logs(1, "%p runnable dequeue start\n", exec);
+      DEBUG_LOG(1, "%p runnable dequeue start\n", exec);
       pthread_mutex_lock(&sync_data->run_mutex);
       while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
              sync_data->num_processors > 0)
@@ -120,7 +120,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data, void* exec)
           pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
         }
       pthread_mutex_unlock(&sync_data->run_mutex);
-      logs(1, "%p runnable dequeue end\n", exec);
+      DEBUG_LOG(1, "%p runnable dequeue end\n", exec);
     }
 
   if (sync_data->num_processors > 0 &&
