@@ -52,18 +52,22 @@ extern "C"
   void
   log_write()
   {
-    std::cout << "writing log\n";
-    std::ofstream outfile;
-    outfile.open("qs.log");
-    outfile.precision(15);
-    log_info info;
-    while (log_queue->try_pop(info))
+    if (log_level != 0)
       {
-        timespec t = info.timestamp;
-        outfile << t.tv_sec << " " << t.tv_nsec;
-        outfile << ": " << info.str;
-        free(info.str);
+        std::cout << "writing log\n";
+        std::ofstream outfile;
+        outfile.open("qs.log");
+        outfile.precision(15);
+        log_info info;
+        while (log_queue->try_pop(info))
+          {
+            timespec t = info.timestamp;
+            outfile << t.tv_sec << " " << t.tv_nsec;
+            outfile << ": " << info.str;
+            free(info.str);
+          }
+        outfile.close();
       }
-    outfile.close();
+    delete log_queue;
   }
 }
