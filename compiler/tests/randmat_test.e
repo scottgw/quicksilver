@@ -33,8 +33,8 @@ module Randmat_Test
       s := 8
       num_workers := 32
  
-      create matrix.make (nrows,ncols)
-      create workers.make (32)
+      create matrix.make (nrows, ncols)
+      create workers.make (num_workers)
 
       from
         start := 0
@@ -72,7 +72,7 @@ module Randmat_Test
               from jj := 0
               until jj >= ncols
               loop
-                worker.get (ii, jj) -- should store in real matrix
+                matrix.put (ii, jj, worker.get (ii, jj))
                 jj := jj + 1
               end
               ii := ii + 1
