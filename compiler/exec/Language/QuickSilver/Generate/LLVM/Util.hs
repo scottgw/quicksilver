@@ -53,26 +53,27 @@ import           Foreign.C
 import           Foreign.Ptr
 import           Foreign.Storable
 
-import qualified LLVM.FFI.Core as L
-import qualified LLVM.FFI.BitWriter as L
-import           LLVM.FFI.Core 
-    (
-     BuilderRef,
-     ValueRef,
-     ModuleRef,
-     ContextRef,
-     TypeRef
-    )
+import qualified LLVM.Wrapper.Core as W 
+import           LLVM.Wrapper.Core ( Type, Value, BasicBlock
+                                   , Builder, Context, Module
+                                   , CallingConvention, FPPredicate
+                                   , IntPredicate)
+import qualified LLVM.Wrapper.BitWriter as W 
+-- import qualified LLVM.FFI.Core as L
+-- import qualified LLVM.FFI.BitWriter as L
+-- import           LLVM.FFI.Core 
+--     (
+--     )
 
 import           Prelude hiding (lookup)
 
-type Env = Map Text ValueRef
+type Env = Map Text Value
 
 data ClassInfo = 
     ClassInfo
     {
       rtClass       :: ClasInterface,
-      rtClassStruct :: Either TypeRef TypeRef
+      rtClassStruct :: Either Type Type
     } deriving Show
 
 type ClassEnv = Map Text ClassInfo
@@ -80,15 +81,15 @@ type ClassEnv = Map Text ClassInfo
 data BuildState = 
     BuildState
     {
-      bsBuilder  :: BuilderRef,
-      bsModule   :: ModuleRef,
-      bsContext  :: ContextRef,
+      bsBuilder  :: Builder,
+      bsModule   :: Module,
+      bsContext  :: Context,
       bsEnv      :: Env,
       bsRoutine  :: RoutineI,
-      bsQueues   :: [(TExpr, ValueRef)],
+      bsQueues   :: [(TExpr, Value)],
       bsCurrent  :: ClasInterface,
       bsClassEnv :: ClassEnv,
-      bsTypeEnv  :: Map Text TypeRef, -- For special types like processor.
+      bsTypeEnv  :: Map Text Type, -- For special types like processor.
       bsDebug    :: Bool
     }
 
@@ -99,32 +100,32 @@ debug str = do
   debg <- bsDebug <$> ask
   when debg $ lift $ putStrLn str
 
-debugDump :: ValueRef -> Build ()
-debugDump valRef = do
+debugDump :: Value -> Build ()
+debugDump val = do
   debg <- bsDebug <$> ask
-  when debg $ lift $ L.dumpValue valRef
+  when debg $ lift $ W.dumpValueToString val >>= putStrLn
 
 withPtrArray :: Storable a => [a] -> (Ptr a -> IO b) -> IO b
 withPtrArray as f = do
   arr <- newListArray (0, length as - 1) as
   withStorableArray arr f
 
-singleEnv :: Decl -> ValueRef -> Env
+singleEnv :: Decl -> Value -> Env
 singleEnv (Decl n _) v = singleEnv' n v
 
-singleEnv' :: Text -> ValueRef -> Env
+singleEnv' :: Text -> Value -> Env
 singleEnv' n v = Map.singleton n v
 
 withUpdEnv :: (Env -> Env) -> Build a -> Build a
 withUpdEnv = local . updEnv
 
-askBuild :: Build BuilderRef
+askBuild :: Build Builder
 askBuild = fmap bsBuilder ask
 
-askModule :: Build ModuleRef 
+askModule :: Build Module 
 askModule = fmap bsModule ask
 
-askContext :: Build ContextRef
+askContext :: Build Context
 askContext = fmap bsContext ask
 
 askEnv :: Build Env
@@ -139,19 +140,18 @@ currentClass = fmap bsCurrent ask
 currentRoutine :: Build RoutineI
 currentRoutine = bsRoutine `fmap` ask
 
-writeModuleToFile :: ModuleRef -> String -> IO Bool
-writeModuleToFile = (flip withCString) . L.writeBitcodeToFile
+writeModuleToFile :: Module -> String -> IO ()
+writeModuleToFile = W.writeBitcodeToFile
 
 runBuild :: Bool -> Text -> Build a -> IO a
 runBuild debg moduleName b = do
-  context <- L.contextCreate
-  builder <- L.createBuilderInContext context
-  modul   <- withCString (Text.unpack moduleName)
-                         (flip L.moduleCreateWithNameInContext context)  
+  context <- W.contextCreate
+  builder <- W.createBuilderInContext context
+  modul   <- W.moduleCreateWithNameInContext (Text.unpack moduleName) context
 
   runReaderT b (BuildState {
                   bsBuilder  = builder
-                , bsModule   = modul 
+                , bsModule   = modul
                 , bsContext  = context
                 , bsCurrent  = error "Current class not set"
                 , bsRoutine  = error "Current routine not set"
@@ -175,20 +175,20 @@ insertClassEnv = Map.insert
 fromListClassEnv :: [(Text, ClassInfo)] -> ClassEnv -> ClassEnv
 fromListClassEnv pairs bs = foldr (uncurry insertClassEnv) bs pairs
 
-insertEnv :: Text -> ValueRef -> Env -> Env
+insertEnv :: Text -> Value -> Env -> Env
 insertEnv s v = Map.insert s v
 
-fromListEnv :: [(Text, ValueRef)] -> Env -> Env
+fromListEnv :: [(Text, Value)] -> Env -> Env
 fromListEnv pairs bs = foldr (uncurry insertEnv) bs pairs
 
-insertNamedType :: Text -> TypeRef -> BuildState -> BuildState
+insertNamedType :: Text -> Type -> BuildState -> BuildState
 insertNamedType name typ bs =
     bs { bsTypeEnv = Map.insert name typ (bsTypeEnv bs) }
 
-lookupNamedType :: Text -> Build (Maybe TypeRef)
+lookupNamedType :: Text -> Build (Maybe Type)
 lookupNamedType name = Map.lookup name <$> bsTypeEnv <$> ask
 
-lookupQueueFor :: TExpr -> Build ValueRef
+lookupQueueFor :: TExpr -> Build Value
 lookupQueueFor e =
     do m <- bsQueues <$> ask
        case lookup e m of
@@ -196,7 +196,7 @@ lookupQueueFor e =
          Nothing -> error $ "lookupQueueFor: not found " ++ show e ++
                             " in " ++ show m
       
-updateQueues :: [(TExpr, ValueRef)] -> BuildState -> BuildState
+updateQueues :: [(TExpr, Value)] -> BuildState -> BuildState
 updateQueues qs bs =
     bs { bsQueues = upd (bsQueues bs) }
     where
@@ -214,7 +214,7 @@ setRoutine f bs = bs {bsRoutine = f}
 lookupClassEnv :: Text -> Build ClassInfo
 lookupClassEnv t = fmap (lookupErr (Text.unpack t) t) askClassEnv
 
-lookupEnv :: Text -> Build ValueRef
+lookupEnv :: Text -> Build Value
 lookupEnv t = 
     fmap (\e -> 
               lookupErr (unwords[s, "in"
@@ -223,16 +223,16 @@ lookupEnv t =
           where s = Text.unpack t
 
 
-lookupEnvM :: Text -> Build (Maybe ValueRef)
+lookupEnvM :: Text -> Build (Maybe Value)
 lookupEnvM s = fmap (Map.lookup s) askEnv
 
 lookupErr :: (Eq k, Hashable k) => String -> k -> Map k v -> v
 lookupErr err k m = maybe (error err) id (Map.lookup k m)
 
-lookupValue :: ClassName -> Build ValueRef
+lookupValue :: ClassName -> Build Value
 lookupValue = lookupEnv
 
-lookupClasLType :: ClassName -> Build (Either TypeRef TypeRef)
+lookupClasLType :: ClassName -> Build (Either Type Type)
 lookupClasLType = fmap rtClassStruct . lookupClassEnv
 
 lookupClas :: ClassName -> Build ClasInterface
@@ -261,46 +261,46 @@ liftBuild5 :: (a -> b -> c -> d -> e -> IO x) ->
               a -> b -> c -> d -> e -> Build x
 liftBuild5 f a b c d e = lift $ f a b c d e
 
-withBuilder0 :: (BuilderRef -> IO x) -> Build x
+withBuilder0 :: (Builder -> IO x) -> Build x
 withBuilder0 f = askBuild >>= lift . f
 
-withBuilder1 :: (BuilderRef -> a -> IO x) -> a -> Build x
+withBuilder1 :: (Builder -> a -> IO x) -> a -> Build x
 withBuilder1 f a = askBuild >>= \ bRef -> lift $ f bRef a
 
-withBuilder2 :: (BuilderRef -> a -> b -> IO x) -> 
+withBuilder2 :: (Builder -> a -> b -> IO x) -> 
                 a -> b -> Build x
 withBuilder2 f a b = askBuild >>= \ bRef -> lift $ f bRef a b
 
-withBuilder3 :: (BuilderRef -> a -> b -> c -> IO x) -> 
+withBuilder3 :: (Builder -> a -> b -> c -> IO x) -> 
                 a -> b -> c -> Build x
 withBuilder3 f a b c = askBuild >>= \ bRef -> lift $ f bRef a b c
 
-withBuilder4 :: (BuilderRef -> a -> b -> c -> d -> IO x) -> 
+withBuilder4 :: (Builder -> a -> b -> c -> d -> IO x) -> 
                 a -> b -> c -> d -> Build x
 withBuilder4 f a b c d = askBuild >>= \ bRef -> lift $ f bRef a b c d
 
-withBuilder5 :: (BuilderRef -> a -> b -> c -> d -> e -> IO x) -> 
+withBuilder5 :: (Builder -> a -> b -> c -> d -> e -> IO x) -> 
                 a -> b -> c -> d -> e -> Build x
 withBuilder5 f a b c d e= askBuild >>= \ bRef -> lift $ f bRef a b c d e 
 
-withContext0 :: (ContextRef -> IO x) -> Build x
+withContext0 :: (Context -> IO x) -> Build x
 withContext0 f = askContext >>= lift . f
 
-withContext1 :: (ContextRef -> a -> IO x) -> a -> Build x
+withContext1 :: (Context -> a -> IO x) -> a -> Build x
 withContext1 f a = askContext >>= \ bRef -> lift $ f bRef a
 
-withContext2 :: (ContextRef -> a -> b -> IO x) -> 
+withContext2 :: (Context -> a -> b -> IO x) -> 
                 a -> b -> Build x
 withContext2 f a b = askContext >>= \ bRef -> lift $ f bRef a b
 
-withContext3 :: (ContextRef -> a -> b -> c -> IO x) -> 
+withContext3 :: (Context -> a -> b -> c -> IO x) -> 
                 a -> b -> c -> Build x
 withContext3 f a b c = askContext >>= \ bRef -> lift $ f bRef a b c
 
-withContext4 :: (ContextRef -> a -> b -> c -> d -> IO x) -> 
+withContext4 :: (Context -> a -> b -> c -> d -> IO x) -> 
                 a -> b -> c -> d -> Build x
 withContext4 f a b c d = askContext >>= \ bRef -> lift $ f bRef a b c d
 
-withContext5 :: (ContextRef -> a -> b -> c -> d -> e -> IO x) -> 
+withContext5 :: (Context -> a -> b -> c -> d -> e -> IO x) -> 
                 a -> b -> c -> d -> e -> Build x
 withContext5 f a b c d e= askContext >>= \ bRef -> lift $ f bRef a b c d e 

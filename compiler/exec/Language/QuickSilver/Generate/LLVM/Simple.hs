@@ -2,7 +2,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
     (
      IntPredicate (..), FPPredicate (..),
      CallingConvention (..),
-     ContextRef, ValueRef, TypeRef,
+     ContextRef, Value, TypeRef,
      BasicBlockRef, BuilderRef,
      Build, Env,
 
@@ -22,7 +22,6 @@ module Language.QuickSilver.Generate.LLVM.Simple
      dumpValue,
      
      gep, gepInt,
-     extractValue, insertValue,
 
      add, sub, mul, fdiv, neg, fneg,
      sdiv, srem,
@@ -51,9 +50,10 @@ module Language.QuickSilver.Generate.LLVM.Simple
      call, call',callByName,
      invoke, invoke',
      setFunctionCallConv,
-     setInstructionCallConv,
+     setInstructionCallConv
     ) where
 
+import Control.Applicative
 import Control.Monad.Reader
 
 import Data.Array.Storable
@@ -66,79 +66,76 @@ import Foreign.Storable
 
 import GHC.Ptr
 
-import qualified LLVM.FFI.Core as L
-import LLVM.FFI.Core 
-    (
-     BuilderRef, ValueRef, BasicBlockRef,
-     CallingConvention, ContextRef,
-     constPtrToInt,
+import qualified LLVM.Wrapper.Core as W 
+import           LLVM.Wrapper.Core ( Type, Value, BasicBlock, Builder
+                                   , CallingConvention, FPPredicate
+                                   , IntPredicate)
 
-     constInt, constReal
+import qualified LLVM.FFI.Core as L
+-- import LLVM.FFI.Core 
+--     (
+--      constPtrToInt,
+--      constInt, constReal
              
-    )
+--     )
 
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 
 
-setGlobalConstant :: ValueRef -> Bool -> Build ()
+setGlobalConstant :: Value -> Bool -> Build ()
 setGlobalConstant v b = lift (L.setGlobalConstant v b)
 
-setVisibility :: ValueRef -> Int -> Build ()
+setVisibility :: Value -> Int -> Build ()
 setVisibility v i = lift $ L.setVisibility v (fromIntegral i)
 
-getVisibility :: ValueRef -> Build Int
+getVisibility :: Value -> Build Int
 getVisibility v = lift $ fromIntegral `fmap` L.getVisibility v
 
-setLinkage :: ValueRef -> Int -> Build ()
+setLinkage :: Value -> Int -> Build ()
 setLinkage v i = lift $ L.setLinkage v (fromIntegral i)
 
-getLinkage :: ValueRef -> Build Int
+getLinkage :: Value -> Build Int
 getLinkage v = lift $ fromIntegral `fmap` L.getLinkage v
 
-addGlobal :: TypeRef -> String -> Build ValueRef
+addGlobal :: Type -> String -> Build Value
 addGlobal t s = do
     m <- askModule
-    lift $ withCString s (L.addGlobal m t)
+    lift $ W.addGlobal m t s
 
-setInitializer :: ValueRef -> ValueRef -> Build ()
+setInitializer :: Value -> Value -> Build ()
 setInitializer = liftBuild2  L.setInitializer
 
-setFunctionCallConv :: ValueRef -> CallingConvention -> Build ()
-setFunctionCallConv v = lift . L.setFunctionCallConv v . L.fromCallingConvention
+setFunctionCallConv :: Value -> CallingConvention -> Build ()
+setFunctionCallConv v = 
+    lift . L.setFunctionCallConv v . L.fromCallingConvention
 
-
-setInstructionCallConv :: ValueRef -> CallingConvention -> Build ()
+setInstructionCallConv :: Value -> CallingConvention -> Build ()
 setInstructionCallConv v = 
   lift . L.setInstructionCallConv v . L.fromCallingConvention
 
-dumpValue :: ValueRef -> Build ()
+dumpValue :: Value -> Build ()
 dumpValue v = lift (L.dumpValue v)
 
-ptrToInt :: ValueRef -> TypeRef -> String -> Build ValueRef
-ptrToInt v t str = do
-  b <- askBuild
-  lift $ withCString str (L.buildPtrToInt b v t)
+ptrToInt :: Value -> Type -> String -> Build Value
+ptrToInt = withBuilder3 W.buildPtrToInt
 
-intToPtr :: ValueRef -> TypeRef -> String -> Build ValueRef
-intToPtr v t str = do
-  b <- askBuild
-  lift $ withCString str (L.buildIntToPtr b v t)
+intToPtr :: Value -> Type -> String -> Build Value
+intToPtr = withBuilder3 W.buildIntToPtr
 
-
-countParamTypes :: TypeRef -> Build Int
+countParamTypes :: Type -> Build Int
 countParamTypes t = fromIntegral `fmap` (lift $ L.countParamTypes t)
 
-countParams :: ValueRef -> Int
+countParams :: Value -> Int
 countParams = fromIntegral . L.countParams
 
-paramTypesIO :: Int -> TypeRef -> IO [TypeRef]
+paramTypesIO :: Int -> Type -> IO [Type]
 paramTypesIO n t = do
   arr <- mallocArray n
   L.getParamTypes t arr
   peekArray n arr
 
-paramTypes :: TypeRef -> Build [TypeRef]
+paramTypes :: Type -> Build [Type]
 paramTypes t = do
   n <- countParamTypes t
   lift (paramTypesIO n t)
@@ -147,46 +144,45 @@ paramTypes t = do
 {-
 data Linkage = 
 
-setLinkage :: ValueRef -> Linkage -> Buil ()
+setLinkage :: Value -> Linkage -> Buil ()
 setLinkage v l = lift $ L.setLinkage v (fromEnum l)
 -}
 
-getParam :: ValueRef -> Int -> ValueRef
+getParam :: Value -> Int -> Value
 getParam funcRef = L.getParam funcRef . toEnum
 
-getNamedFunction :: Text -> Build ValueRef
+getNamedFunction :: Text -> Build (Maybe Value)
 getNamedFunction s = do
   m <- askModule
   debug $ "getNamedFunction: asking for: " ++ show s
-  lift $ withCString (Text.unpack s) (L.getNamedFunction m)
+  lift $ W.getNamedFunction m (Text.unpack s)
 
-nul :: TypeRef -> ValueRef
+nul :: Type -> Value
 nul = L.constNull
 
-getFirstGlobal :: Build ValueRef
+getFirstGlobal :: Build Value
 getFirstGlobal = askModule >>= lift . L.getFirstGlobal
 
-getNextGlobal :: ValueRef -> Build ValueRef
+getNextGlobal :: Value -> Build Value
 getNextGlobal = lift . L.getNextGlobal 
 
-getNamedGlobal :: Text -> Build ValueRef
+getNamedGlobal :: Text -> Build (Maybe Value)
 getNamedGlobal str = do
   m <- askModule
-  lift $ withCString (Text.unpack str) (L.getNamedGlobal m)
+  lift $ W.getNamedGlobal m (Text.unpack str)
 
-setValueName :: ValueRef -> String -> Build ()
+setValueName :: Value -> String -> Build ()
 setValueName v str = lift $ withCString str $ L.setValueName v
 
-getValueName :: ValueRef -> Build String
+getValueName :: Value -> Build String
 getValueName v = lift $ L.getValueName v >>= peekCString 
 
-globalString :: String -> Build ValueRef
-globalString str = do
-  b <- askBuild
-  let str' = str ++ "_global"
-  lift $ withCString str (withCString str' . L.buildGlobalStringPtr b)
+globalString :: String -> Build Value
+globalString str =
+  let strName = str ++ "_global"
+  in withBuilder2 W.buildGlobalStringPtr str strName
 
-string :: String -> Build ValueRef
+string :: String -> Build Value
 string origStr = 
    let 
        str = origStr -- ++ "\0"
@@ -196,64 +192,52 @@ string origStr =
      fmt <- lift $ withCString str ( \ cstr -> return $ L.constString cstr l False)
      t <- typeOfVal fmt
      m <- askModule
-     g <- lift $  withCString strGlob (L.addGlobal m t)
+     g <- lift $ W.addGlobal m t strGlob
      lift $ L.setInitializer g fmt
      setLinkage g 5 -- WeakAnyLinkage
 
      return g
 
-struct :: Bool -> [ValueRef] -> Build ValueRef
+struct :: Bool -> [Value] -> Build Value
 struct packed elems =
     let cStruct ar = L.constStruct ar (fromIntegral $ length elems) packed
     in lift $ withPtrArray elems (return . cStruct)
 
-extractValue :: ValueRef -> Int -> Build ValueRef
-extractValue aggr indx = do
-  b <- askBuild
-  lift $ withCString "extractVal" 
-           (L.buildExtractValue b aggr (fromIntegral indx))
+load :: Value -> String -> Build Value
+load = withBuilder2 W.buildLoad
 
-insertValue :: ValueRef -> ValueRef -> Int -> Build ValueRef
-insertValue aggr newVal indx = do
-  b <- askBuild
-  lift $ withCString "insertVal" 
-           (L.buildInsertValue b aggr newVal (fromIntegral indx))
+store :: Value -> Value -> Build Value
+store = withBuilder2 W.buildStore
 
-load :: ValueRef -> String -> Build ValueRef
-load v str = askBuild >>= lift . withCString str . ($ v) . L.buildLoad
-
-store :: ValueRef -> ValueRef -> Build ValueRef
-store = withBuilder2 L.buildStore
-
-call :: Text -> [ValueRef] -> Build ValueRef
+call :: Text -> [Value] -> Build Value
 call s args = do
   funcRef <- lookupEnv s
   call' funcRef args (Text.unpack s)
 
-callByName :: Text -> [ValueRef] -> Build ValueRef
+callByName :: Text -> [Value] -> Build (Maybe Value)
 callByName f args = do
-  fPtr <- getNamedFunction f
-  call' fPtr args ("callByName: " ++ show f)
+  fPtrMb <- getNamedFunction f
+  case fPtrMb of
+    Just fPtr -> Just <$> call' fPtr args ("callByName: " ++ show f)
+    Nothing -> return Nothing
 
 -- FIXME: return Void functions can't have a name 
--- However, we can't even examine the return type of the functino value
+-- However, we can't even examine the return type of the function value
 -- because it is reported as a pointer-type, not a function-type!
-call' :: ValueRef -> [ValueRef] -> String -> Build ValueRef
-call' f args _str = 
-    withBuilder0 (\b -> withCString "" =<< 
-                         withArrayLenC args (\p -> return . L.buildCall b f p))
+call' :: Value -> [Value] -> String -> Build Value
+call' = withBuilder3 W.buildCall
 
 withArrayLenC ::  Storable a => [a] -> (Ptr a -> CUInt -> IO b) -> IO b
 withArrayLenC xs f = withArrayLen xs (\ i p -> f p (fromIntegral i))
 
-invoke :: Text -> [ValueRef] -> BasicBlockRef -> BasicBlockRef -> 
-          Build ValueRef
+invoke :: Text -> [Value] -> BasicBlock -> BasicBlock -> 
+          Build Value
 invoke s args b1 b2 = do
   f <- lookupEnv s
   invoke' f args b1 b2 (Text.unpack s)
 
-invoke' :: ValueRef -> [ValueRef] -> BasicBlockRef -> BasicBlockRef -> 
-          String -> Build ValueRef
+invoke' :: Value -> [Value] -> BasicBlock -> BasicBlock -> 
+          String -> Build Value
 invoke' f args norm excp _ = 
     withBuilder0 
     (\ b -> withCString "" ( \ s ->
@@ -261,122 +245,110 @@ invoke' f args norm excp _ =
               (\ p i -> L.buildInvoke b f p i norm excp s))
     )
 
-buildLandingPad :: TypeRef -> ValueRef -> Int -> String -> Build ValueRef
+buildLandingPad :: Type -> Value -> Int -> String -> Build Value
 buildLandingPad typ personality numClauses name =
     withBuilder0 $ \b -> withCString name $ \ cstr ->
       L.buildLandingPad b typ personality (fromIntegral numClauses) cstr
 
-addClause :: ValueRef -> ValueRef -> Build ()
+addClause :: Value -> Value -> Build ()
 addClause = liftBuild2 L.addClause
 
-setCleanup :: ValueRef -> Bool -> Build ()
+setCleanup :: Value -> Bool -> Build ()
 setCleanup landingpad cleanup = lift $ L.setCleanup landingpad (fromIntegral $ fromEnum $ cleanup)
 
-alloca :: TypeRef -> Text-> Build ValueRef
-alloca tr str = askBuild >>= 
-                lift . withCString (Text.unpack str) . ($ tr) . L.buildAlloca
+alloca :: Type -> Text-> Build Value
+alloca tr str = (withBuilder2 W.buildAlloca) tr (Text.unpack str)
 
-unreachable :: Build ()
-unreachable = withBuilder0 L.buildUnreachable >> return ()
+unreachable :: Build Value
+unreachable = withBuilder0 W.buildUnreachable
 
-retVoid :: Build ()
-retVoid = withBuilder0 L.buildRetVoid >> return ()
+retVoid :: Build Value
+retVoid = withBuilder0 W.buildRetVoid
 
-ret :: ValueRef -> Build ()
-ret v = withBuilder0 (flip L.buildRet v) >> return ()
+ret :: Value -> Build Value
+ret = withBuilder1 W.buildRet
 
-icmp :: IntPredicate -> ValueRef -> ValueRef -> String -> Build ValueRef
-icmp p v1 v2 str =
-    withBuilder0 ( \ b -> withCString str 
-                         (L.buildICmp b (fromIntPredicate p) v1 v2)
-                 )
+icmp :: IntPredicate -> Value -> Value -> String -> Build Value
+icmp = withBuilder4 W.buildICmp
 
-fcmp :: FPPredicate -> ValueRef -> ValueRef -> String -> Build ValueRef
-fcmp p v1 v2 str =
-    withBuilder0 ( \ b -> withCString str 
-                         (L.buildFCmp b (fromFPPredicate p) v1 v2)
-                 )
+fcmp :: FPPredicate -> Value -> Value -> String -> Build Value
+fcmp = withBuilder4 W.buildFCmp
 
-siToFP :: ValueRef -> TypeRef -> String -> Build ValueRef
-siToFP v t str = 
-    withBuilder0 ( \ b -> withCString str (L.buildSIToFP b v t))
+siToFP :: Value -> Type -> String -> Build Value
+siToFP = withBuilder3 W.buildSIToFP
 
-bitcast :: ValueRef -> TypeRef -> String -> Build ValueRef
-bitcast v t str = 
-    withBuilder0 ( \ b -> withCString str (L.buildBitCast b v t))
+bitcast :: Value -> Type -> String -> Build Value
+bitcast = withBuilder3 W.buildBitCast
 
 
-addFunc :: Text -> TypeRef -> Build ValueRef
+addFunc :: Text -> Type -> Build Value
 addFunc str typ = do
   m <- askModule
-  lift (withCString (Text.unpack str) ( \ cstr -> L.addFunction m cstr typ))
+  lift (W.addFunction m  (Text.unpack str) typ)
 
-condBr :: ValueRef -> BasicBlockRef -> BasicBlockRef -> Build ()
-condBr c b1 b2 = withBuilder0 (\b -> L.buildCondBr b c b1 b2) >> return ()
+condBr :: Value -> BasicBlock -> BasicBlock -> Build Value
+condBr = withBuilder3 W.buildCondBr
 
-br :: BasicBlockRef -> Build ()
-br bl = withBuilder0 (\ b -> L.buildBr b bl) >> return ()
+br :: BasicBlock -> Build Value
+br = withBuilder1 W.buildBr
 
-positionAtEnd :: BasicBlockRef -> Build ()
-positionAtEnd = withBuilder1 L.positionAtEnd
+positionAtEnd :: BasicBlock -> Build ()
+positionAtEnd = withBuilder1 W.positionAtEnd
 
-getInsertBlock :: Build ValueRef
-getInsertBlock = withBuilder0 L.getInsertBlock
+getInsertBlock :: Build Value
+getInsertBlock = withBuilder0 W.getInsertBlock
 
-opWrap :: (BuilderRef -> ValueRef -> ValueRef -> CString -> IO ValueRef) ->
-      ValueRef -> ValueRef -> String -> Build ValueRef
+opWrap :: (Builder -> Value -> Value -> CString -> IO Value) ->
+      Value -> Value -> String -> Build Value
 opWrap op v1 v2 str = 
     askBuild >>= lift . withCString str . (\ f -> f v1 v2) . op
 
-unOpWrap :: (BuilderRef -> ValueRef -> CString -> IO ValueRef) ->
-      ValueRef -> String -> Build ValueRef
+unOpWrap :: (Builder -> Value -> CString -> IO Value) ->
+      Value -> String -> Build Value
 unOpWrap op v str = 
     askBuild >>= lift . withCString str . ($ v) . op
 
-add,sub,orr,mul,fdiv :: ValueRef -> ValueRef -> String -> Build ValueRef
-add = opWrap L.buildAdd
-sub = opWrap L.buildSub
-orr = opWrap L.buildOr
-andd = opWrap L.buildAnd
-mul = opWrap L.buildMul
-fdiv = opWrap L.buildFDiv
-sdiv = opWrap L.buildSDiv
-srem = opWrap L.buildSRem
+add,sub,orr,mul,fdiv :: Value -> Value -> String -> Build Value
+add = withBuilder3 W.buildAdd
+sub = withBuilder3 W.buildSub
+orr = withBuilder3 W.buildOr
+andd = withBuilder3 W.buildAnd
+mul = withBuilder3 W.buildMul
+fdiv = withBuilder3 W.buildFDiv
+sdiv = withBuilder3 W.buildSDiv
+srem = withBuilder3 W.buildSRem
 
-nott, neg :: ValueRef -> String -> Build ValueRef
-nott = unOpWrap L.buildNot
-neg = unOpWrap L.buildNeg
-fneg = unOpWrap L.buildFNeg
+nott, neg :: Value -> String -> Build Value
+nott = withBuilder2 W.buildNot
+neg = withBuilder2 W.buildNeg
+fneg = withBuilder2 W.buildFNeg
 
 
-sext :: ValueRef -> TypeRef -> String -> Build ValueRef
-sext val extendTo str = 
-  withBuilder0 $ \b -> withCString str (L.buildSExt b val extendTo)
+sext :: Value -> Type -> String -> Build Value
+sext = withBuilder3 W.buildSExt
   
-trunc :: ValueRef -> TypeRef -> String -> Build ValueRef
-trunc val truncTo str = 
-  withBuilder0 $ \b -> withCString str (L.buildTrunc b val truncTo)
+trunc :: Value -> Type -> String -> Build Value
+trunc = withBuilder3 W.buildTrunc
   
 
 
-getEntryBasicBlock :: ValueRef -> Build BasicBlockRef
+getEntryBasicBlock :: Value -> Build BasicBlock
 getEntryBasicBlock = liftBuild1 L.getEntryBasicBlock
 
-appendBasicBlock :: ValueRef -> Text -> Build BasicBlockRef
+appendBasicBlock :: Value -> Text -> Build BasicBlock
 appendBasicBlock v str = 
-  withContext0 $ \c -> 
-      withCString (Text.unpack str) (L.appendBasicBlockInContext c v)
+    (withContext2 W.appendBasicBlockInContext) v (Text.unpack str)
 
-getBasicBlockParent :: BasicBlockRef ->  Build ValueRef
+getBasicBlockParent :: BasicBlock ->  Build Value
 getBasicBlockParent = liftBuild1 L.getBasicBlockParent
 
-funcType :: TypeRef -> [TypeRef] -> Build TypeRef
+funcType :: Type -> [Type] -> Build Type
 funcType rType argTypes = functionType' rType argTypes False
 
-funcTypeVar :: TypeRef -> [TypeRef] -> Build TypeRef
+funcTypeVar :: Type -> [Type] -> Build Type
 funcTypeVar rType argTypes = functionType' rType argTypes True
 
-functionType' :: TypeRef -> [TypeRef] -> Bool -> Build TypeRef
+functionType' :: Type -> [Type] -> Bool -> Build Type
 functionType' retType argTypes isVarArg = 
     let
         ftIO typeArr = return $
@@ -389,55 +361,10 @@ functionType' retType argTypes isVarArg =
       cArr <- newListArray (0, length argTypes - 1) argTypes
       withStorableArray cArr ftIO
 
-gep :: ValueRef -> [ValueRef] -> Build ValueRef
-gep v idxs = 
-  let
-      gepIO b ar = withCString "" (L.buildGEP b v ar (toEnum $ length idxs))
-  in
-    withBuilder0 $ \ b -> do
-      iArr <- newListArray (0, length idxs - 1) idxs
-      withStorableArray iArr (gepIO b)
+gep :: Value -> [Value] -> Build Value
+gep v idxs = lift (W.constGEP v idxs)
 
-
-gepInt :: ValueRef -> [Int] -> Build ValueRef
+gepInt :: Value -> [Int] -> Build Value
 gepInt v is = do
   i32 <- int32TypeM
-  gep v $ map (\ i -> constInt i32 (fromIntegral i) False) is
-
-data IntPredicate =
-    IntEQ                       -- ^ equal
-  | IntNE                       -- ^ not equal
-  | IntUGT                      -- ^ unsigned greater than
-  | IntUGE                      -- ^ unsigned greater or equal
-  | IntULT                      -- ^ unsigned less than
-  | IntULE                      -- ^ unsigned less or equal
-  | IntSGT                      -- ^ signed greater than
-  | IntSGE                      -- ^ signed greater or equal
-  | IntSLT                      -- ^ signed less than
-  | IntSLE                      -- ^ signed less or equal
-    deriving (Eq, Ord, Enum, Show)
-
-fromIntPredicate :: IntPredicate -> CInt
-fromIntPredicate p = fromIntegral (fromEnum p + 32)
-
-data FPPredicate =
-    FPFalse           -- ^ Always false (always folded)
-  | FPOEQ             -- ^ True if ordered and equal
-  | FPOGT             -- ^ True if ordered and greater than
-  | FPOGE             -- ^ True if ordered and greater than or equal
-  | FPOLT             -- ^ True if ordered and less than
-  | FPOLE             -- ^ True if ordered and less than or equal
-  | FPONE             -- ^ True if ordered and operands are unequal
-  | FPORD             -- ^ True if ordered (no nans)
-  | FPUNO             -- ^ True if unordered: isnan(X) | isnan(Y)
-  | FPUEQ             -- ^ True if unordered or equal
-  | FPUGT             -- ^ True if unordered or greater than
-  | FPUGE             -- ^ True if unordered, greater than, or equal
-  | FPULT             -- ^ True if unordered or less than
-  | FPULE             -- ^ True if unordered, less than, or equal
-  | FPUNE             -- ^ True if unordered or not equal
-  | FPT               -- ^ Always true (always folded)
-    deriving (Eq, Ord, Enum, Show)
-
-fromFPPredicate :: FPPredicate -> CInt
-fromFPPredicate p = fromIntegral (fromEnum p)
+  gep v $ map (\ i -> W.constInt i32 (fromIntegral i) False) is
