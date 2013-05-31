@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ffi.h>
 #include <stdlib.h>
 
@@ -120,6 +121,84 @@ priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
   pq->last_was_func = false;
   priv_queue_link_enqueue(pq, clos, wait_proc);
+}
+
+static
+void
+typed_access(clos_type_t type, void* source, void *target)
+{
+  if (type == closure_pointer_type())
+    {
+      void **src = (void**) source;
+      void **trg = (void**) trg;
+      *trg = *src;
+    }
+  else if (type == closure_uint1_type())
+    {
+      uint8_t *src = (uint8_t*) source;
+      uint8_t *trg = (uint8_t*) target;
+      *trg = *src;
+    }
+  else if (type == closure_sint_type())
+    {
+      int64_t *src = (int64_t*) source;
+      int64_t *trg = (int64_t*) target;
+      *trg = *src;
+    }
+  else
+    {
+      assert(false && "access_wrapper: unhandled type");
+    }
+}
+
+void
+access_wrapper(processor_t proc, clos_type_t type, void* source, void *target)
+{
+  typed_access (type, source, target);
+  while (proc->task->state != TASK_WAITING);
+  proc_wake(proc);
+}
+
+void
+priv_queue_access(priv_queue_t pq,
+                  clos_type_t type,
+                  void* access_ptr,
+                  void* res,
+                  processor_t proc)
+{
+  if (!pq->last_was_func)
+    {
+      pq->last_was_func = true;
+
+      void ***args;
+      clos_type_t *arg_types;
+
+      closure_t access_clos =
+        closure_new(access_wrapper,
+                    closure_void_type(),
+                    4,
+                    &args,
+                    &arg_types);
+
+      arg_types[0] = closure_pointer_type();
+      arg_types[1] = closure_pointer_type();
+      arg_types[2] = closure_pointer_type();
+      arg_types[3] = closure_pointer_type();
+
+      *args[0] = proc;
+      *args[1] = type;
+      *args[2] = access_ptr;
+      *args[3] = res;
+
+      priv_queue_link_enqueue(pq, access_clos, proc);
+
+      proc->task->state = TASK_TRANSITION_TO_WAITING;
+      proc_yield_to_executor(proc);
+    }
+  else
+    {
+      typed_access(type, access_ptr, res);
+    }  
 }
 
 void

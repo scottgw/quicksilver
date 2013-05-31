@@ -39,7 +39,11 @@ import Language.QuickSilver.Generate.Util
 
 
 evalClause :: Clause TExpr -> Build ValueRef
-evalClause (Clause _n e) = loadEval e
+evalClause (Clause _n e) =
+  do debug "evalClause"
+     e' <- eval e
+     debugDump e'
+     load' e'
 
 evalClauses :: [Clause TExpr] -> Build ValueRef
 evalClauses cs =
@@ -285,13 +289,54 @@ evalUnPos (BinOpExpr op e1 e2 resType) = genBinOp op e1 e2 resType
 evalUnPos (Access trg attr typ) = do
   debug $ "Access: " ++ show (trg, attr, typ)
   trgV <- loadEval trg
-  debugDump trgV
-  let cname = classTypeName (texprTyp (contents trg))
+  let trgType = texpr trg
+  baseTrg <- case trgType of
+               Sep _ _ t ->
+                   do (_, r) <- splitSepRef trgV
+                      inst <- load' r
+                      castType t inst >>= load'
+               _ -> return trgV
+  debugDump baseTrg
+  let cname = classTypeName trgType
   clas <- lookupClas cname
-  case attributeIndex clas attr of
-    -- Add 1 to skip the processor in every object.
-    Just index -> gepInt trgV [0, index] 
-    Nothing -> error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
+  attrLoc <- case attributeIndex clas attr of
+               Just index -> gepInt baseTrg [0, index] 
+               Nothing ->
+                   error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
+  if isSeparate trgType
+    then
+      do startB <- getInsertBlock
+         func   <- getBasicBlockParent startB
+         afterAccessB <- appendBasicBlock func "afterAccess"
+         directAccessB <- appendBasicBlock func "directAccess"
+         sepAccessB <- appendBasicBlock func "sepAccess"
+
+         privQ <- getQueueFor trg
+         
+         lastWasFunc <- "priv_queue_last_was_func" <#> [privQ]
+         closResLoc <- closLocFor typ
+         condBr lastWasFunc directAccessB sepAccessB
+
+         positionAtEnd directAccessB
+         v <- load' attrLoc
+         store v closResLoc
+         br afterAccessB
+
+         positionAtEnd sepAccessB
+         closT <- closType typ
+         voidPtr <- voidPtrType
+         attrVoidPtr <- bitcast attrLoc voidPtr ""
+         closResVoidPtr <- bitcast closResLoc voidPtr ""
+         currProc <- getCurrProc
+         mapM_ debugDump [privQ, closT, attrVoidPtr, closResLoc, currProc]
+         "priv_queue_access" <#> 
+            [privQ, closT, attrVoidPtr, closResVoidPtr, currProc]
+         debug "sep access done"
+         br directAccessB
+
+         positionAtEnd afterAccessB
+         return closResLoc
+    else return attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
 
@@ -379,10 +424,10 @@ separateCall trg fName args retType =
                      ,show (trg:args)])
        debugDump f
 
-       trgProcRef <- gepInt trg' [0, 0]
+       (trgProcRef, nonSepTrgRef) <- splitSepRef trg'
        trgProc <- load' trgProcRef
-       nonSepTrgRef <- gepInt trg' [0, 1]
        nonSepTrg <- load' nonSepTrgRef
+       resLoc <- closLocFor retType
        privQ <- getQueueFor trg
        if retType == NoType
           -- This is a procedure call, we have to do the closure
@@ -396,31 +441,26 @@ separateCall trg fName args retType =
        let Sep _ _ baseType = texpr trg
        baseTypeL <- typeOfM baseType
        castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
-       call' f (trgProc : castedNonSepTrg : args') ""
+       res <- call' f (trgProc : castedNonSepTrg : args') ""
+       when (retType /= NoType) (void $ store res resLoc)
        br afterSepCallB
 
        positionAtEnd sepFuncCallB
        closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
        debug "sepCall: calling underlying function"
        currProc <- getCurrProc
-       resLoc <- if retType == NoType
+       if retType == NoType
          then "priv_queue_routine" <#> [privQ, closure, currProc]
          else
-           do resType <- typeOfM retType
-              resLoc <- lookupEnv "<closResult>"
-              voidPtr <- voidPtrType
+           do voidPtr <- voidPtrType
               resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
               "priv_queue_function" <#> [privQ, closure, resLocCast, currProc]
-              if isBasic retType || isSeparate retType
-                then return resLoc
-                     -- Basic and results that are declared separate do not
-                     -- need to be re-wrapped with the processor of
-                     -- their target.
-                else wrapSepResult trgProc retType resLoc
        br afterSepCallB
 
        positionAtEnd afterSepCallB
-       return resLoc
+       if not (isBasic retType || isSeparate retType || retType == NoType)
+         then wrapSepResult trgProc retType resLoc
+         else return resLoc
 
 prepareClosure retType trg f args trgProc nonSepTrg args' =
   do let Sep _ _ nonSepTrgType = texpr trg
@@ -466,10 +506,11 @@ prepareClosure retType trg f args trgProc nonSepTrg args' =
      zipWithM storeArg (zip allTypes allEvald) [0 ..]
      return closure
 
+splitSepRef ref = (,) <$> gepInt ref [0, 0] <*> gepInt ref [0, 1]
+
 wrapSepResult trgProc retType resultLoc =
   do sepInst <- mallocSeparate retType
-     procRef <- gepInt sepInst [0, 0]
-     objRef <- gepInt sepInst [0, 1]
+     (procRef, objRef) <- splitSepRef sepInst
      res <- load' resultLoc
      store trgProc procRef
      store res objRef
@@ -484,9 +525,19 @@ getQueueFor e =
       InheritProc inh _ -> getQueueFor inh
       _ -> lookupQueueFor e
 
+closLocFor :: Typ -> Build ValueRef
+closLocFor t =
+    case t of
+      BoolType -> lookupEnv "<closResult1>"
+      Int64Type -> lookupEnv "<closResult64>"
+      ClassType _ _ -> lookupEnv "<closResult64>"
+      NoType -> lookupEnv "<closResult64>"
+      e -> error ("closLocFor: " ++ show e)
+
 closType :: Typ -> Build ValueRef
 closType t =
     case t of
+      BoolType -> "closure_uint1_type" <#> []
       AnyIntType -> "closure_sint_type" <#> []
       Int8Type -> "closure_sint8_type" <#> []
       Int16Type -> "closure_sint16_type" <#> []

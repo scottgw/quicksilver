@@ -11,7 +11,7 @@ create make
       height := a_height
       ncols := a_ncols
       seed := a_seed
-      done := 0
+      done := False
       create matrix.make (height, ncols)
     end
 
@@ -38,10 +38,10 @@ create make
         end
         i := i + 1
       end
-      done := 1
+      done := True
     end
 
-  is_done():Integer
+  is_done(): Boolean
     do
       Result := done
     end
@@ -61,7 +61,7 @@ create make
       Result := matrix.item (j, i - start)
     end
 
-  done: Integer
+  done: Boolean
   matrix: Int_Matrix
   height: Integer
   start: Integer

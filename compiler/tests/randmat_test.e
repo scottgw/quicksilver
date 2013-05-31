@@ -62,11 +62,11 @@ module Randmat_Test
       loop
         worker := workers.item(i)
         separate worker
-          require worker.is_done() = 1
+         require worker.done -- is_done()
           do
             from
-              ii := worker.get_start()
-              iend := ii + worker.get_height()
+              ii := worker.start
+              iend := ii + worker.height
             until ii >= iend
             loop
               from jj := 0

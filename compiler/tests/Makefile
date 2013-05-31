@@ -1,4 +1,4 @@
-all: condition_test mutex_test prodcons_test share_test\
+all: condition_test mutex_test prodcons_test share_test noshare_test\
 	randmat_test\
 	array_test odd_even_test separate_test http_test socket_test helloworld
 
@@ -6,6 +6,8 @@ all: condition_test mutex_test prodcons_test share_test\
 randmat_test: randmat_test.e randmat_worker.ebc lib/stdlib.bc
 	./qsc $< randmat_worker.ebc
 
+noshare_test: noshare_test.e noshare_worker.ebc lib/stdlib.bc
+	./qsc $< noshare_worker.ebc
 
 share_test: share_test.e data.ebc share_worker.ebc lib/stdlib.bc
 	./qsc $< data.ebc share_worker.ebc

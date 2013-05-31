@@ -71,6 +71,32 @@ closure_void_type ()
   return (clos_type_t)&ffi_type_void;
 }
 
+
+clos_type_t
+closure_uint1_type ()
+{
+  return (clos_type_t)&ffi_type_uint8;
+}
+
+
+clos_type_t
+closure_sint8_type ()
+{
+  return (clos_type_t)&ffi_type_sint8;
+}
+
+clos_type_t
+closure_sint16_type ()
+{
+  return (clos_type_t)&ffi_type_sint16;
+}
+
+clos_type_t
+closure_sint32_type ()
+{
+  return (clos_type_t)&ffi_type_sint32;
+}
+
 clos_type_t
 closure_sint_type ()
 {
@@ -93,6 +119,15 @@ closure_apply(closure_t clos, void* res)
       fn(*((closure_t*)clos->args[0]),
          *(clos->args[1]),
          *((processor_t*)clos->args[2]));
+    }
+  else if (clos->fn == access_wrapper)
+    {
+      void (*fn)(processor_t, clos_type_t, void*, void *);
+      fn = clos->fn;
+      fn(*((processor_t*)clos->args[0]),
+         *((clos_type_t*)clos->args[1]),
+         *(clos->args[2]),
+         *(clos->args[3]));
     }
   else
     {

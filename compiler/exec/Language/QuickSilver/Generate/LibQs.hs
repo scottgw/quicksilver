@@ -46,6 +46,9 @@ declareQsFuncs =
                       ]
                     )
                   , ("closure_pointer_type", closTypeTypeM, [])
+                  , ("closure_uint1_type", closTypeTypeM, [])
+                  , ("closure_sint8_type", closTypeTypeM, [])
+                  , ("closure_sint32_type", closTypeTypeM, [])
                   , ("closure_sint_type", closTypeTypeM, [])
                   , ("closure_void_type", closTypeTypeM, [])
 
@@ -65,6 +68,15 @@ declareQsFuncs =
                   , ("priv_queue_function"
                     , voidTypeM
                     , [privQueueTypeM, closureTypeM, voidPtrType, procTypeM]
+                    )
+                  , ("priv_queue_access"
+                    , voidTypeM
+                    , [ privQueueTypeM
+                      , closTypeTypeM
+                      , voidPtrType
+                      , voidPtrType
+                      , procTypeM
+                      ]
                     )
                   , ("priv_queue_last_was_func", int1TypeM, [privQueueTypeM])
                   , ("priv_queue_shutdown"

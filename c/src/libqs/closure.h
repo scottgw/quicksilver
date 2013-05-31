@@ -34,6 +34,18 @@ bool
 closure_is_end(closure_t clos);
 
 clos_type_t
+closure_uint1_type ();
+
+clos_type_t
+closure_sint8_type ();
+
+clos_type_t
+closure_sint16_type ();
+
+clos_type_t
+closure_sint32_type ();
+
+clos_type_t
 closure_void_type ();
 
 clos_type_t

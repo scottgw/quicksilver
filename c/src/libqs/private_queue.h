@@ -27,6 +27,9 @@ closure_t
 priv_dequeue(priv_queue_t q, processor_t proc);
 
 void
+access_wrapper(processor_t proc, clos_type_t type, void* source, void *target);
+
+void
 function_wrapper(closure_t clos, void* res, processor_t proc);
 
 void

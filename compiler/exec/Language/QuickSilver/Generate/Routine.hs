@@ -56,11 +56,22 @@ genClosureArgs =
        argTypeArrayRef <- alloca argTypesType "<argTypes>"
 
        i64 <- int64TypeM
-       closResultRef <- alloca i64 "<closResult>"
+       closResult64Ref <- alloca i64 "<closResult64>"
+       i32 <- int32TypeM
+       closResult32Ref <- alloca i32 "<closResult32>"
+       i8 <- int8TypeM
+       closResult8Ref <- alloca i8 "<closResult8>"
+       i1 <- int1TypeM
+       closResult1Ref <- alloca i1 "<closResult1>"
+
+
        
        return (fromList [("<args>", argArrayPtrRef)
                         ,("<argTypes>", argTypeArrayRef)
-                        ,("<closResult>", closResultRef)
+                        ,("<closResult64>", closResult64Ref)
+                        ,("<closResult32>", closResult32Ref)
+                        ,("<closResult8>", closResult8Ref)
+                        ,("<closResult1>", closResult1Ref)
                         ]
               )
 -- genProcDecl :: Build Env
