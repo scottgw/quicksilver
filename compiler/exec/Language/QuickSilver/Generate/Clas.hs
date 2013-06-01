@@ -47,7 +47,7 @@ genMain clas = do
   call "qs_init" []
   let mainName  = fullNameStr (view className clas) "main"
 
-  mainFunc <- getNamedFunction mainName
+  Just mainFunc <- getNamedFunction mainName
 
   maxProcs <- int 32000
   numExecs <- int 4
@@ -64,6 +64,7 @@ genMain clas = do
 
   zero <- int 0
   ret zero
+  return ()
 
-atNewBlock :: ValueRef -> Text -> Build ()
+atNewBlock :: Value -> Text -> Build ()
 atNewBlock f str = appendBasicBlock f str >>= positionAtEnd

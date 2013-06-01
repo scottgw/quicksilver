@@ -22,7 +22,7 @@ import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 
-allocDecl :: Decl -> Build ValueRef
+allocDecl :: Decl -> Build Value
 allocDecl (Decl n t) = typeOfM t >>= flip alloca n
 
 allocDeclEnv :: Decl -> Build Env
@@ -34,7 +34,7 @@ genDecls r =
     RoutineBody locals _ _ -> unions <$> mapM allocDeclEnv locals
     _ -> return empty
 
-allocP :: ValueRef -> Decl -> Int -> Build Env
+allocP :: Value -> Decl -> Int -> Build Env
 allocP fRef d i = do
   debug "Routine: allocating decl for arg"
   vr <- allocDecl d
@@ -44,7 +44,7 @@ allocP fRef d i = do
   debug "Routine: returning new env"
   return (singleEnv d vr)
 
-allocPs :: ValueRef -> [Decl] -> Build Env
+allocPs :: Value -> [Decl] -> Build Env
 allocPs fRef ds = unions `fmap` zipWithM (allocP fRef) ds [0..]
 
 genClosureArgs :: Build Env
@@ -86,7 +86,7 @@ genClosureArgs =
 --       Decl "Current" _ : _ -> True
 --       _ -> False
 
-routineEnv :: TRoutine -> ValueRef -> Build Env
+routineEnv :: TRoutine -> Value -> Build Env
 routineEnv rout func = 
     unions <$> sequence [ debug "Routine: generating result" >>
                                 routResult rout
@@ -116,7 +116,7 @@ genExternal name =
      
      mapM_ debugDump args
 
-     externFunc <- getNamedFunction name
+     Just externFunc <- getNamedFunction name
      
      v <- call' externFunc args "forwarding to external"
      debug "generated external call"
@@ -171,7 +171,7 @@ genRoutine :: Bool -> TRoutine -> Build ()
 genRoutine isMain rout = do
   clas <- currentClass
   let cname = view className clas
-  funcRef <- getNamedFunction (fullNameStr cname (routineName rout))
+  Just funcRef <- getNamedFunction (fullNameStr cname (routineName rout))
   debug "Setting calling convention on function"
   -- setFunctionCallConv funcRef Fast
   debug "Creating start block"
@@ -196,7 +196,7 @@ genRoutine isMain rout = do
                           )
                          )
 
-routStartBlock :: AbsRoutine body exp -> ValueRef -> Build ()
+routStartBlock :: AbsRoutine body exp -> Value -> Build ()
 routStartBlock (AbsRoutine {routineName = fName}) funcRef =
   appendBasicBlock funcRef (fName `Text.append` "StartB") >>= positionAtEnd
 
@@ -207,8 +207,8 @@ routResult f = allocDeclEnv . Decl "Result" . routineResult $ f
 routReturn :: TRoutine -> Build ()
 routReturn rout =
   case routineResult rout of
-    NoType -> retVoid
-    t      -> evalUnPos (ResultVar t) >>= (`load` "") >>= ret
+    NoType -> void retVoid
+    t      -> evalUnPos (ResultVar t) >>= (`load` "") >>= void . ret
 
 genRoutines :: Bool -> [TRoutine] -> Build ()
 genRoutines isMain = mapM_ (genRoutine isMain)

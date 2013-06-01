@@ -8,11 +8,8 @@ import           Control.Applicative
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
-import           Foreign.Ptr
-
 import           Language.QuickSilver.Generate.LLVM.Simple
 import           Language.QuickSilver.Generate.LLVM.Types
-
 
 declareQsFuncs :: Build ()
 declareQsFuncs =
@@ -97,40 +94,41 @@ declareQsFuncs =
                   , ("sync_data_free", voidTypeM, [syncDataTypeM])
                   ]
 
-voidPtrType :: Build TypeRef
+voidPtrType :: Build Type
 voidPtrType = pointer0 <$> int8TypeM
 
-privQueueTypeM :: Build TypeRef
+privQueueTypeM :: Build Type
 privQueueTypeM = getOpaqueType "privq"
 
-closureTypeM :: Build TypeRef
+closureTypeM :: Build Type
 closureTypeM = getOpaqueType "closure"
 
-closTypeTypeM :: Build TypeRef
+closTypeTypeM :: Build Type
 closTypeTypeM = getOpaqueType "clostype"
 
-syncDataTypeM :: Build TypeRef
+syncDataTypeM :: Build Type
 syncDataTypeM = getOpaqueType "syncdata"
 
-execTypeM :: Build TypeRef
+execTypeM :: Build Type
 execTypeM = getOpaqueType "exec"
 
-procTypeM :: Build TypeRef
+procTypeM :: Build Type
 procTypeM = getOpaqueType "proc"
 
-notifierTypeM :: Build TypeRef
+notifierTypeM :: Build Type
 notifierTypeM = getOpaqueType "notifier"
 
-getOpaqueType :: Text -> Build TypeRef
+getOpaqueType :: Text -> Build Type
 getOpaqueType typeName =
-    do typePtr <- getTypeByName newName
-       pointer0 <$> if typePtr == nullPtr
-                    then structCreateNamed newName
-                    else return typePtr
+    do typePtrMb <- getTypeByName newName
+       pointer0 <$>
+         case typePtrMb of
+           Just typePtr -> return typePtr
+           Nothing -> structCreateNamed newName
     where
       newName = typeName `Text.append` "StructType"
 
-funcType' :: Build TypeRef -> [Build TypeRef] -> Build TypeRef
+funcType' :: Build Type -> [Build Type] -> Build Type
 funcType' rM aMs = do
   r <- rM
   as <- sequence aMs

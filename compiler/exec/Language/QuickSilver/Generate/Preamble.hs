@@ -36,10 +36,10 @@ preamble clas = do
         env classEnv =
           setCurrent (clasInterface $ untype clas) . setClassEnv classEnv
 
-ptr :: Build TypeRef
+ptr :: Build Type
 ptr = pointerType <$> int8TypeM <*> pure 0
 
-constDecls :: [(Text, Build TypeRef)]
+constDecls :: [(Text, Build Type)]
 constDecls = 
     [ ("llvm.sqrt.f64", funcType' doubleTypeM [doubleTypeM])
     , ("GC_init",       funcType' voidTypeM [])   
@@ -60,36 +60,36 @@ constDecls =
     , ("llvm.eh.typeid.for", funcType' int32TypeM [ptr])
     ]
 
-addConstDecls :: Build (Map Text ValueRef)
+addConstDecls :: Build (Map Text Value)
 addConstDecls = fromList `fmap` mapM addDecl constDecls
     where
       addDecl (str, t) = (str,) <$> (addFunc str =<< t)
 
-stringConsts :: [(Text, Build ValueRef, Int)]
+stringConsts :: [(Text, Build Value, Int)]
 stringConsts = 
     [("_ZTIi", stdTypeInfoExtern, 0)
     ]
 
-addStringConsts :: Build (Map Text ValueRef)
+addStringConsts :: Build (Map Text Value)
 addStringConsts = fromList `fmap` mapM addConst stringConsts
     where addConst (str, vr, l) = do
             v <- vr
             setLinkage v l
             return (str, v)
 
-cxaThrowType :: Build TypeRef
+cxaThrowType :: Build Type
 cxaThrowType = do
   -- t <- stdTypeInfoType
   destr <- funcType' voidTypeM [ptr]
   funcType' voidTypeM [ptr, ptr, return $ pointerType destr 0]
 
-stdTypeInfoType :: Build TypeRef
+stdTypeInfoType :: Build Type
 stdTypeInfoType = do
   ptrT <- ptr
   str <- structType [ptrT, ptrT] False
   structType [str] False
 
-stdTypeInfoExtern :: Build ValueRef
+stdTypeInfoExtern :: Build Value
 stdTypeInfoExtern = do
   g <- flip addGlobal "_ZTIi" =<< ptr
   setGlobalConstant g True

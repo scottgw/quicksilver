@@ -2,8 +2,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
     (
      IntPredicate (..), FPPredicate (..),
      CallingConvention (..),
-     ContextRef, Value, TypeRef,
-     BasicBlockRef, BuilderRef,
+     Context, Value, Type, Builder, BasicBlock,
      Build, Env,
 
      askModule, writeModuleToFile, runBuild,
@@ -67,9 +66,10 @@ import Foreign.Storable
 import GHC.Ptr
 
 import qualified LLVM.Wrapper.Core as W 
-import           LLVM.Wrapper.Core ( Type, Value, BasicBlock, Builder
+import           LLVM.Wrapper.Core ( Type, Value, BasicBlock, Builder, Context
                                    , CallingConvention, FPPredicate
-                                   , IntPredicate)
+                                   , IntPredicate
+                                   , constInt, constReal, constPtrToInt)
 
 import qualified LLVM.FFI.Core as L
 -- import LLVM.FFI.Core 
@@ -84,7 +84,7 @@ import Language.QuickSilver.Generate.LLVM.Util
 
 
 setGlobalConstant :: Value -> Bool -> Build ()
-setGlobalConstant v b = lift (L.setGlobalConstant v b)
+setGlobalConstant v b = lift (W.setGlobalConstant v b)
 
 setVisibility :: Value -> Int -> Build ()
 setVisibility v i = lift $ L.setVisibility v (fromIntegral i)
@@ -161,7 +161,7 @@ nul :: Type -> Value
 nul = L.constNull
 
 getFirstGlobal :: Build Value
-getFirstGlobal = askModule >>= lift . L.getFirstGlobal
+getFirstGlobal = askModule >>= lift . W.getFirstGlobal
 
 getNextGlobal :: Value -> Build Value
 getNextGlobal = lift . L.getNextGlobal 
@@ -188,20 +188,16 @@ string origStr =
        str = origStr -- ++ "\0"
        strGlob = origStr ++ "_global"
        l = fromIntegral (length str)
-   in do
-     fmt <- lift $ withCString str ( \ cstr -> return $ L.constString cstr l False)
-     t <- typeOfVal fmt
-     m <- askModule
-     g <- lift $ W.addGlobal m t strGlob
-     lift $ L.setInitializer g fmt
-     setLinkage g 5 -- WeakAnyLinkage
+       fmt = W.constString str False
+   in do t <- typeOfVal fmt
+         m <- askModule
+         g <- lift $ W.addGlobal m t strGlob
+         lift $ W.setInitializer g fmt
+         lift $ W.setLinkage g W.WeakAnyLinkage
+         return g
 
-     return g
-
-struct :: Bool -> [Value] -> Build Value
-struct packed elems =
-    let cStruct ar = L.constStruct ar (fromIntegral $ length elems) packed
-    in lift $ withPtrArray elems (return . cStruct)
+struct :: [Value] -> Bool -> Build Value
+struct = withContext2 W.constStructInContext
 
 load :: Value -> String -> Build Value
 load = withBuilder2 W.buildLoad
@@ -238,17 +234,13 @@ invoke s args b1 b2 = do
 
 invoke' :: Value -> [Value] -> BasicBlock -> BasicBlock -> 
           String -> Build Value
-invoke' f args norm excp _ = 
-    withBuilder0 
-    (\ b -> withCString "" ( \ s ->
-            withArrayLenC args 
-              (\ p i -> L.buildInvoke b f p i norm excp s))
-    )
+invoke' f args norm excp str = 
+    withBuilder0 (\ b -> W.buildInvoke b f args norm excp str)
 
 buildLandingPad :: Type -> Value -> Int -> String -> Build Value
 buildLandingPad typ personality numClauses name =
-    withBuilder0 $ \b -> withCString name $ \ cstr ->
-      L.buildLandingPad b typ personality (fromIntegral numClauses) cstr
+    withBuilder0 $ \b ->
+      W.buildLandingPad b typ personality (fromIntegral numClauses) name
 
 addClause :: Value -> Value -> Build ()
 addClause = liftBuild2 L.addClause

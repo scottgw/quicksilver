@@ -17,14 +17,14 @@ import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Util
 
-fetchCurrentAttr :: Text -> Build ValueRef
+fetchCurrentAttr :: Text -> Build Value
 fetchCurrentAttr ident = do
   curr <- lookupEnv  "Current"
   clas <- currentClass
   obj  <- load curr ""
   getAttribute clas ident obj
 
-lookupVarAccess :: UnPosTExpr -> Build ValueRef
+lookupVarAccess :: UnPosTExpr -> Build Value
 lookupVarAccess (Var i _) = lookupEnv i
 lookupVarAccess (T.ResultVar _) = lookupEnv "Result"
 lookupVarAccess (Access _ i _) = fetchCurrentAttr i
@@ -227,7 +227,7 @@ unlockQueue privQ =
        currProc <- getCurrProc
        "priv_queue_unlock" <#> [privQ, currProc]
 
-unlockQueues :: [ValueRef] -> Build ()
+unlockQueues :: [Value] -> Build ()
 unlockQueues = mapM_ unlockQueue
 
 waitOnSeparate :: TExpr -> Build ()
@@ -246,7 +246,7 @@ waitOnSeparate e =
 --   cName <- className `fmap` currentClass
 --   genBuiltin cName fName
 
-lookupMalloc :: Typ -> Text -> [TExpr] -> Build ValueRef
+lookupMalloc :: Typ -> Text -> [TExpr] -> Build Value
 lookupMalloc t  _fName _args =
   case t of
     ClassType cName _ -> mallocObject cName

@@ -127,7 +127,7 @@ featureAsCreate :: Text -> Text -> Text
 featureAsCreate cName fName = Text.concat ["__", cName, fName, "_create"]
 
 
-newtype ClasTable = ClasTable {unClasTable :: [TypeRef]}
+newtype ClasTable = ClasTable {unClasTable :: [Type]}
 
 mkClasTable :: ClasInterface -> Build ClasTable
 mkClasTable c = 

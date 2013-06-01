@@ -34,32 +34,33 @@ import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.Util
 
+(<#>) :: Text.Text -> [Value] -> Build Value
+(<#>) name args =
+  do Just ret <- callByName name args
+     return ret
 
-(<#>) = callByName
-
-
-evalClause :: Clause TExpr -> Build ValueRef
+evalClause :: Clause TExpr -> Build Value
 evalClause (Clause _n e) =
   do debug "evalClause"
      e' <- eval e
      debugDump e'
      load' e'
 
-evalClauses :: [Clause TExpr] -> Build ValueRef
+evalClauses :: [Clause TExpr] -> Build Value
 evalClauses cs =
   do vals <- mapM evalClause cs
      tr <- true
      foldM (\ acc v -> andd acc v "clause eval fold") tr vals
 
-getCurrProc :: Build ValueRef
+getCurrProc :: Build Value
 getCurrProc = lookupEnv "<CurrentProc>" >>= load'
 
-getProc :: ValueRef -> Build ValueRef
+getProc :: Value -> Build Value
 getProc v =
   do procRef <- gepInt v [0, 0]
      load procRef "getProc"
 
-castType :: Typ -> ValueRef -> Build ValueRef
+castType :: Typ -> Value -> Build Value
 castType Int8Type v =
     do debug "castType: to int8 start"
        i8 <- int8TypeM
@@ -84,7 +85,7 @@ castType t@(ClassType c _) v = do
   bitcast v tRep ("castTo" ++ Text.unpack c) >>= simpStore
 castType t _ = error $ "castType: not implemented for " ++ show t
 
-eval :: TExpr -> Build ValueRef
+eval :: TExpr -> Build Value
 eval (contents -> e) = evalUnPos e
 
 simpStore v = do
@@ -96,7 +97,7 @@ simpStore v = do
 load' ref = load ref ""
 loadEval e = eval e >>= load'
 
-genBinOp :: BinOp -> TExpr -> TExpr -> Typ -> Build ValueRef
+genBinOp :: BinOp -> TExpr -> TExpr -> Typ -> Build Value
 genBinOp op e1 e2 _resType =
   case lookup op opFuncs of
     Just f ->
@@ -194,7 +195,7 @@ genBinOp op e1 e2 _resType =
          load res "andThen result"
 
 
-genUnOp :: UnOp -> TExpr -> Typ -> Build ValueRef
+genUnOp :: UnOp -> TExpr -> Typ -> Build Value
 genUnOp op e _resType =
   case lookup op opFuncs of
     Just f ->
@@ -214,7 +215,7 @@ genUnOp op e _resType =
       ]
 
 
-evalUnPos :: UnPosTExpr -> Build ValueRef
+evalUnPos :: UnPosTExpr -> Build Value
 evalUnPos (Cast t e) =
   do debug $ "evalUnPos: cast " ++ show (t, e)
      v <- loadEval e
@@ -231,7 +232,7 @@ evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
                         procRef <- lookupEnv "<CurrentProc>"
                         proc <- load procRef "loading proc for static call"
                         return [proc]
-       fn <- getNamedFunction (fullNameStr moduleType name)
+       Just fn <- getNamedFunction (fullNameStr moduleType name)
        args' <- mapM loadEval args
        debugDump fn
        mapM_ debugDump (pre ++ args')
@@ -355,9 +356,9 @@ evalUnPos (Unbox t e) = do
 
 evalUnPos (LitString s) = do
   -- we rely that the strings are stored internally as char8*
-  rawStr <- getNamedGlobal (s `Text.append` "_global")
+  Just rawStr <- getNamedGlobal (s `Text.append` "_global")
   n <- int (Text.length s)
-  f <- getNamedFunction (fullNameStr "String" "make_with_pointer")
+  Just f <- getNamedFunction (fullNameStr "String" "make_with_pointer")
   currProc <- getCurrProc
   charPtrType <- pointer0 <$> int8TypeM
   rawStrPtr <- bitcast rawStr charPtrType "char8 cast"
@@ -383,7 +384,7 @@ nonSeparateCall trg fName args retType =
        debugDump trg'
        args' <- mapM loadEval args
        debug (show trg)
-       f <- getNamedFunction (fullNameStr cName fName)
+       Just f <- getNamedFunction (fullNameStr cName fName)
        debug (concat ["eval: call -> " 
                      ,Text.unpack $ fullNameStr cName fName 
                      ,",", show f, " with "
@@ -415,7 +416,7 @@ separateCall trg fName args retType =
        debugDump trg'
        args' <- mapM loadEval args
        debug (show trg)
-       f <- getNamedFunction (fullNameStr cName fName)
+       Just f <- getNamedFunction (fullNameStr cName fName)
        debug (concat ["sepCall: call -> " 
                      ,Text.unpack $ fullNameStr cName fName 
                      ,",", show f, " with "
@@ -519,13 +520,13 @@ wrapSepResult trgProc retType resultLoc =
      store sepInst sepRef
      return sepRef
 
-getQueueFor :: TExpr -> Build ValueRef
+getQueueFor :: TExpr -> Build Value
 getQueueFor e =
     case contents e of
       InheritProc inh _ -> getQueueFor inh
       _ -> lookupQueueFor e
 
-closLocFor :: Typ -> Build ValueRef
+closLocFor :: Typ -> Build Value
 closLocFor t =
     case t of
       BoolType -> lookupEnv "<closResult1>"
@@ -534,7 +535,7 @@ closLocFor t =
       NoType -> lookupEnv "<closResult64>"
       e -> error ("closLocFor: " ++ show e)
 
-closType :: Typ -> Build ValueRef
+closType :: Typ -> Build Value
 closType t =
     case t of
       BoolType -> "closure_uint1_type" <#> []

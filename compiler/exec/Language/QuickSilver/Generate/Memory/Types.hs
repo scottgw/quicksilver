@@ -27,10 +27,10 @@ import           Language.QuickSilver.Generate.LLVM.Simple
 import           Language.QuickSilver.Generate.LLVM.Types
 import           Language.QuickSilver.Generate.LLVM.Util
 
-typeOfDecl :: Decl -> Build TypeRef
+typeOfDecl :: Decl -> Build Type
 typeOfDecl = typeOfM . declType
 
-typeOf :: ClassEnv -> Typ -> Build TypeRef
+typeOf :: ClassEnv -> Typ -> Build Type
 typeOf e t =
     case t of
       NoType -> voidTypeM
@@ -49,15 +49,15 @@ typeOf e t =
       ClassType s _ -> processClass s
     where
       sepClass s =
-        do sepTypeRef <- getTypeByName "separate_wrapper"
-           if sepTypeRef == nullPtr
+        do Just sepType <- getTypeByName "separate_wrapper"
+           if sepType == nullPtr
              then
                do sepStruct <- structCreateNamed "separate_wrapper"
-                  procTypeRef <- procTypeM
+                  procType <- procTypeM
                   voidPtrRef <- voidPtrType
-                  structSetBody sepStruct [procTypeRef, voidPtrRef] True
+                  structSetBody sepStruct [procType, voidPtrRef] True
                   return (pointer0 sepStruct)
-             else return (pointer0 sepTypeRef)
+             else return (pointer0 sepType)
 
       processClass s =
         case Map.lookup s e of
@@ -71,7 +71,7 @@ typeOf e t =
                              , show s ++ " " ++ show e]
 
         
-typeOfM :: Typ -> Build TypeRef
+typeOfM :: Typ -> Build Type
 typeOfM t = askClassEnv >>= \env -> typeOf env t
 
 isSpecialClass :: ClasInterface -> Bool
@@ -80,13 +80,13 @@ isSpecialClass cls = isSpecialClassName (view className cls)
 isSpecialClassName :: Text -> Bool
 isSpecialClassName name = name `elem` map fst nameAndType
 
-nameAndType :: [(Text, Build TypeRef)]
+nameAndType :: [(Text, Build Type)]
 nameAndType =
     [("Pointer_8", pointer0 <$> int8TypeM)
     ,("Array", pointer0 <$> pointer0 <$> voidPtrType)
     ]
 
-mkSpecialClassType :: Text -> Build TypeRef
+mkSpecialClassType :: Text -> Build Type
 mkSpecialClassType name = 
     case lookup name nameAndType of
       Just t -> t
@@ -94,11 +94,11 @@ mkSpecialClassType name =
           error $ "mkSpecialClassType: non special type: " ++ Text.unpack name
 
 
-featDeclType :: RoutineI -> Build TypeRef
+featDeclType :: RoutineI -> Build Type
 featDeclType f = join $ (liftM2 funcType) (featResTyp f) (featArgTyps f)
 
-featResTyp :: RoutineI -> Build TypeRef
+featResTyp :: RoutineI -> Build Type
 featResTyp = typeOfM . routineResult
 
-featArgTyps :: RoutineI -> Build [TypeRef]
+featArgTyps :: RoutineI -> Build [Type]
 featArgTyps = mapM typeOfDecl . routineArgs
