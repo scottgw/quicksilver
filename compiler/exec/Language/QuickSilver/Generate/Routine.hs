@@ -118,7 +118,7 @@ genExternal name =
 
      Just externFunc <- getNamedFunction name
      
-     v <- call' externFunc args "forwarding to external"
+     v <- call' externFunc args
      debug "generated external call"
      debugDump v
      resultMb <- lookupEnvM "Result"

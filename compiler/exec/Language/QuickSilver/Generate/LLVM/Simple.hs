@@ -5,6 +5,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
      Context, Value, Type, Builder, BasicBlock,
      Build, Env,
 
+     dumpModule,
      askModule, writeModuleToFile, runBuild,
      withUpdEnv, lookupEnv, fromListEnv,
 
@@ -69,7 +70,8 @@ import qualified LLVM.Wrapper.Core as W
 import           LLVM.Wrapper.Core ( Type, Value, BasicBlock, Builder, Context
                                    , CallingConvention, FPPredicate
                                    , IntPredicate
-                                   , constInt, constReal, constPtrToInt)
+                                   , constInt, constReal, constPtrToInt
+                                   , dumpTypeToString)
 
 import qualified LLVM.FFI.Core as L
 -- import LLVM.FFI.Core 
@@ -82,6 +84,9 @@ import qualified LLVM.FFI.Core as L
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
 
+
+dumpModule :: Build ()
+dumpModule = askModule >>= lift . W.dumpModule
 
 setGlobalConstant :: Value -> Bool -> Build ()
 setGlobalConstant v b = lift (W.setGlobalConstant v b)
@@ -208,20 +213,20 @@ store = withBuilder2 W.buildStore
 call :: Text -> [Value] -> Build Value
 call s args = do
   funcRef <- lookupEnv s
-  call' funcRef args (Text.unpack s)
+  call' funcRef args
 
 callByName :: Text -> [Value] -> Build (Maybe Value)
 callByName f args = do
   fPtrMb <- getNamedFunction f
   case fPtrMb of
-    Just fPtr -> Just <$> call' fPtr args ("callByName: " ++ show f)
+    Just fPtr -> Just <$> call' fPtr args
     Nothing -> return Nothing
 
 -- FIXME: return Void functions can't have a name 
 -- However, we can't even examine the return type of the function value
 -- because it is reported as a pointer-type, not a function-type!
-call' :: Value -> [Value] -> String -> Build Value
-call' = withBuilder3 W.buildCall
+call' :: Value -> [Value] -> Build Value
+call' fn args = withBuilder3 W.buildCall fn args ""
 
 withArrayLenC ::  Storable a => [a] -> (Ptr a -> CUInt -> IO b) -> IO b
 withArrayLenC xs f = withArrayLen xs (\ i p -> f p (fromIntegral i))
@@ -354,9 +359,9 @@ functionType' retType argTypes isVarArg =
       withStorableArray cArr ftIO
 
 gep :: Value -> [Value] -> Build Value
-gep v idxs = lift (W.constGEP v idxs)
+gep v idxs = withBuilder0 (\b -> W.buildGEP b v idxs "")
 
 gepInt :: Value -> [Int] -> Build Value
 gepInt v is = do
   i32 <- int32TypeM
-  gep v $ map (\ i -> W.constInt i32 (fromIntegral i) False) is
+  gep v $ map (\ i -> W.constInt i32 (fromIntegral i) True) is

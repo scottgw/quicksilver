@@ -46,6 +46,7 @@ genStmt (Assign ident expr) = do
 
   debug "Assign: storing"
   store rhs lhs
+  debug "Assign: done storing"
   return ()
 genStmt (If cond then_ elseIfs elseMb) = do
   debug "genStmt: if"

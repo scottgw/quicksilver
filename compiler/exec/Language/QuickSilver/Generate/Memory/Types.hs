@@ -49,15 +49,15 @@ typeOf e t =
       ClassType s _ -> processClass s
     where
       sepClass s =
-        do Just sepType <- getTypeByName "separate_wrapper"
-           if sepType == nullPtr
-             then
+        do sepTypeMb <- getTypeByName "separate_wrapper"
+           case sepTypeMb of
+             Nothing ->
                do sepStruct <- structCreateNamed "separate_wrapper"
                   procType <- procTypeM
                   voidPtrRef <- voidPtrType
                   structSetBody sepStruct [procType, voidPtrRef] True
                   return (pointer0 sepStruct)
-             else return (pointer0 sepType)
+             Just sepType -> return (pointer0 sepType)
 
       processClass s =
         case Map.lookup s e of

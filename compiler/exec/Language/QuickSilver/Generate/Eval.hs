@@ -236,7 +236,8 @@ evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
        args' <- mapM loadEval args
        debugDump fn
        mapM_ debugDump (pre ++ args')
-       r <- call' fn (pre ++ args') ("static call: " ++ Text.unpack name)
+       r <- call' fn (pre ++ args')
+       debug "static call: called"
        -- setInstructionCallConv r Fast
        if retVal /= NoType then simpStore r else return r
 
@@ -301,9 +302,13 @@ evalUnPos (Access trg attr typ) = do
   let cname = classTypeName trgType
   clas <- lookupClas cname
   attrLoc <- case attributeIndex clas attr of
-               Just index -> gepInt baseTrg [0, index] 
+               Just index ->
+                 do debug ("access: location " ++ show index)
+                    -- dumpModule
+                    gepInt baseTrg [0, index]
                Nothing ->
                    error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
+  debug "access: have location"
   if isSeparate trgType
     then
       do startB <- getInsertBlock
@@ -337,7 +342,7 @@ evalUnPos (Access trg attr typ) = do
 
          positionAtEnd afterAccessB
          return closResLoc
-    else return attrLoc
+    else debugDump attrLoc >> return attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
 
@@ -370,7 +375,7 @@ evalUnPos (LitString s) = do
   debugDump strPtr
  --  str <- load strPtr "loading created string"
   -- debugDump str
-  call' f [currProc, strPtr, n, rawStrPtr] ("call: string constructor")
+  call' f [currProc, strPtr, n, rawStrPtr]
   debug "Creating string done"
   simpStore strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
@@ -393,7 +398,7 @@ nonSeparateCall trg fName args retType =
                      ,show (trg:args)])
        debugDump f
 
-       r <- call' f (currProc:trg':args') ("nonsep call: " ++ Text.unpack fName)
+       r <- call' f (currProc:trg':args')
        debug "eval: nonsep call -> done"
        -- setInstructionCallConv r Fast
 
@@ -442,7 +447,7 @@ separateCall trg fName args retType =
        let Sep _ _ baseType = texpr trg
        baseTypeL <- typeOfM baseType
        castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
-       res <- call' f (trgProc : castedNonSepTrg : args') ""
+       res <- call' f (trgProc : castedNonSepTrg : args')
        when (retType /= NoType) (void $ store res resLoc)
        br afterSepCallB
 
