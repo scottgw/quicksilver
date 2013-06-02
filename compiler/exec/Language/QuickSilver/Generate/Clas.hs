@@ -41,7 +41,7 @@ genClass' clas isMain = do
 genMain :: TClass -> Build ()
 genMain clas = do
   i64T <- int64TypeM
-  fRef <- addFunc "main" =<< funcType i64T []
+  fRef <- addFunc "main" (funcType i64T [])
   atNewBlock fRef "mainStart"
 
   call "qs_init" []

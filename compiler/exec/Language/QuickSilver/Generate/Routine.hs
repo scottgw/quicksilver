@@ -157,7 +157,7 @@ throw = do
   int32 <- int 32
   store int32 intptr
   
-  voidF <- funcType vd [pointer0 i8]
+  let voidF = funcType vd [pointer0 i8]
   stdType <- lookupEnv "_ZTIi"
   castType <- bitcast stdType (pointer0 i8) "stdTypeCast"
 

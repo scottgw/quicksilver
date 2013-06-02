@@ -95,7 +95,7 @@ mkSpecialClassType name =
 
 
 featDeclType :: RoutineI -> Build Type
-featDeclType f = join $ (liftM2 funcType) (featResTyp f) (featArgTyps f)
+featDeclType f = funcType <$> featResTyp f <*> featArgTyps f
 
 featResTyp :: RoutineI -> Build Type
 featResTyp = typeOfM . routineResult

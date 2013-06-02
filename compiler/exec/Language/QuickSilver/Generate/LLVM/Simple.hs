@@ -39,6 +39,8 @@ module Language.QuickSilver.Generate.LLVM.Simple
      getInsertBlock, getEntryBasicBlock, appendBasicBlock, positionAtEnd,
      getBasicBlockParent,
 
+     buildPhi, addIncoming,
+     
      globalString, string, nul, constInt, constReal,  struct,
 
      unreachable,
@@ -56,30 +58,20 @@ module Language.QuickSilver.Generate.LLVM.Simple
 import Control.Applicative
 import Control.Monad.Reader
 
-import Data.Array.Storable
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import Foreign.C
 import Foreign.Marshal.Array
-import Foreign.Storable
-
-import GHC.Ptr
 
 import qualified LLVM.Wrapper.Core as W 
 import           LLVM.Wrapper.Core ( Type, Value, BasicBlock, Builder, Context
                                    , CallingConvention, FPPredicate
                                    , IntPredicate
                                    , constInt, constReal, constPtrToInt
-                                   , dumpTypeToString)
+                                   , functionType)
 
 import qualified LLVM.FFI.Core as L
--- import LLVM.FFI.Core 
---     (
---      constPtrToInt,
---      constInt, constReal
-             
---     )
 
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -228,9 +220,6 @@ callByName f args = do
 call' :: Value -> [Value] -> Build Value
 call' fn args = withBuilder3 W.buildCall fn args ""
 
-withArrayLenC ::  Storable a => [a] -> (Ptr a -> CUInt -> IO b) -> IO b
-withArrayLenC xs f = withArrayLen xs (\ i p -> f p (fromIntegral i))
-
 invoke :: Text -> [Value] -> BasicBlock -> BasicBlock -> 
           Build Value
 invoke s args b1 b2 = do
@@ -295,16 +284,6 @@ positionAtEnd = withBuilder1 W.positionAtEnd
 getInsertBlock :: Build Value
 getInsertBlock = withBuilder0 W.getInsertBlock
 
-opWrap :: (Builder -> Value -> Value -> CString -> IO Value) ->
-      Value -> Value -> String -> Build Value
-opWrap op v1 v2 str = 
-    askBuild >>= lift . withCString str . (\ f -> f v1 v2) . op
-
-unOpWrap :: (Builder -> Value -> CString -> IO Value) ->
-      Value -> String -> Build Value
-unOpWrap op v str = 
-    askBuild >>= lift . withCString str . ($ v) . op
-
 add,sub,orr,mul,fdiv :: Value -> Value -> String -> Build Value
 add = withBuilder3 W.buildAdd
 sub = withBuilder3 W.buildSub
@@ -326,8 +305,6 @@ sext = withBuilder3 W.buildSExt
   
 trunc :: Value -> Type -> String -> Build Value
 trunc = withBuilder3 W.buildTrunc
-  
-
 
 getEntryBasicBlock :: Value -> Build BasicBlock
 getEntryBasicBlock = liftBuild1 L.getEntryBasicBlock
@@ -339,24 +316,18 @@ appendBasicBlock v str =
 getBasicBlockParent :: BasicBlock ->  Build Value
 getBasicBlockParent = liftBuild1 L.getBasicBlockParent
 
-funcType :: Type -> [Type] -> Build Type
-funcType rType argTypes = functionType' rType argTypes False
+buildPhi :: Type -> String -> Build Value
+buildPhi = withBuilder2 W.buildPhi
 
-funcTypeVar :: Type -> [Type] -> Build Type
-funcTypeVar rType argTypes = functionType' rType argTypes True
+addIncoming :: Value -> [(Value, BasicBlock)] -> Build ()
+addIncoming phi edges = lift (W.addIncoming phi edges)
 
-functionType' :: Type -> [Type] -> Bool -> Build Type
-functionType' retType argTypes isVarArg = 
-    let
-        ftIO typeArr = return $
-            L.functionType 
-             retType
-             typeArr 
-             (toEnum $ length argTypes) 
-             (toEnum . fromEnum $ isVarArg)
-    in lift $ do
-      cArr <- newListArray (0, length argTypes - 1) argTypes
-      withStorableArray cArr ftIO
+
+funcType :: Type -> [Type] -> Type
+funcType rType argTypes = functionType rType argTypes False
+
+funcTypeVar :: Type -> [Type] -> Type
+funcTypeVar rType argTypes = functionType rType argTypes True
 
 gep :: Value -> [Value] -> Build Value
 gep v idxs = withBuilder0 (\b -> W.buildGEP b v idxs "")

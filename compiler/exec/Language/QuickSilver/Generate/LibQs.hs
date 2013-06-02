@@ -132,9 +132,9 @@ funcType' :: Build Type -> [Build Type] -> Build Type
 funcType' rM aMs = do
   r <- rM
   as <- sequence aMs
-  funcType r as
+  return (funcType r as)
 
 funcTypeVar' rM aMs = do
   r <- rM
   as <- sequence aMs
-  funcTypeVar r as
+  return (funcTypeVar r as)
