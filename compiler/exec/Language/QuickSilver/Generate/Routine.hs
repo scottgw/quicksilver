@@ -208,7 +208,7 @@ routReturn :: TRoutine -> Build ()
 routReturn rout =
   case routineResult rout of
     NoType -> void retVoid
-    t      -> evalUnPos (ResultVar t) >>= (`load` "") >>= void . ret
+    t      -> evalUnPos (ResultVar t) >>= void . ret
 
 genRoutines :: Bool -> [TRoutine] -> Build ()
 genRoutines isMain = mapM_ (genRoutine isMain)

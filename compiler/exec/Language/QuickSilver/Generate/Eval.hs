@@ -4,8 +4,9 @@ module Language.QuickSilver.Generate.Eval
        ( eval
        , evalClause
        , evalClauses
-       , loadEval
+       -- , loadEval
        , evalUnPos
+       , accessLoc
        , getCurrProc
        , getProc
        , true
@@ -44,7 +45,7 @@ evalClause (Clause _n e) =
   do debug "evalClause"
      e' <- eval e
      debugDump e'
-     load' e'
+     return e'
 
 evalClauses :: [Clause TExpr] -> Build Value
 evalClauses cs =
@@ -64,8 +65,8 @@ castType :: Typ -> Value -> Build Value
 castType Int8Type v =
     do debug "castType: to int8 start"
        i8 <- int8TypeM
-       trunc v i8 "castType: to int8" >>= simpStore
-castType Int64Type v = simpStore v
+       trunc v i8 "castType: to int8"
+castType Int64Type v = return v
     -- do v' <- load' v
     --    debugDump v'
     --    i64 <- int64TypeM
@@ -76,34 +77,33 @@ castType Int64Type v = simpStore v
 --   siToFP v' dblT "intToDouble" >>= simpStore
 castType (AnyRefType _) v = do
   ptrType <- voidPtrType
-  bitcast v ptrType ("castToAnyRef") >>= simpStore
+  bitcast v ptrType ("castToAnyRef")
 castType t@(Sep _ _ s) v = do
   sepType <- typeOfM t
-  bitcast v sepType ("castToSep") >>= simpStore
+  bitcast v sepType ("castToSep")
 castType t@(ClassType c _) v = do
   tRep <- typeOfM t
-  bitcast v tRep ("castTo" ++ Text.unpack c) >>= simpStore
+  bitcast v tRep ("castTo" ++ Text.unpack c)
 castType t _ = error $ "castType: not implemented for " ++ show t
 
 eval :: TExpr -> Build Value
 eval (contents -> e) = evalUnPos e
 
-simpStore v = do
-  t <- typeOfVal v
-  r <- alloca t ""
-  store v r
-  return r
+-- simpStore v = do
+--   t <- typeOfVal v
+--   r <- alloca t ""
+--   store v r
+--   return r
 
 load' ref = load ref ""
-loadEval e = eval e >>= load'
+-- loadEval e = eval e >>= load'
 
 genBinOp :: BinOp -> TExpr -> TExpr -> Typ -> Build Value
 genBinOp op e1 e2 _resType =
   case lookup op opFuncs of
     Just f ->
       do debug ("genBinOp: " ++ show (op, e1, e2))
-         v <- f "genBinOp generated operation"
-         simpStore v
+         f "genBinOp generated operation"
     Nothing -> error $ "genBinOp: operation not found: " ++ show op
   where
     opFuncs =
@@ -134,8 +134,8 @@ genBinOp op e1 e2 _resType =
       ]
 
     strictApply f str =
-      do e1' <- loadEval e1
-         e2' <- loadEval e2
+      do e1' <- eval e1
+         e2' <- eval e2
          f e1' e2' str
 
     orElse _str =
@@ -149,11 +149,11 @@ genBinOp op e1 e2 _resType =
          afterB    <- appendBasicBlock func "orElse after"
 
          positionAtEnd startB
-         e1'  <- loadEval e1
+         e1'  <- eval e1
          condBr e1' shortcutB fullEvalB
 
          positionAtEnd fullEvalB
-         e2'  <- loadEval e2
+         e2'  <- eval e2
          store e2' res
          br afterB
 
@@ -177,11 +177,11 @@ genBinOp op e1 e2 _resType =
          afterB    <- appendBasicBlock func "andThen after"
 
          positionAtEnd startB
-         e1'  <- loadEval e1
+         e1'  <- eval e1
          condBr e1' fullEvalB shortcutB
 
          positionAtEnd fullEvalB
-         e2'  <- loadEval e2
+         e2'  <- eval e2
          store e2' res
          br afterB
 
@@ -200,11 +200,9 @@ genUnOp op e _resType =
   case lookup op opFuncs of
     Just f ->
       do debug ("genUnOp: " ++ show (op, e))
-         e' <- loadEval e
+         e' <- eval e
          debugDump e'
-         v <- f e' "genUnOp generated operation"
-         debugDump v
-         simpStore v
+         f e' "genUnOp generated operation"
     Nothing -> error $ "genUnOp: operation not found: " ++ show op
   where
     opFuncs =
@@ -214,11 +212,30 @@ genUnOp op e _resType =
       , (Not, nott)
       ]
 
+accessLoc :: TExpr -> Text.Text -> Build Value
+accessLoc trg attr =
+  do debug $ "Access: " ++ show (trg, attr)
+     trgV <- eval trg
+     let trgType = texpr trg
+     baseTrg <- case trgType of
+                  Sep _ _ t ->
+                      do (_, r) <- splitSepRef trgV
+                         inst <- load' r
+                         castType t inst
+                  _ -> return trgV
+     debugDump baseTrg
+     let cname = classTypeName trgType
+     clas <- lookupClas cname
+     case attributeIndex clas attr of
+       Just index -> gepInt baseTrg [0, index]
+       Nothing ->
+         error $ "accessLoc: couldn't find index " ++ show (trg, attr)
+ 
 
 evalUnPos :: UnPosTExpr -> Build Value
 evalUnPos (Cast t e) =
   do debug $ "evalUnPos: cast " ++ show (t, e)
-     v <- loadEval e
+     v <- eval e
      castType t v
 
 evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
@@ -233,13 +250,10 @@ evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
                         proc <- load procRef "loading proc for static call"
                         return [proc]
        Just fn <- getNamedFunction (fullNameStr moduleType name)
-       args' <- mapM loadEval args
+       args' <- mapM eval args
        debugDump fn
        mapM_ debugDump (pre ++ args')
-       r <- call' fn (pre ++ args')
-       debug "static call: called"
-       -- setInstructionCallConv r Fast
-       if retVal /= NoType then simpStore r else return r
+       call' fn (pre ++ args')
 
 evalUnPos (EqExpr op e1 e2) =
   do let ccmp | isIntegerType (texpr e1) || texpr e1 == CharType=
@@ -260,54 +274,35 @@ evalUnPos (EqExpr op e1 e2) =
      debug $ "evalUnPos: eqExpr " ++ show (op, e1, e2)
      
      debug "evalUnPos: 1 eqExpr"
-     e1' <- loadEval e1
+     e1' <- eval e1
      debugDump e1'
      
      debug "evalUnPos: 2 eqExpr"
-     e2' <- loadEval e2
+     e2' <- eval e2
      debugDump e2'
 
-     res <- ccmp e1' e2' "equality check"
-     debug "evalUnPos: eqExpr done"
-     simpStore res
+     ccmp e1' e2' "equality check"
 
 evalUnPos (Call trg fName args retVal)
     |  isSeparate (texpr trg) = separateCall trg fName args retVal
     |  otherwise              = nonSeparateCall trg fName args retVal
 
-evalUnPos (LitInt i _t)   = int (fromIntegral i) >>= simpStore
-evalUnPos (LitDouble d)   = dbl d >>= simpStore
-evalUnPos (LitChar c)     = char c >>= simpStore
-evalUnPos (LitBool True)  = simpStore =<< true
-evalUnPos (LitBool False) = simpStore =<< false
-evalUnPos (Var s _) = lookupEnv s
-evalUnPos (LitVoid t) = nul `fmap` typeOfM t >>= simpStore
-evalUnPos (CurrentVar _) = lookupEnv "Current"
-evalUnPos (ResultVar _) = lookupEnv "Result"
+evalUnPos (LitInt i _t)   = int (fromIntegral i)
+evalUnPos (LitDouble d)   = dbl d
+evalUnPos (LitChar c)     = char c
+evalUnPos (LitBool True)  = true
+evalUnPos (LitBool False) = false
+evalUnPos (Var s _) = lookupEnv s >>= load'
+evalUnPos (LitVoid t) = nul `fmap` typeOfM t
+evalUnPos (CurrentVar _) = lookupEnv "Current" >>= load'
+evalUnPos (ResultVar _) = lookupEnv "Result" >>= load'
 
 evalUnPos (UnOpExpr op e resType) = genUnOp op e resType
 evalUnPos (BinOpExpr op e1 e2 resType) = genBinOp op e1 e2 resType
 
 evalUnPos (Access trg attr typ) = do
-  debug $ "Access: " ++ show (trg, attr, typ)
-  trgV <- loadEval trg
+  attrLoc <- accessLoc trg attr
   let trgType = texpr trg
-  baseTrg <- case trgType of
-               Sep _ _ t ->
-                   do (_, r) <- splitSepRef trgV
-                      inst <- load' r
-                      castType t inst >>= load'
-               _ -> return trgV
-  debugDump baseTrg
-  let cname = classTypeName trgType
-  clas <- lookupClas cname
-  attrLoc <- case attributeIndex clas attr of
-               Just index ->
-                 do debug ("access: location " ++ show index)
-                    -- dumpModule
-                    gepInt baseTrg [0, index]
-               Nothing ->
-                   error $ "evalUnPos: couldn't find index " ++ show (trg, attr)
   debug "access: have location"
   if isSeparate trgType
     then
@@ -340,24 +335,25 @@ evalUnPos (Access trg attr typ) = do
          debug "sep access done"
          br directAccessB
 
+         -- Really should use a phi node here.
          positionAtEnd afterAccessB
-         return closResLoc
-    else debugDump attrLoc >> return attrLoc
+         load' closResLoc
+    else debugDump attrLoc >> load' attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
 
-evalUnPos (Box c e) = do
-  v    <- loadEval e
-  vPtr <- mallocTyp =<< typeOfM (texpr e)
-  _ <- store v vPtr
-  vPtrPtr <- simpStore vPtr
-  castType c vPtrPtr
+-- evalUnPos (Box c e) = do
+--   v    <- eval e
+--   vPtr <- mallocTyp =<< typeOfM (texpr e)
+--   _ <- store v vPtr
+--   vPtrPtr <- simpStore vPtr
+--   castType c vPtrPtr
 
-evalUnPos (Unbox t e) = do
-  ePtr <- loadEval e
-  t' <- typeOfM t
-  casted <- bitcast ePtr (pointer0 t') "unboxing cast"
-  load casted "unboxing" >>= simpStore
+-- evalUnPos (Unbox t e) = do
+--   ePtr <- eval e
+--   t' <- typeOfM t
+--   casted <- bitcast ePtr (pointer0 t') "unboxing cast"
+--   load casted "unboxing"
 
 evalUnPos (LitString s) = do
   -- we rely that the strings are stored internally as char8*
@@ -377,7 +373,7 @@ evalUnPos (LitString s) = do
   -- debugDump str
   call' f [currProc, strPtr, n, rawStrPtr]
   debug "Creating string done"
-  simpStore strPtr
+  return strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
 
 
@@ -385,9 +381,9 @@ nonSeparateCall trg fName args retType =
     do let cName = classTypeName (texpr trg)
 
        currProc <- getCurrProc
-       trg'  <- loadEval trg
+       trg'  <- eval trg
        debugDump trg'
-       args' <- mapM loadEval args
+       args' <- mapM eval args
        debug (show trg)
        Just f <- getNamedFunction (fullNameStr cName fName)
        debug (concat ["eval: call -> " 
@@ -398,11 +394,7 @@ nonSeparateCall trg fName args retType =
                      ,show (trg:args)])
        debugDump f
 
-       r <- call' f (currProc:trg':args')
-       debug "eval: nonsep call -> done"
-       -- setInstructionCallConv r Fast
-
-       if retType /= NoType then simpStore r else return r
+       call' f (currProc:trg':args')
 
 separateCall trg fName args retType =
     do startB <- getInsertBlock
@@ -417,9 +409,9 @@ separateCall trg fName args retType =
        debug "generating separate call"
 
        -- positionAtEnd sepCallStartB
-       trg'  <- loadEval trg
+       trg'  <- eval trg
        debugDump trg'
-       args' <- mapM loadEval args
+       args' <- mapM eval args
        debug (show trg)
        Just f <- getNamedFunction (fullNameStr cName fName)
        debug (concat ["sepCall: call -> " 
@@ -466,7 +458,7 @@ separateCall trg fName args retType =
        positionAtEnd afterSepCallB
        if not (isBasic retType || isSeparate retType || retType == NoType)
          then wrapSepResult trgProc retType resLoc
-         else return resLoc
+         else load' resLoc
 
 prepareClosure retType trg f args trgProc nonSepTrg args' =
   do let Sep _ _ nonSepTrgType = texpr trg
@@ -520,10 +512,7 @@ wrapSepResult trgProc retType resultLoc =
      res <- load' resultLoc
      store trgProc procRef
      store res objRef
-
-     sepRef <- join (alloca <$> typeOfVal sepInst <*> pure "sepInstRef")
-     store sepInst sepRef
-     return sepRef
+     return sepInst
 
 getQueueFor :: TExpr -> Build Value
 getQueueFor e =

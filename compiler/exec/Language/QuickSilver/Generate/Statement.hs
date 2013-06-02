@@ -30,27 +30,36 @@ lookupVarAccess (T.ResultVar _) = lookupEnv "Result"
 lookupVarAccess (Access _ i _) = fetchCurrentAttr i
 lookupVarAccess e = error ("lookupVarAccess: not Var or Access: " ++ show e)
 
+locOf :: TExpr -> Build Value
+locOf te =
+  case contents te of
+    T.Access trg name _type -> accessLoc trg name
+    T.Var n _type -> lookupEnv n
+    T.ResultVar _ -> lookupEnv "Result"
+    t -> error $ "locOf: " ++ show te
+         
+
 genStmt :: UnPosTStmt -> Build ()
 genStmt (CallStmt e)        = eval e >> return ()
 genStmt (Block ss)          = mapM_ (genStmt . contents) ss
-genStmt (Assign ident expr) = do
-  debug $ "Assign to: " ++ show ident
+genStmt (Assign lhs rhs) = do
+  debug $ "Assign to: " ++ show lhs
 
-  lhs <- eval ident
+  lhsLoc <- locOf lhs
   debug "Assign: lhs"
-  debugDump lhs
+  debugDump lhsLoc
   
-  rhs <- loadEval expr
+  rhs' <- eval rhs
   debug "Assign: rhs"
-  debugDump rhs
+  debugDump rhs'
 
   debug "Assign: storing"
-  store rhs lhs
+  store rhs' lhsLoc
   debug "Assign: done storing"
   return ()
 genStmt (If cond then_ elseIfs elseMb) = do
   debug "genStmt: if"
-  condV  <- loadEval cond
+  condV  <- eval cond
 
   startB <- getInsertBlock
   func   <- getBasicBlockParent startB
@@ -65,7 +74,7 @@ genStmt (If cond then_ elseIfs elseMb) = do
         elseIfThenB <- appendBasicBlock func "elseIfThen"
         
         positionAtEnd elseIfB
-        condVal <- loadEval c
+        condVal <- eval c
         _ <- condBr condVal elseIfThenB nextIfCase
     
         positionAtEnd elseIfThenB
@@ -102,7 +111,7 @@ genStmt (Loop setup _invs cond body _varMb) = do
   _ <- br condB
 
   positionAtEnd condB
-  res  <- loadEval cond
+  res  <- eval cond
   _ <- condBr res afterB bodyB
 
   positionAtEnd bodyB
@@ -113,7 +122,7 @@ genStmt (Loop setup _invs cond body _varMb) = do
   return ()
 
 genStmt (Shutdown e) =
-  do e' <- loadEval e
+  do e' <- eval e
      currProc <- getCurrProc
      eProc <- getProc e'
      "proc_shutdown" <#> [eProc, currProc]
@@ -212,7 +221,7 @@ lockSeps = mapM_ lockSep
              prc <- getProcExpr e
              lockSep' prc
 
-getProcExpr e = loadEval e >>= getProc
+getProcExpr e = eval e >>= getProc
 
 getQueue prc =
     do currProc <- getCurrProc
@@ -233,7 +242,7 @@ unlockQueues = mapM_ unlockQueue
 
 waitOnSeparate :: TExpr -> Build ()
 waitOnSeparate e =
-  do e' <- loadEval e
+  do e' <- eval e
      -- FIXME: probably shouldn't re-evaluate the whole expression
      prc <- getProc e'
      currProc <- getCurrProc
