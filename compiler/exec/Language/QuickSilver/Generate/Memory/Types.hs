@@ -12,9 +12,6 @@ module Language.QuickSilver.Generate.Memory.Types
 
 import           Control.Applicative
 import           Control.Lens
-import           Control.Monad
-
-import           Foreign.Ptr
 
 import           Data.Text (Text)
 import qualified Data.Text as Text

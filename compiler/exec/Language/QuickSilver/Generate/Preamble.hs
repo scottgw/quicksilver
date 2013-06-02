@@ -65,9 +65,9 @@ addConstDecls = fromList `fmap` mapM addDecl constDecls
     where
       addDecl (str, t) = (str,) <$> (addFunc str =<< t)
 
-stringConsts :: [(Text, Build Value, Int)]
+stringConsts :: [(Text, Build Value, Linkage)]
 stringConsts = 
-    [("_ZTIi", stdTypeInfoExtern, 0)
+    [("_ZTIi", stdTypeInfoExtern, ExternalLinkage)
     ]
 
 addStringConsts :: Build (Map Text Value)

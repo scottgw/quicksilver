@@ -49,7 +49,6 @@ import           Data.List (lookup)
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
-import           Foreign.C
 import           Foreign.Ptr
 import           Foreign.Storable
 

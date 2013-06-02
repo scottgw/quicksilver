@@ -16,7 +16,6 @@ import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Util
 import Language.QuickSilver.Generate.LLVM.Simple
 import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Values
 
 attributeIndex :: ClasInterface -> Text -> Maybe Int
 attributeIndex c attrName =

@@ -1,7 +1,7 @@
 module Language.QuickSilver.Generate.LLVM.Simple
     (
      IntPredicate (..), FPPredicate (..),
-     CallingConvention (..),
+     CallingConvention (..), Linkage (..),
      Context, Value, Type, Builder, BasicBlock,
      Build, Env,
 
@@ -14,8 +14,6 @@ module Language.QuickSilver.Generate.LLVM.Simple
      addGlobal, setInitializer, setGlobalConstant, getNamedGlobal,
      getFirstGlobal, getNextGlobal,
 
-     setValueName, getValueName,
-                   
      setVisibility, getVisibility,
      setLinkage, getLinkage,
 
@@ -48,7 +46,8 @@ module Language.QuickSilver.Generate.LLVM.Simple
      buildLandingPad, setCleanup, addClause,
 
      addFunc, funcType, funcTypeVar, getNamedFunction,
-     paramTypes, countParams, getParam,
+     countParamTypes,
+     getParamTypes, countParams, getParam,
      call, call',callByName,
      invoke, invoke',
      setFunctionCallConv,
@@ -61,17 +60,14 @@ import Control.Monad.Reader
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
-import Foreign.C
-import Foreign.Marshal.Array
-
 import qualified LLVM.Wrapper.Core as W 
-import           LLVM.Wrapper.Core ( Type, Value, BasicBlock, Builder, Context
+import           LLVM.Wrapper.Core ( Value, BasicBlock, Builder, Context
                                    , CallingConvention, FPPredicate
                                    , IntPredicate
+                                   , Visibility
+                                   , Linkage
                                    , constInt, constReal, constPtrToInt
                                    , functionType)
-
-import qualified LLVM.FFI.Core as L
 
 import Language.QuickSilver.Generate.LLVM.Types
 import Language.QuickSilver.Generate.LLVM.Util
@@ -83,17 +79,17 @@ dumpModule = askModule >>= lift . W.dumpModule
 setGlobalConstant :: Value -> Bool -> Build ()
 setGlobalConstant v b = lift (W.setGlobalConstant v b)
 
-setVisibility :: Value -> Int -> Build ()
-setVisibility v i = lift $ L.setVisibility v (fromIntegral i)
+setVisibility :: Value -> Visibility -> Build ()
+setVisibility v vis = lift $ W.setVisibility v vis
 
-getVisibility :: Value -> Build Int
-getVisibility v = lift $ fromIntegral `fmap` L.getVisibility v
+getVisibility :: Value -> Build Visibility
+getVisibility = lift . W.getVisibility
 
-setLinkage :: Value -> Int -> Build ()
-setLinkage v i = lift $ L.setLinkage v (fromIntegral i)
+setLinkage :: Value -> Linkage -> Build ()
+setLinkage v link = lift $ W.setLinkage v link
 
-getLinkage :: Value -> Build Int
-getLinkage v = lift $ fromIntegral `fmap` L.getLinkage v
+getLinkage :: Value -> Build Linkage
+getLinkage = lift . W.getLinkage
 
 addGlobal :: Type -> String -> Build Value
 addGlobal t s = do
@@ -101,18 +97,18 @@ addGlobal t s = do
     lift $ W.addGlobal m t s
 
 setInitializer :: Value -> Value -> Build ()
-setInitializer = liftBuild2  L.setInitializer
+setInitializer = liftBuild2  W.setInitializer
 
 setFunctionCallConv :: Value -> CallingConvention -> Build ()
-setFunctionCallConv v = 
-    lift . L.setFunctionCallConv v . L.fromCallingConvention
+setFunctionCallConv v conv = 
+    lift $ W.setFunctionCallConv v conv
 
 setInstructionCallConv :: Value -> CallingConvention -> Build ()
-setInstructionCallConv v = 
-  lift . L.setInstructionCallConv v . L.fromCallingConvention
+setInstructionCallConv v conv = 
+  lift $ W.setInstructionCallConv v conv
 
 dumpValue :: Value -> Build ()
-dumpValue v = lift (L.dumpValue v)
+dumpValue v = lift (W.dumpValue v)
 
 ptrToInt :: Value -> Type -> String -> Build Value
 ptrToInt = withBuilder3 W.buildPtrToInt
@@ -120,33 +116,17 @@ ptrToInt = withBuilder3 W.buildPtrToInt
 intToPtr :: Value -> Type -> String -> Build Value
 intToPtr = withBuilder3 W.buildIntToPtr
 
-countParamTypes :: Type -> Build Int
-countParamTypes t = fromIntegral `fmap` (lift $ L.countParamTypes t)
+countParamTypes :: Type -> Int
+countParamTypes = W.countParamTypes
 
 countParams :: Value -> Int
-countParams = fromIntegral . L.countParams
+countParams = W.countParams
 
-paramTypesIO :: Int -> Type -> IO [Type]
-paramTypesIO n t = do
-  arr <- mallocArray n
-  L.getParamTypes t arr
-  peekArray n arr
-
-paramTypes :: Type -> Build [Type]
-paramTypes t = do
-  n <- countParamTypes t
-  lift (paramTypesIO n t)
-
-
-{-
-data Linkage = 
-
-setLinkage :: Value -> Linkage -> Buil ()
-setLinkage v l = lift $ L.setLinkage v (fromEnum l)
--}
+getParamTypes :: Type -> [Type]
+getParamTypes = W.getParamTypes
 
 getParam :: Value -> Int -> Value
-getParam funcRef = L.getParam funcRef . toEnum
+getParam = W.getParam
 
 getNamedFunction :: Text -> Build (Maybe Value)
 getNamedFunction s = do
@@ -155,24 +135,18 @@ getNamedFunction s = do
   lift $ W.getNamedFunction m (Text.unpack s)
 
 nul :: Type -> Value
-nul = L.constNull
+nul = W.constNull
 
 getFirstGlobal :: Build Value
 getFirstGlobal = askModule >>= lift . W.getFirstGlobal
 
 getNextGlobal :: Value -> Build Value
-getNextGlobal = lift . L.getNextGlobal 
+getNextGlobal = lift . W.getNextGlobal 
 
 getNamedGlobal :: Text -> Build (Maybe Value)
 getNamedGlobal str = do
   m <- askModule
   lift $ W.getNamedGlobal m (Text.unpack str)
-
-setValueName :: Value -> String -> Build ()
-setValueName v str = lift $ withCString str $ L.setValueName v
-
-getValueName :: Value -> Build String
-getValueName v = lift $ L.getValueName v >>= peekCString 
 
 globalString :: String -> Build Value
 globalString str =
@@ -184,13 +158,11 @@ string origStr =
    let 
        str = origStr -- ++ "\0"
        strGlob = origStr ++ "_global"
-       l = fromIntegral (length str)
        fmt = W.constString str False
    in do t <- typeOfVal fmt
-         m <- askModule
-         g <- lift $ W.addGlobal m t strGlob
-         lift $ W.setInitializer g fmt
-         lift $ W.setLinkage g W.WeakAnyLinkage
+         g <- addGlobal t strGlob
+         setInitializer g fmt
+         setLinkage g W.WeakAnyLinkage
          return g
 
 struct :: [Value] -> Bool -> Build Value
@@ -237,10 +209,10 @@ buildLandingPad typ personality numClauses name =
       W.buildLandingPad b typ personality (fromIntegral numClauses) name
 
 addClause :: Value -> Value -> Build ()
-addClause = liftBuild2 L.addClause
+addClause = liftBuild2 W.addClause
 
 setCleanup :: Value -> Bool -> Build ()
-setCleanup landingpad cleanup = lift $ L.setCleanup landingpad (fromIntegral $ fromEnum $ cleanup)
+setCleanup landingPad cleanup = lift (W.setCleanup landingPad cleanup)
 
 alloca :: Type -> Text-> Build Value
 alloca tr str = (withBuilder2 W.buildAlloca) tr (Text.unpack str)
@@ -307,14 +279,14 @@ trunc :: Value -> Type -> String -> Build Value
 trunc = withBuilder3 W.buildTrunc
 
 getEntryBasicBlock :: Value -> Build BasicBlock
-getEntryBasicBlock = liftBuild1 L.getEntryBasicBlock
+getEntryBasicBlock = liftBuild1 W.getEntryBasicBlock
 
 appendBasicBlock :: Value -> Text -> Build BasicBlock
 appendBasicBlock v str = 
     (withContext2 W.appendBasicBlockInContext) v (Text.unpack str)
 
 getBasicBlockParent :: BasicBlock ->  Build Value
-getBasicBlockParent = liftBuild1 L.getBasicBlockParent
+getBasicBlockParent = liftBuild1 W.getBasicBlockParent
 
 buildPhi :: Type -> String -> Build Value
 buildPhi = withBuilder2 W.buildPhi

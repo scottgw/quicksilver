@@ -7,8 +7,6 @@ import Control.Monad.Reader
 import Data.Generics
 import Data.Text as Text
 
-import Foreign.C.String
-
 import GHC.Constants
 
 import Language.QuickSilver.Syntax

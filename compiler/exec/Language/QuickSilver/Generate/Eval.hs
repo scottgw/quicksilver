@@ -33,7 +33,6 @@ import Language.QuickSilver.Generate.LLVM.Util
 import Language.QuickSilver.Generate.LLVM.Values
 import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Memory.Object
-import Language.QuickSilver.Generate.Util
 
 (<#>) :: Text.Text -> [Value] -> Build Value
 (<#>) name args =
