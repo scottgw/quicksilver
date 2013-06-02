@@ -387,68 +387,75 @@ nonSeparateCall trg fName args retType =
        call' f (currProc:trg':args')
 
 separateCall trg fName args retType =
-    do startB <- getInsertBlock
-       func   <- getBasicBlockParent startB
+  do let cName = classTypeName (texpr trg)
+     debug "generating separate call"
 
-       -- sepCallStartB <- appendBasicBlock func "sepCallStart"
-       directFuncB <- appendBasicBlock func "directFuncCall"
-       sepFuncCallB <- appendBasicBlock func "sepFuncCall"
-       afterSepCallB <- appendBasicBlock func "afterSepCall"
+     -- positionAtEnd sepCallStartB
+     trg'  <- eval trg
+     debugDump trg'
+     args' <- mapM eval args
+     debug (show trg)
+     Just f <- getNamedFunction (fullNameStr cName fName)
+     debug (concat ["sepCall: call -> "
+                   ,Text.unpack $ fullNameStr cName fName 
+                   ,",", show f, " with "
+                   ,show (countParams f)
+                   ," parameters " 
+                   ,show (trg:args)])
+     debugDump f
 
-       let cName = classTypeName (texpr trg)
-       debug "generating separate call"
+     (trgProcRef, nonSepTrgRef) <- splitSepRef trg'
+     trgProc <- load' trgProcRef
+     nonSepTrg <- load' nonSepTrgRef
+     privQ <- getQueueFor trg
 
-       -- positionAtEnd sepCallStartB
-       trg'  <- eval trg
-       debugDump trg'
-       args' <- mapM eval args
-       debug (show trg)
-       Just f <- getNamedFunction (fullNameStr cName fName)
-       debug (concat ["sepCall: call -> "
-                     ,Text.unpack $ fullNameStr cName fName 
-                     ,",", show f, " with "
-                     ,show (countParams f)
-                     ," parameters " 
-                     ,show (trg:args)])
-       debugDump f
+     if retType == NoType
+       then
+         do closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
+            debug "sepCall: calling underlying function"
+            currProc <- getCurrProc
+            "priv_queue_routine" <#> [privQ, closure, currProc]
+       else
+         do startB <- getInsertBlock
+            func   <- getBasicBlockParent startB
 
-       (trgProcRef, nonSepTrgRef) <- splitSepRef trg'
-       trgProc <- load' trgProcRef
-       nonSepTrg <- load' nonSepTrgRef
-       resLoc <- closLocFor retType
-       privQ <- getQueueFor trg
-       if retType == NoType
-          -- This is a procedure call, we have to do the closure
-         then br sepFuncCallB
-         else -- Otherwise we *may* be able to skip it if the last was also a func call
-           do lastWasFunc <- "priv_queue_last_was_func" <#> [privQ]
-              condBr lastWasFunc directFuncB sepFuncCallB
+            directFuncB <- appendBasicBlock func "directFuncCall"
+            sepFuncCallB <- appendBasicBlock func "sepFuncCall"
+            afterSepCallB <- appendBasicBlock func "afterSepCall"
 
-       positionAtEnd directFuncB
-       debug "building direct call"
-       let Sep _ _ baseType = texpr trg
-       baseTypeL <- typeOfM baseType
-       castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
-       res <- call' f (trgProc : castedNonSepTrg : args')
-       when (retType /= NoType) (void $ store res resLoc)
-       br afterSepCallB
+            lastWasFunc <- "priv_queue_last_was_func" <#> [privQ]
+            condBr lastWasFunc directFuncB sepFuncCallB
 
-       positionAtEnd sepFuncCallB
-       closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
-       debug "sepCall: calling underlying function"
-       currProc <- getCurrProc
-       if retType == NoType
-         then "priv_queue_routine" <#> [privQ, closure, currProc]
-         else
-           do voidPtr <- voidPtrType
-              resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
-              "priv_queue_function" <#> [privQ, closure, resLocCast, currProc]
-       br afterSepCallB
+            positionAtEnd directFuncB
+            debug "building direct call"
+            let Sep _ _ baseType = texpr trg
+            baseTypeL <- typeOfM baseType
+            castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
+            directVal <- call' f (trgProc : castedNonSepTrg : args')
+            br afterSepCallB
 
-       positionAtEnd afterSepCallB
-       if not (isBasic retType || isSeparate retType || retType == NoType)
-         then wrapSepResult trgProc retType resLoc
-         else load' resLoc
+            positionAtEnd sepFuncCallB
+            closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
+            debug "sepCall: calling underlying function"
+            currProc <- getCurrProc
+            voidPtr <- voidPtrType
+
+            -- Dig out the appropriate storage type and cast to a void
+            -- pointer priv_queue_function can take it.
+            resLoc <- closLocFor retType
+            resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
+            "priv_queue_function" <#> [privQ, closure, resLocCast, currProc]
+            sepCallVal <- load' resLoc
+            br afterSepCallB
+
+            positionAtEnd afterSepCallB
+            phi <- join (buildPhi <$> typeOfM retType <*> pure "")
+            addIncoming phi [ (directVal, directFuncB)
+                            , (sepCallVal, sepFuncCallB)
+                            ]
+            if not (isBasic retType || isSeparate retType)
+              then wrapSepResult trgProc retType phi
+              else return phi
 
 prepareClosure retType trg f args trgProc nonSepTrg args' =
   do let Sep _ _ nonSepTrgType = texpr trg
@@ -484,8 +491,8 @@ prepareClosure retType trg f args trgProc nonSepTrg args' =
          storeArg (t, val) idx =
            do debug $ "storeArg: " ++ show (t, val, idx)
               ptr <- if isBasic t
-                     then join (intToPtr val <$> voidPtrType <*> pure "ptrtoint")
-                     else join (bitcast val <$> voidPtrType <*> pure "arg store bitcast")
+                     then join (intToPtr val <$> voidPtrType <*> pure "")
+                     else join (bitcast val <$> voidPtrType <*> pure "")
               argLoc <- gepInt argArrayPtr [idx]
               argRef <- load' argLoc
               store ptr argRef
@@ -496,12 +503,11 @@ prepareClosure retType trg f args trgProc nonSepTrg args' =
 
 splitSepRef ref = (,) <$> gepInt ref [0, 0] <*> gepInt ref [0, 1]
 
-wrapSepResult trgProc retType resultLoc =
+wrapSepResult trgProc retType result =
   do sepInst <- mallocSeparate retType
      (procRef, objRef) <- splitSepRef sepInst
-     res <- load' resultLoc
      store trgProc procRef
-     store res objRef
+     store result objRef
      return sepInst
 
 getQueueFor :: TExpr -> Build Value
