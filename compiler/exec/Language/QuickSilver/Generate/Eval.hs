@@ -141,58 +141,44 @@ genBinOp op e1 e2 _resType =
     orElse _str =
       do startB <- getInsertBlock
          func   <- getBasicBlockParent startB
-         res    <- join (alloca <$> int1TypeM <*> pure "orElse result")
          tr     <- true
 
-         shortcutB <- appendBasicBlock func "orElse shortcut"
          fullEvalB <- appendBasicBlock func "orElse full evaluate"
          afterB    <- appendBasicBlock func "orElse after"
 
          positionAtEnd startB
          e1'  <- eval e1
-         condBr e1' shortcutB fullEvalB
+         condBr e1' afterB fullEvalB
 
          positionAtEnd fullEvalB
          e2'  <- eval e2
-         store e2' res
-         br afterB
-
-         positionAtEnd shortcutB
-         store tr res
          br afterB
 
          positionAtEnd afterB
-         debug "orElse res"
-         debugDump res
-         load res "orElse result"
+         phi <- join (buildPhi <$> int1TypeM <*> pure "")
+         addIncoming phi [(tr, startB), (e2', fullEvalB)]
+         return phi
 
     andThen _str =
       do startB <- getInsertBlock
          func   <- getBasicBlockParent startB
-         res    <- join (alloca <$> int1TypeM <*> pure "andThen result")
          fl     <- false
 
-         shortcutB <- appendBasicBlock func "andThen shortcut"
          fullEvalB <- appendBasicBlock func "andThen full evaluate"
          afterB    <- appendBasicBlock func "andThen after"
 
          positionAtEnd startB
          e1'  <- eval e1
-         condBr e1' fullEvalB shortcutB
+         condBr e1' fullEvalB afterB
 
          positionAtEnd fullEvalB
          e2'  <- eval e2
-         store e2' res
-         br afterB
-
-         positionAtEnd shortcutB
-         store fl res
          br afterB
 
          positionAtEnd afterB
-         debug "andThen res"
-         debugDump res
-         load res "andThen result"
+         phi <- join (buildPhi <$> int1TypeM <*> pure "")
+         addIncoming phi [(fl, startB), (e2', fullEvalB)]
+         return phi
 
 
 genUnOp :: UnOp -> TExpr -> Typ -> Build Value
@@ -315,17 +301,17 @@ evalUnPos (Access trg attr typ) = do
          privQ <- getQueueFor trg
          
          lastWasFunc <- "priv_queue_last_was_func" <#> [privQ]
-         closResLoc <- closLocFor typ
+
          condBr lastWasFunc directAccessB sepAccessB
 
          positionAtEnd directAccessB
-         v <- load' attrLoc
-         store v closResLoc
+         directVal <- load' attrLoc
          br afterAccessB
 
          positionAtEnd sepAccessB
          closT <- closType typ
          voidPtr <- voidPtrType
+         closResLoc <- closLocFor typ
          attrVoidPtr <- bitcast attrLoc voidPtr ""
          closResVoidPtr <- bitcast closResLoc voidPtr ""
          currProc <- getCurrProc
@@ -333,11 +319,16 @@ evalUnPos (Access trg attr typ) = do
          "priv_queue_access" <#> 
             [privQ, closT, attrVoidPtr, closResVoidPtr, currProc]
          debug "sep access done"
-         br directAccessB
+         sepCallVal <- load' closResLoc
+         br afterAccessB
 
          -- Really should use a phi node here.
          positionAtEnd afterAccessB
-         load' closResLoc
+         phi <- join (buildPhi <$> typeOfM typ <*> pure "")
+         addIncoming phi [ (directVal, directAccessB)
+                         , (sepCallVal, sepAccessB)
+                         ]
+         return phi
     else debugDump attrLoc >> load' attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
@@ -414,7 +405,7 @@ separateCall trg fName args retType =
        args' <- mapM eval args
        debug (show trg)
        Just f <- getNamedFunction (fullNameStr cName fName)
-       debug (concat ["sepCall: call -> " 
+       debug (concat ["sepCall: call -> "
                      ,Text.unpack $ fullNameStr cName fName 
                      ,",", show f, " with "
                      ,show (countParams f)
