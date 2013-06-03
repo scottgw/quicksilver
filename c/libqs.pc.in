@@ -8,4 +8,4 @@ Description: Library for the QuickSilver runtime.
 Requires: tbb glib-2.0
 Version: 1.0
 Cflags: -I${includedir} -pthread
-Libs: -L${libdir} -lqs -lrt -ltbb -l:libffi.so.6
+Libs: -L${libdir} -lqs -lgc -lrt -ltbb -l:libffi.so.6
