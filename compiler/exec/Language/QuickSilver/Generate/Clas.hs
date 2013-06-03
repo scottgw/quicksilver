@@ -52,7 +52,7 @@ genMain clas = do
   numExecs <- int 4
 
   syncData <- "sync_data_new" <#> [maxProcs]
-  rootProc <- "proc_new_root" <#> [syncData, mainFunc]
+  "proc_new_root" <#> [syncData, mainFunc]
   "create_executors" <#> [syncData, numExecs]
 
   notifier <- "notifier_spawn" <#> [syncData]

@@ -36,7 +36,7 @@ locOf te =
     T.Access trg name _type -> accessLoc trg name
     T.Var n _type -> lookupEnv n
     T.ResultVar _ -> lookupEnv "Result"
-    t -> error $ "locOf: " ++ show te
+    _ -> error $ "locOf: " ++ show te
          
 
 genStmt :: UnPosTStmt -> Build ()
@@ -161,7 +161,7 @@ genStmt (Separate args clauses body) =
   
 genStmt (Create _typeMb var fName args) =
   case texpr var of
-    varType@(Sep _ _ t) ->
+    Sep _ _ t ->
       do debug "creating separate object"
          varRef <- lookupVarAccess (contents var)
          newSep <- mallocSeparate t
@@ -207,20 +207,6 @@ genStmt (Create _typeMb var fName args) =
 -- genStmt BuiltIn = lookupBuiltin
 genStmt s = error $ "genStmt: no pattern for: " ++ show s
 
-lockSeps :: [TExpr] -> Build ()
-lockSeps = mapM_ lockSep
-  where
-    lockSep e =
-      case contents e of
-        Var _ _ -> go
-        Access _ _ _ -> go -- 
-        _ -> error $ "lockSep: found non-variable expression " ++ show e
-      where
-        go =
-          do debug "lockSep"
-             prc <- getProcExpr e
-             lockSep' prc
-
 getProcExpr e = eval e >>= getProc
 
 getQueue prc =
@@ -261,6 +247,6 @@ lookupMalloc t  _fName _args =
   case t of
     ClassType cName _ -> mallocObject cName
     -- FIXME: Add separate wrapper datatype
-    Sep _ _ t -> mallocObject (classTypeName t)
+    Sep _ _ baseType -> mallocObject (classTypeName baseType)
     _ -> error ("lookupMalloc: called on non-class type: " ++ show t)
 

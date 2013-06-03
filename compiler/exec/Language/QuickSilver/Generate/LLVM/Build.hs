@@ -19,7 +19,6 @@ import           Foreign.Ptr
 import           Foreign.Storable
 
 import qualified LLVM.Wrapper.Core as W
-import qualified LLVM.Wrapper.BitWriter as W
 
 import           Prelude hiding (lookup)
 

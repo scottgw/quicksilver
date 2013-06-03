@@ -204,15 +204,13 @@ setInitializer :: LLVM m => Value -> Value -> m ()
 setInitializer = liftBuild2  W.setInitializer
 
 setFunctionCallConv :: LLVM m => Value -> CallingConvention -> m ()
-setFunctionCallConv v conv = 
-    liftIO $ W.setFunctionCallConv v conv
+setFunctionCallConv = liftBuild2 W.setFunctionCallConv
 
 setInstructionCallConv :: LLVM m => Value -> CallingConvention -> m ()
-setInstructionCallConv v conv = 
-  liftIO $ W.setInstructionCallConv v conv
+setInstructionCallConv = liftBuild2 W.setInstructionCallConv 
 
 dumpValue :: LLVM m => Value -> m ()
-dumpValue v = liftIO (W.dumpValue v)
+dumpValue = liftBuild1 W.dumpValue
 
 ptrToInt :: LLVM m => Value -> Type -> String -> m Value
 ptrToInt = withBuilder3 W.buildPtrToInt
@@ -303,10 +301,10 @@ addClause :: LLVM m => Value -> Value -> m ()
 addClause = liftBuild2 W.addClause
 
 setCleanup :: LLVM m => Value -> Bool -> m ()
-setCleanup landingPad cleanup = liftIO (W.setCleanup landingPad cleanup)
+setCleanup = liftBuild2 W.setCleanup
 
 alloca :: LLVM m => Type -> Text-> m Value
-alloca tr str = (withBuilder2 W.buildAlloca) tr (Text.unpack str)
+alloca tr str = withBuilder2 W.buildAlloca tr (Text.unpack str)
 
 unreachable :: LLVM m => m Value
 unreachable = withBuilder0 W.buildUnreachable
@@ -384,7 +382,7 @@ phi :: LLVM m => Type -> String -> m Value
 phi = withBuilder2 W.buildPhi
 
 addIncoming :: LLVM m => Value -> [(Value, BasicBlock)] -> m ()
-addIncoming phiNode edges = liftIO (W.addIncoming phiNode edges)
+addIncoming = liftBuild2 W.addIncoming
 
 gep :: LLVM m => Value -> [Value] -> m Value
 gep v idxs = withBuilder0 (\b -> W.buildGEP b v idxs "")
@@ -395,14 +393,13 @@ typeOfVal = liftBuild1 W.typeOf
 
 structCreateNamed :: LLVM m => Text -> m Type
 structCreateNamed str = do
-  c <- askContext
-  liftIO $ W.structCreateNamedInContext c (Text.unpack str)
+  withContext1 W.structCreateNamedInContext (Text.unpack str)
 
 structSetBody :: LLVM m => Type -> [Type] -> Bool -> m ()
-structSetBody strct body pack = liftIO (W.structSetBody strct body pack)
+structSetBody = liftBuild3 W.structSetBody
 
 getTypeKind :: LLVM m => Type -> m TypeKind
-getTypeKind = liftIO . W.getTypeKind
+getTypeKind = liftBuild1 W.getTypeKind
 
 getTypeByName :: LLVM m => Text -> m (Maybe Type)
 getTypeByName name = 
@@ -410,7 +407,7 @@ getTypeByName name =
        liftIO (W.getTypeByName modul (Text.unpack name))
 
 getElementType :: LLVM m => Type -> m Type
-getElementType t = liftIO (W.getElementType t)
+getElementType = liftBuild1 W.getElementType
 
 structType :: LLVM m => [Type] -> Bool -> m Type
 structType = withContext2 W.structTypeInContext
@@ -449,16 +446,6 @@ liftBuild3 :: LLVM m =>
               a -> b -> c -> m x
 liftBuild3 f a b c = liftIO $ f a b c
 
-liftBuild4 :: LLVM m =>
-              (a -> b -> c -> d -> IO x) -> 
-              a -> b -> c -> d -> m x
-liftBuild4 f a b c d = liftIO $ f a b c d
-
-liftBuild5 :: LLVM m =>
-              (a -> b -> c -> d -> e -> IO x) -> 
-              a -> b -> c -> d -> e -> m x
-liftBuild5 f a b c d e = liftIO $ f a b c d e
-
 withBuilder0 :: LLVM m => (Builder -> IO x) -> m x
 withBuilder0 f = askBuild >>= liftIO . f
 
@@ -494,15 +481,3 @@ withContext1 f a = askContext >>= \ bRef -> liftIO $ f bRef a
 withContext2 :: LLVM m => (Context -> a -> b -> IO x) -> 
                 a -> b -> m x
 withContext2 f a b = askContext >>= \ bRef -> liftIO $ f bRef a b
-
-withContext3 :: LLVM m => (Context -> a -> b -> c -> IO x) -> 
-                a -> b -> c -> m x
-withContext3 f a b c = askContext >>= \ bRef -> liftIO $ f bRef a b c
-
-withContext4 :: LLVM m => (Context -> a -> b -> c -> d -> IO x) -> 
-                a -> b -> c -> d -> m x
-withContext4 f a b c d = askContext >>= \ bRef -> liftIO $ f bRef a b c d
-
-withContext5 :: LLVM m => (Context -> a -> b -> c -> d -> e -> IO x) -> 
-                a -> b -> c -> d -> e -> m x
-withContext5 f a b c d e = askContext >>= \ bRef -> liftIO $ f bRef a b c d e 

@@ -44,7 +44,7 @@ typeOf e t =
       Sep _ _ s -> sepClass s
       ClassType s _ -> processClass s
     where
-      sepClass s =
+      sepClass _ =
         do sepTypeMb <- getTypeByName "separate_wrapper"
            case sepTypeMb of
              Nothing ->

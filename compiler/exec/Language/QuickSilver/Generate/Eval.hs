@@ -34,8 +34,8 @@ import Language.QuickSilver.Generate.Memory.Object
 
 (<#>) :: Text.Text -> [Value] -> Build Value
 (<#>) name args =
-  do Just ret <- callByName name args
-     return ret
+  do Just result <- callByName name args
+     return result
 
 evalClause :: Clause TExpr -> Build Value
 evalClause (Clause _n e) =
@@ -75,7 +75,7 @@ castType Int64Type v = return v
 castType (AnyRefType _) v = do
   ptrType <- voidPtrType
   bitcast v ptrType ("castToAnyRef")
-castType t@(Sep _ _ s) v = do
+castType t@(Sep _ _ _s) v = do
   sepType <- typeOfM t
   bitcast v sepType ("castToSep")
 castType t@(ClassType c _) v = do
@@ -221,7 +221,7 @@ evalUnPos (Cast t e) =
      v <- eval e
      castType t v
 
-evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
+evalUnPos (StaticCall (ClassType moduleType _) name args _retType) =
     do debug "evalUnPos: static call"
        Just rout <- findAbsRoutine <$> lookupClas moduleType <*> pure name
        pre <- case routineImpl rout of
@@ -365,7 +365,7 @@ evalUnPos (LitString s) = do
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
 
 
-nonSeparateCall trg fName args retType =
+nonSeparateCall trg fName args _retType =
     do let cName = classTypeName (texpr trg)
 
        currProc <- getCurrProc

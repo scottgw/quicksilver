@@ -73,17 +73,6 @@ genClosureArgs =
                         ,("<closResult1>", closResult1Ref)
                         ]
               )
--- genProcDecl :: Build Env
--- genProcDecl =
---     do procType <- procTypeM
---        ref <- alloca procType "<CurrentProc>"
---        return (singleEnv' "<CurrentProc>" ref)
-
--- routHasCurrent :: TRoutine -> Bool
--- routHasCurrent rout =
---     case routineArgs rout of
---       Decl "Current" _ : _ -> True
---       _ -> False
 
 routineEnv :: TRoutine -> Value -> Build Env
 routineEnv rout func = 
@@ -94,11 +83,6 @@ routineEnv rout func =
                                 allocPs func (routineArgs rout)
                         , debug "Routine: closure args and arg types" >> genClosureArgs
                         ]
-
-routHasNonSpecialCurrent rout =
-    case routineArgs rout of
-      Decl "Current" t : _ -> not (isSpecialClassName (classTypeName t))
-      _ -> False
 
 genBody :: TRoutine -> Build ()
 genBody r =
