@@ -1,119 +1,232 @@
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
+
 module Language.QuickSilver.Generate.LLVM.Simple
-    (
-     IntPredicate (..), FPPredicate (..),
-     CallingConvention (..), Linkage (..),
-     Context, Value, Type, Builder, BasicBlock,
-     Build, Env,
+    ( runLLVMReader
+    , LLVM (..)
+    , LLVMData (..)
+    , LLVMReaderT
+    , LLVMReader
 
-     dumpModule,
-     askModule, writeModuleToFile, runBuild,
-     withUpdEnv, lookupEnv, fromListEnv,
+    , Context
+    , Value
+    , Type
+    , Builder
+    , Module
+    , dumpModule
+    , dumpValue
 
-     alloca, load, store,
+      -- ** Globals
+    , CallingConvention (..)
+    , Linkage (..)
+    , Visibility (..)
+    , addGlobal
+    , setInitializer
+    , setGlobalConstant
+    , getNamedGlobal
+    , getFirstGlobal
+    , getNextGlobal
+    , setVisibility
+    , getVisibility
+    , setLinkage
+    , getLinkage
+    , string
+    , globalString
 
-     addGlobal, setInitializer, setGlobalConstant, getNamedGlobal,
-     getFirstGlobal, getNextGlobal,
+      -- ** Operators
+    , IntPredicate (..)
+    , FPPredicate (..)
+    , constInt
+    , constReal
+    , add
+    , sub
+    , mul
+    , fdiv
+    , neg
+    , fneg
+    , sdiv
+    , srem
+    , nott
+    , andd
+    , orr
+    , icmp
+    , fcmp  
+    , sext
+    , trunc
+    , siToFP
 
-     setVisibility, getVisibility,
-     setLinkage, getLinkage,
+      -- ** Control flow
+    , ret
+    , retVoid
+    , condBr
+    , br
+    , call
+    , callByName
+    , invoke
+    , unreachable
 
-     dumpValue,
-     
-     gep, gepInt,
+      -- ** Landing pad
+    , buildLandingPad
+    , setCleanup
+    , addClause
 
-     add, sub, mul, fdiv, neg, fneg,
-     sdiv, srem,
-     nott, andd, orr,
-     condBr, br,
-     icmp, fcmp,
+      -- ** Memory
+    , alloca
+    , load
+    , store
+    , nul
+    , ptrToInt
+    , intToPtr
+    , gep
+    , bitcast
+    , constPtrToInt
 
-     sext, trunc,
-     
-     ptrToInt, intToPtr, siToFP, bitcast,
-     constPtrToInt,
+      -- ** Basic blocks
+    , BasicBlock
+    , getInsertBlock
+    , getEntryBasicBlock
+    , appendBasicBlock
+    , positionAtEnd
+    , getBasicBlockParent
 
-     ret, retVoid,
+      -- ** Phi node
+    , phi
+    , addIncoming
 
-     getInsertBlock, getEntryBasicBlock, appendBasicBlock, positionAtEnd,
-     getBasicBlockParent,
+      -- ** Types
+    , intType
+    , doubleType
+    , voidType
+    , arrayType
+    , struct
+    , structType
+    , structCreateNamed
+    , structSetBody
+    , countStructElementTypes
+    , getTypeKind
+    , getTypeByName
+    , getElementType
+    , functionType
 
-     buildPhi, addIncoming,
-     
-     globalString, string, nul, constInt, constReal,  struct,
-
-     unreachable,
-
-     buildLandingPad, setCleanup, addClause,
-
-     addFunc, funcType, funcTypeVar, getNamedFunction,
-     countParamTypes,
-     getParamTypes, countParams, getParam,
-     call, call',callByName,
-     invoke, invoke',
-     setFunctionCallConv,
-     setInstructionCallConv
+      -- ** Functions      
+    , addFunction
+    , getNamedFunction
+    , countParamTypes
+    , getParamTypes
+    , countParams
+    , getParam
+    , setFunctionCallConv
+    , setInstructionCallConv
     ) where
 
 import Control.Applicative
 import Control.Monad.Reader
+import Control.Monad.Identity
 
 import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import qualified LLVM.Wrapper.Core as W 
-import           LLVM.Wrapper.Core ( Value, BasicBlock, Builder, Context
+import           LLVM.Wrapper.Core ( Builder, Context, Module
+                                   , Value, BasicBlock, Type, TypeKind
                                    , CallingConvention, FPPredicate
                                    , IntPredicate
                                    , Visibility
                                    , Linkage
                                    , constInt, constReal, constPtrToInt
-                                   , functionType)
+                                   )
 
-import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Util
+-- import Language.QuickSilver.Generate.LLVM.Types
+-- import Language.QuickSilver.Generate.LLVM.Util
 
+-- My specific stuff
 
-dumpModule :: Build ()
-dumpModule = askModule >>= lift . W.dumpModule
+--
+-- Real module stuff
+--
 
-setGlobalConstant :: Value -> Bool -> Build ()
-setGlobalConstant v b = lift (W.setGlobalConstant v b)
+class (Functor m, MonadIO m) => LLVM m where
+  askBuild :: m Builder
+  askContext :: m Context
+  askModule :: m Module
 
-setVisibility :: Value -> Visibility -> Build ()
-setVisibility v vis = lift $ W.setVisibility v vis
+data LLVMData =
+  LLVMData { llvmBuild :: Builder
+           , llvmContext :: Context
+           , llvmModule :: Module
+           }
 
-getVisibility :: Value -> Build Visibility
-getVisibility = lift . W.getVisibility
+instance Functor LLVMReader where
+  fmap f (LLVMReader m) = LLVMReader (fmap f m)
 
-setLinkage :: Value -> Linkage -> Build ()
-setLinkage v link = lift $ W.setLinkage v link
+instance Monad LLVMReader where
+  (LLVMReader m) >>= f = LLVMReader (m >>= (unLLVMReader . f))
+  return a = LLVMReader (return a)
 
-getLinkage :: Value -> Build Linkage
-getLinkage = lift . W.getLinkage
+-- instance MonadReader LLVMReader where
+--   ask = LLVMReader ask
+--   local f (LLVMReader m) = LLVMReader (local f m)
 
-addGlobal :: Type -> String -> Build Value
+instance MonadIO LLVMReader where
+  liftIO m = LLVMReader (liftIO m)
+
+instance LLVM LLVMReader where
+  askBuild = llvmBuild <$> (LLVMReader ask)
+  askContext = llvmContext <$> (LLVMReader ask)
+  askModule = llvmModule <$> (LLVMReader ask)
+
+instance LLVM (ReaderT r LLVMReader) where
+  askBuild = lift askBuild
+  askContext = lift askContext
+  askModule = lift askModule
+
+type LLVMReaderT m = ReaderT LLVMData m
+newtype LLVMReader a = LLVMReader { unLLVMReader :: LLVMReaderT IO a }
+                       
+runLLVMReader :: LLVMReader a -> LLVMData -> IO a
+runLLVMReader (LLVMReader m) = runReaderT m 
+
+dumpModule :: LLVM m => m ()
+dumpModule = askModule >>= liftIO . W.dumpModule
+
+setGlobalConstant :: LLVM m => Value -> Bool -> m ()
+setGlobalConstant v b = liftIO (W.setGlobalConstant v b)
+
+setVisibility :: LLVM m => Value -> Visibility -> m ()
+setVisibility v vis = liftIO $ W.setVisibility v vis
+
+getVisibility :: LLVM m => Value -> m Visibility
+getVisibility = liftIO . W.getVisibility
+
+setLinkage :: LLVM m => Value -> Linkage -> m ()
+setLinkage v link = liftIO $ W.setLinkage v link
+
+getLinkage :: LLVM m => Value -> m Linkage
+getLinkage = liftIO . W.getLinkage
+
+addGlobal :: LLVM m => Type -> String -> m Value
 addGlobal t s = do
     m <- askModule
-    lift $ W.addGlobal m t s
+    liftIO $ W.addGlobal m t s
 
-setInitializer :: Value -> Value -> Build ()
+setInitializer :: LLVM m => Value -> Value -> m ()
 setInitializer = liftBuild2  W.setInitializer
 
-setFunctionCallConv :: Value -> CallingConvention -> Build ()
+setFunctionCallConv :: LLVM m => Value -> CallingConvention -> m ()
 setFunctionCallConv v conv = 
-    lift $ W.setFunctionCallConv v conv
+    liftIO $ W.setFunctionCallConv v conv
 
-setInstructionCallConv :: Value -> CallingConvention -> Build ()
+setInstructionCallConv :: LLVM m => Value -> CallingConvention -> m ()
 setInstructionCallConv v conv = 
-  lift $ W.setInstructionCallConv v conv
+  liftIO $ W.setInstructionCallConv v conv
 
-dumpValue :: Value -> Build ()
-dumpValue v = lift (W.dumpValue v)
+dumpValue :: LLVM m => Value -> m ()
+dumpValue v = liftIO (W.dumpValue v)
 
-ptrToInt :: Value -> Type -> String -> Build Value
+ptrToInt :: LLVM m => Value -> Type -> String -> m Value
 ptrToInt = withBuilder3 W.buildPtrToInt
 
-intToPtr :: Value -> Type -> String -> Build Value
+intToPtr :: LLVM m => Value -> Type -> String -> m Value
 intToPtr = withBuilder3 W.buildIntToPtr
 
 countParamTypes :: Type -> Int
@@ -128,32 +241,31 @@ getParamTypes = W.getParamTypes
 getParam :: Value -> Int -> Value
 getParam = W.getParam
 
-getNamedFunction :: Text -> Build (Maybe Value)
+getNamedFunction :: LLVM m => Text -> m (Maybe Value)
 getNamedFunction s = do
   m <- askModule
-  debug $ "getNamedFunction: asking for: " ++ show s
-  lift $ W.getNamedFunction m (Text.unpack s)
+  liftIO $ W.getNamedFunction m (Text.unpack s)
 
 nul :: Type -> Value
 nul = W.constNull
 
-getFirstGlobal :: Build Value
-getFirstGlobal = askModule >>= lift . W.getFirstGlobal
+getFirstGlobal :: LLVM m => m Value
+getFirstGlobal = askModule >>= liftIO . W.getFirstGlobal
 
-getNextGlobal :: Value -> Build Value
-getNextGlobal = lift . W.getNextGlobal 
+getNextGlobal :: LLVM m => Value -> m Value
+getNextGlobal = liftIO . W.getNextGlobal 
 
-getNamedGlobal :: Text -> Build (Maybe Value)
+getNamedGlobal :: LLVM m => Text -> m (Maybe Value)
 getNamedGlobal str = do
   m <- askModule
-  lift $ W.getNamedGlobal m (Text.unpack str)
+  liftIO $ W.getNamedGlobal m (Text.unpack str)
 
-globalString :: String -> Build Value
+globalString :: LLVM m => String -> m Value
 globalString str =
   let strName = str ++ "_global"
   in withBuilder2 W.buildGlobalStringPtr str strName
 
-string :: String -> Build Value
+string :: LLVM m => String -> m Value
 string origStr = 
    let 
        str = origStr -- ++ "\0"
@@ -165,98 +277,87 @@ string origStr =
          setLinkage g W.WeakAnyLinkage
          return g
 
-struct :: [Value] -> Bool -> Build Value
+struct :: LLVM m => [Value] -> Bool -> m Value
 struct = withContext2 W.constStructInContext
 
-load :: Value -> String -> Build Value
+load :: LLVM m => Value -> String -> m Value
 load = withBuilder2 W.buildLoad
 
-store :: Value -> Value -> Build Value
+store :: LLVM m => Value -> Value -> m Value
 store = withBuilder2 W.buildStore
 
-call :: Text -> [Value] -> Build Value
-call s args = do
-  funcRef <- lookupEnv s
-  call' funcRef args
-
-callByName :: Text -> [Value] -> Build (Maybe Value)
+callByName :: LLVM m => Text -> [Value] -> m (Maybe Value)
 callByName f args = do
   fPtrMb <- getNamedFunction f
   case fPtrMb of
-    Just fPtr -> Just <$> call' fPtr args
+    Just fPtr -> Just <$> call fPtr args
     Nothing -> return Nothing
 
 -- FIXME: return Void functions can't have a name 
 -- However, we can't even examine the return type of the function value
 -- because it is reported as a pointer-type, not a function-type!
-call' :: Value -> [Value] -> Build Value
-call' fn args = withBuilder3 W.buildCall fn args ""
+call :: LLVM m => Value -> [Value] -> m Value
+call fn args = withBuilder3 W.buildCall fn args ""
 
-invoke :: Text -> [Value] -> BasicBlock -> BasicBlock -> 
-          Build Value
-invoke s args b1 b2 = do
-  f <- lookupEnv s
-  invoke' f args b1 b2 (Text.unpack s)
+invoke :: LLVM m => Value -> [Value] -> BasicBlock -> BasicBlock -> 
+          String -> m Value
+invoke = withBuilder5 W.buildInvoke
 
-invoke' :: Value -> [Value] -> BasicBlock -> BasicBlock -> 
-          String -> Build Value
-invoke' f args norm excp str = 
-    withBuilder0 (\ b -> W.buildInvoke b f args norm excp str)
-
-buildLandingPad :: Type -> Value -> Int -> String -> Build Value
+buildLandingPad :: LLVM m => Type -> Value -> Int -> String -> m Value
 buildLandingPad typ personality numClauses name =
     withBuilder0 $ \b ->
       W.buildLandingPad b typ personality (fromIntegral numClauses) name
 
-addClause :: Value -> Value -> Build ()
+addClause :: LLVM m => Value -> Value -> m ()
 addClause = liftBuild2 W.addClause
 
-setCleanup :: Value -> Bool -> Build ()
-setCleanup landingPad cleanup = lift (W.setCleanup landingPad cleanup)
+setCleanup :: LLVM m => Value -> Bool -> m ()
+setCleanup landingPad cleanup = liftIO (W.setCleanup landingPad cleanup)
 
-alloca :: Type -> Text-> Build Value
+alloca :: LLVM m => Type -> Text-> m Value
 alloca tr str = (withBuilder2 W.buildAlloca) tr (Text.unpack str)
 
-unreachable :: Build Value
+unreachable :: LLVM m => m Value
 unreachable = withBuilder0 W.buildUnreachable
 
-retVoid :: Build Value
+retVoid :: LLVM m => m Value
 retVoid = withBuilder0 W.buildRetVoid
 
-ret :: Value -> Build Value
+ret :: LLVM m => Value -> m Value
 ret = withBuilder1 W.buildRet
 
-icmp :: IntPredicate -> Value -> Value -> String -> Build Value
+icmp :: LLVM m => IntPredicate -> Value -> Value -> String -> m Value
 icmp = withBuilder4 W.buildICmp
 
-fcmp :: FPPredicate -> Value -> Value -> String -> Build Value
+fcmp :: LLVM m => FPPredicate -> Value -> Value -> String -> m Value
 fcmp = withBuilder4 W.buildFCmp
 
-siToFP :: Value -> Type -> String -> Build Value
+siToFP :: LLVM m => Value -> Type -> String -> m Value
 siToFP = withBuilder3 W.buildSIToFP
 
-bitcast :: Value -> Type -> String -> Build Value
+bitcast :: LLVM m => Value -> Type -> String -> m Value
 bitcast = withBuilder3 W.buildBitCast
 
 
-addFunc :: Text -> Type -> Build Value
-addFunc str typ = do
+addFunction :: LLVM m => Text -> Type -> m Value
+addFunction str typ = do
   m <- askModule
-  lift (W.addFunction m  (Text.unpack str) typ)
+  liftIO (W.addFunction m  (Text.unpack str) typ)
 
-condBr :: Value -> BasicBlock -> BasicBlock -> Build Value
+condBr :: LLVM m => Value -> BasicBlock -> BasicBlock -> m Value
 condBr = withBuilder3 W.buildCondBr
 
-br :: BasicBlock -> Build Value
+br :: LLVM m => BasicBlock -> m Value
 br = withBuilder1 W.buildBr
 
-positionAtEnd :: BasicBlock -> Build ()
+positionAtEnd :: LLVM m => BasicBlock -> m ()
 positionAtEnd = withBuilder1 W.positionAtEnd
 
-getInsertBlock :: Build Value
+getInsertBlock :: LLVM m => m Value
 getInsertBlock = withBuilder0 W.getInsertBlock
 
-add,sub,orr,mul,fdiv :: Value -> Value -> String -> Build Value
+add, sub, orr, andd, mul, fdiv, sdiv, srem :: 
+   LLVM m => Value -> Value -> String -> m Value
 add = withBuilder3 W.buildAdd
 sub = withBuilder3 W.buildSub
 orr = withBuilder3 W.buildOr
@@ -266,45 +367,151 @@ fdiv = withBuilder3 W.buildFDiv
 sdiv = withBuilder3 W.buildSDiv
 srem = withBuilder3 W.buildSRem
 
-nott, neg :: Value -> String -> Build Value
+nott, neg, fneg :: LLVM m => Value -> String -> m Value
 nott = withBuilder2 W.buildNot
 neg = withBuilder2 W.buildNeg
 fneg = withBuilder2 W.buildFNeg
 
 
-sext :: Value -> Type -> String -> Build Value
+sext :: LLVM m => Value -> Type -> String -> m Value
 sext = withBuilder3 W.buildSExt
   
-trunc :: Value -> Type -> String -> Build Value
+trunc :: LLVM m => Value -> Type -> String -> m Value
 trunc = withBuilder3 W.buildTrunc
 
-getEntryBasicBlock :: Value -> Build BasicBlock
+getEntryBasicBlock :: LLVM m => Value -> m BasicBlock
 getEntryBasicBlock = liftBuild1 W.getEntryBasicBlock
 
-appendBasicBlock :: Value -> Text -> Build BasicBlock
+appendBasicBlock :: LLVM m => Value -> Text -> m BasicBlock
 appendBasicBlock v str = 
     (withContext2 W.appendBasicBlockInContext) v (Text.unpack str)
 
-getBasicBlockParent :: BasicBlock ->  Build Value
+getBasicBlockParent :: LLVM m => BasicBlock ->  m Value
 getBasicBlockParent = liftBuild1 W.getBasicBlockParent
 
-buildPhi :: Type -> String -> Build Value
-buildPhi = withBuilder2 W.buildPhi
+phi :: LLVM m => Type -> String -> m Value
+phi = withBuilder2 W.buildPhi
 
-addIncoming :: Value -> [(Value, BasicBlock)] -> Build ()
-addIncoming phi edges = lift (W.addIncoming phi edges)
+addIncoming :: LLVM m => Value -> [(Value, BasicBlock)] -> m ()
+addIncoming phiNode edges = liftIO (W.addIncoming phiNode edges)
 
-
-funcType :: Type -> [Type] -> Type
-funcType rType argTypes = functionType rType argTypes False
-
-funcTypeVar :: Type -> [Type] -> Type
-funcTypeVar rType argTypes = functionType rType argTypes True
-
-gep :: Value -> [Value] -> Build Value
+gep :: LLVM m => Value -> [Value] -> m Value
 gep v idxs = withBuilder0 (\b -> W.buildGEP b v idxs "")
 
-gepInt :: Value -> [Int] -> Build Value
-gepInt v is = do
-  i32 <- int32TypeM
-  gep v $ map (\ i -> W.constInt i32 (fromIntegral i) True) is
+-- ** Types
+typeOfVal :: LLVM m => Value -> m Type
+typeOfVal = liftBuild1 W.typeOf
+
+structCreateNamed :: LLVM m => Text -> m Type
+structCreateNamed str = do
+  c <- askContext
+  liftIO $ W.structCreateNamedInContext c (Text.unpack str)
+
+structSetBody :: LLVM m => Type -> [Type] -> Bool -> m ()
+structSetBody strct body pack = liftIO (W.structSetBody strct body pack)
+
+getTypeKind :: LLVM m => Type -> m TypeKind
+getTypeKind = liftIO . W.getTypeKind
+
+getTypeByName :: LLVM m => Text -> m (Maybe Type)
+getTypeByName name = 
+    do modul <- askModule
+       liftIO (W.getTypeByName modul (Text.unpack name))
+
+getElementType :: LLVM m => Type -> m Type
+getElementType t = liftIO (W.getElementType t)
+
+structType :: LLVM m => [Type] -> Bool -> m Type
+structType = withContext2 W.structTypeInContext
+
+countStructElementTypes :: Type -> Int
+countStructElementTypes = W.countStructElementTypes
+
+intType :: LLVM m => Int -> m Type
+intType = withContext1 W.intTypeInContext . fromIntegral
+
+doubleType :: LLVM m => m Type
+doubleType = withContext0 W.doubleTypeInContext
+
+voidType :: LLVM m => m Type
+voidType = withContext0 W.voidTypeInContext
+
+arrayType :: Type -> Int -> Type
+arrayType t int  = W.arrayType t (fromIntegral int)
+
+functionType :: Type -> [Type] -> Bool -> Type
+functionType = W.functionType
+
+
+{-
+building lifters, just in case
+-}
+
+liftBuild1 :: LLVM m => (a -> IO x) -> a -> m x
+liftBuild1 f a = liftIO $ f a
+
+liftBuild2 :: LLVM m => (a -> b -> IO x) -> a -> b -> m x
+liftBuild2 f a b = liftIO $ f a b
+
+liftBuild3 :: LLVM m =>
+              (a -> b -> c -> IO x) -> 
+              a -> b -> c -> m x
+liftBuild3 f a b c = liftIO $ f a b c
+
+liftBuild4 :: LLVM m =>
+              (a -> b -> c -> d -> IO x) -> 
+              a -> b -> c -> d -> m x
+liftBuild4 f a b c d = liftIO $ f a b c d
+
+liftBuild5 :: LLVM m =>
+              (a -> b -> c -> d -> e -> IO x) -> 
+              a -> b -> c -> d -> e -> m x
+liftBuild5 f a b c d e = liftIO $ f a b c d e
+
+withBuilder0 :: LLVM m => (Builder -> IO x) -> m x
+withBuilder0 f = askBuild >>= liftIO . f
+
+withBuilder1 :: LLVM m => (Builder -> a -> IO x) -> a -> m x
+withBuilder1 f a = askBuild >>= \ bRef -> liftIO $ f bRef a
+
+withBuilder2 :: LLVM m =>
+                (Builder -> a -> b -> IO x) -> 
+                a -> b -> m x
+withBuilder2 f a b = askBuild >>= \ bRef -> liftIO $ f bRef a b
+
+withBuilder3 :: LLVM m =>
+                (Builder -> a -> b -> c -> IO x) -> 
+                a -> b -> c -> m x
+withBuilder3 f a b c = askBuild >>= \ bRef -> liftIO $ f bRef a b c
+
+withBuilder4 :: LLVM m =>
+                (Builder -> a -> b -> c -> d -> IO x) -> 
+                a -> b -> c -> d -> m x
+withBuilder4 f a b c d = askBuild >>= \ bRef -> liftIO $ f bRef a b c d
+
+withBuilder5 :: LLVM m =>
+                (Builder -> a -> b -> c -> d -> e -> IO x) -> 
+                a -> b -> c -> d -> e -> m x
+withBuilder5 f a b c d e= askBuild >>= \ bRef -> liftIO $ f bRef a b c d e 
+
+withContext0 :: LLVM m => (Context -> IO x) -> m x
+withContext0 f = askContext >>= liftIO . f
+
+withContext1 :: LLVM m => (Context -> a -> IO x) -> a -> m x
+withContext1 f a = askContext >>= \ bRef -> liftIO $ f bRef a
+
+withContext2 :: LLVM m => (Context -> a -> b -> IO x) -> 
+                a -> b -> m x
+withContext2 f a b = askContext >>= \ bRef -> liftIO $ f bRef a b
+
+withContext3 :: LLVM m => (Context -> a -> b -> c -> IO x) -> 
+                a -> b -> c -> m x
+withContext3 f a b c = askContext >>= \ bRef -> liftIO $ f bRef a b c
+
+withContext4 :: LLVM m => (Context -> a -> b -> c -> d -> IO x) -> 
+                a -> b -> c -> d -> m x
+withContext4 f a b c d = askContext >>= \ bRef -> liftIO $ f bRef a b c d
+
+withContext5 :: LLVM m => (Context -> a -> b -> c -> d -> e -> IO x) -> 
+                a -> b -> c -> d -> e -> m x
+withContext5 f a b c d e = askContext >>= \ bRef -> liftIO $ f bRef a b c d e 

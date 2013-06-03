@@ -1,34 +1,5 @@
-module Language.QuickSilver.Generate.LLVM.Util 
-    (
-     Build, Env, ClassEnv, ClassInfo (..), BuildState (),
-     
-     withUpdEnv,
-
-     askBuild, askModule, askEnv, askClassEnv, askContext,
-
-     singleEnv, singleEnv',
-
-     updEnv, insertEnv, fromListEnv, lookupEnv, lookupEnvM,
-
-     updClassEnv, insertClassEnv, fromListClassEnv, lookupClassEnv,
-     setClassEnv,
-
-     insertNamedType, lookupNamedType,
-
-     currentClass, setCurrent,
-     currentRoutine, setRoutine,
-
-     lookupClas, lookupValue, lookupQueueFor, updateQueues,
-     lookupClasLType,
-
-     writeModuleToFile,
- 
-     withPtrArray, 
-
-     runBuild,
-     debug, debugDump
-    )
-    where
+{-# LANGUAGE Rank2Types #-}
+module Language.QuickSilver.Generate.LLVM.Build where
 
 import           Control.Applicative
 import           Control.Monad.Reader
@@ -46,14 +17,12 @@ import qualified Data.Text as Text
 import           Foreign.Ptr
 import           Foreign.Storable
 
-import qualified LLVM.Wrapper.Core as W 
-import           LLVM.Wrapper.Core ( Type, Value, BasicBlock
-                                   , Builder, Context, Module
-                                   , CallingConvention, FPPredicate
-                                   , IntPredicate)
-import qualified LLVM.Wrapper.BitWriter as W 
+import qualified LLVM.Wrapper.Core as W
+import qualified LLVM.Wrapper.BitWriter as W
 
 import           Prelude hiding (lookup)
+
+import           Language.QuickSilver.Generate.LLVM.Simple
 
 type Env = Map Text Value
 
@@ -68,30 +37,47 @@ type ClassEnv = Map Text ClassInfo
 
 data BuildState = 
     BuildState
-    {
-      bsBuilder  :: Builder,
-      bsModule   :: Module,
-      bsContext  :: Context,
-      bsEnv      :: Env,
-      bsRoutine  :: RoutineI,
-      bsQueues   :: [(TExpr, Value)],
-      bsCurrent  :: ClasInterface,
-      bsClassEnv :: ClassEnv,
-      bsTypeEnv  :: Map Text Type, -- For special types like processor.
-      bsDebug    :: Bool
+    { bsEnv      :: Env
+    , bsRoutine  :: RoutineI
+    , bsQueues   :: [(TExpr, Value)]
+    , bsCurrent  :: ClasInterface
+    , bsClassEnv :: ClassEnv
+    , bsTypeEnv  :: Map Text Type -- For special types like processor.
+    , bsDebug    :: Bool
     }
 
-type Build a = ReaderT BuildState IO a
+type Build a = ReaderT BuildState LLVMReader a
+
+runBuild :: forall a . Bool -> Text -> Build a -> IO a
+runBuild debg moduleName m = do
+  context <- W.contextCreate
+  builder <- W.createBuilderInContext context
+  modul   <- W.moduleCreateWithNameInContext (Text.unpack moduleName) context
+
+  let llvmData = LLVMData builder context modul
+      buildState =
+        BuildState { bsCurrent  = error "Current class not set"
+                   , bsRoutine  = error "Current routine not set"
+                   , bsQueues   = []
+                   , bsEnv      = Map.empty
+                   , bsClassEnv = Map.empty
+                   , bsTypeEnv  = Map.empty
+                   , bsDebug    = debg
+                   }
+
+      buildResult = runReaderT m buildState
+  
+  runLLVMReader buildResult llvmData
 
 debug :: String -> Build ()
 debug str = do
   debg <- bsDebug <$> ask
-  when debg $ lift $ putStrLn str
+  when debg $ liftIO $ putStrLn str
 
 debugDump :: Value -> Build ()
 debugDump val = do
   debg <- bsDebug <$> ask
-  when debg $ lift $ W.dumpValueToString val >>= putStrLn
+  when debg $ liftIO $ W.dumpValueToString val >>= putStrLn
 
 withPtrArray :: Storable a => [a] -> (Ptr a -> IO b) -> IO b
 withPtrArray as f = do
@@ -107,49 +93,20 @@ singleEnv' n v = Map.singleton n v
 withUpdEnv :: (Env -> Env) -> Build a -> Build a
 withUpdEnv = local . updEnv
 
-askBuild :: Build Builder
-askBuild = fmap bsBuilder ask
-
-askModule :: Build Module 
-askModule = fmap bsModule ask
-
-askContext :: Build Context
-askContext = fmap bsContext ask
-
 askEnv :: Build Env
-askEnv = fmap bsEnv ask
+askEnv = bsEnv <$> ask
 
 askClassEnv :: Build ClassEnv
-askClassEnv = fmap bsClassEnv ask
+askClassEnv = bsClassEnv <$> ask
 
 currentClass :: Build ClasInterface
-currentClass = fmap bsCurrent ask
+currentClass = bsCurrent <$> ask
 
 currentRoutine :: Build RoutineI
 currentRoutine = bsRoutine `fmap` ask
 
 writeModuleToFile :: Module -> String -> IO ()
 writeModuleToFile = W.writeBitcodeToFile
-
-runBuild :: Bool -> Text -> Build a -> IO a
-runBuild debg moduleName b = do
-  context <- W.contextCreate
-  builder <- W.createBuilderInContext context
-  modul   <- W.moduleCreateWithNameInContext (Text.unpack moduleName) context
-
-  runReaderT b (BuildState {
-                  bsBuilder  = builder
-                , bsModule   = modul
-                , bsContext  = context
-                , bsCurrent  = error "Current class not set"
-                , bsRoutine  = error "Current routine not set"
-                , bsQueues   = []
-                , bsEnv      = Map.empty
-                , bsClassEnv = Map.empty
-                , bsTypeEnv  = Map.empty
-                , bsDebug    = debg
-                }
-               )
 
 updEnv :: (Env -> Env) -> BuildState -> BuildState
 updEnv f bs = bs { bsEnv = f (bsEnv bs) }
@@ -225,3 +182,46 @@ lookupClasLType = fmap rtClassStruct . lookupClassEnv
 
 lookupClas :: ClassName -> Build ClasInterface
 lookupClas  = fmap rtClass . lookupClassEnv
+
+
+call' :: Text -> [Value] -> Build Value
+call' s args = do
+  funcRef <- lookupEnv s
+  call funcRef args
+
+
+invoke' :: Text -> [Value] -> BasicBlock -> BasicBlock -> Build Value
+invoke' s args b1 b2 = do
+  f <- lookupEnv s
+  invoke f args b1 b2 (Text.unpack s)
+
+
+funcType :: Type -> [Type] -> Type
+funcType rType argTypes = functionType rType argTypes False
+
+funcTypeVar :: Type -> [Type] -> Type
+funcTypeVar rType argTypes = functionType rType argTypes True
+
+int1TypeM :: LLVM m => m Type
+int1TypeM = intType 1
+
+int8TypeM :: LLVM m => m Type
+int8TypeM = intType 8
+
+int16TypeM :: LLVM m => m Type
+int16TypeM = intType 16
+
+int32TypeM :: LLVM m => m Type
+int32TypeM = intType 32
+
+int64TypeM :: LLVM m => m Type
+int64TypeM = intType 64
+
+pointer0 :: Type -> Type
+pointer0 = (`W.pointerType` 0)
+
+gepInt :: LLVM m => Value -> [Int] -> m Value
+gepInt v is = do
+  i32 <- int32TypeM
+  gep v $ map (\ i -> W.constInt i32 (fromIntegral i) True) is
+
