@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#define GC_THREADS
+#include <gc.h>
+
 #include "libqs/task.h"
 #include "libqs/valgrind.h"
 
@@ -49,6 +52,18 @@ task_wrapper(wrapper_data* data)
   void (*f)(void*) = data->f;
   void* ptr = data->ptr;
   free(data);
+
+
+  /* Register the custom stacks with the boehm collector so it doesn't
+     reclaim memory in use */
+  struct GC_stack_base gc_base;
+  int gc_res;
+
+  gc_res = GC_get_stack_base(&gc_base);
+  assert(gc_res <= GC_DUPLICATE);
+
+  gc_res = GC_register_my_thread(&gc_base);
+  assert(gc_res <= GC_DUPLICATE);
 
   task->state = TASK_RUNNING;
   f(ptr);

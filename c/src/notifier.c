@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#define GC_THREADS
+#include <gc.h>
+
 #include "libqs/executor.h"
 #include "libqs/notifier.h"
 #include "libqs/sync_ops.h"
