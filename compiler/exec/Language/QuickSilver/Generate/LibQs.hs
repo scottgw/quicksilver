@@ -9,28 +9,28 @@ import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Language.QuickSilver.Generate.LLVM.Simple
-import           Language.QuickSilver.Generate.LLVM.Types
+import           Language.QuickSilver.Generate.LLVM.Build
 
 declareQsFuncs :: Build ()
 declareQsFuncs =
     do mapM_ genDecl functions
     where
       genDecl (name, resType, argTypes) =
-          funcType' resType argTypes >>= addFunc name
+          funcType' resType argTypes >>= addFunction name
 
       functions = [ ("proc_new", procTypeM, [syncDataTypeM])
                   , ("proc_new_from_other", procTypeM, [procTypeM])
                   , ("proc_new_root"
                     , procTypeM
                     , [ syncDataTypeM
-                      , pointer0 <$> funcType' voidTypeM [procTypeM]
+                      , pointer0 <$> funcType' voidType [procTypeM]
                       ]
                     )
                   , ("proc_get_queue", privQueueTypeM, [procTypeM, procTypeM])
-                  , ("proc_deref_priv_queues", voidTypeM, [procTypeM])
-                  , ("proc_shutdown", voidTypeM, [procTypeM, procTypeM])
+                  , ("proc_deref_priv_queues", voidType, [procTypeM])
+                  , ("proc_shutdown", voidType, [procTypeM, procTypeM])
                   , ("proc_wait_for_available"
-                    , voidTypeM
+                    , voidType
                     , [procTypeM, procTypeM]
                     )                    
                   , ("closure_new"
@@ -51,23 +51,23 @@ declareQsFuncs =
 
                   , ("priv_queue_new", privQueueTypeM, [procTypeM])
                   , ("priv_queue_lock"
-                    , voidTypeM
+                    , voidType
                     , [privQueueTypeM, procTypeM]
                     )
                   , ("priv_queue_unlock"                    
-                    , voidTypeM
+                    , voidType
                     , [privQueueTypeM, procTypeM]
                     )
                   , ("priv_queue_routine"
-                    , voidTypeM
+                    , voidType
                     , [privQueueTypeM, closureTypeM, procTypeM]
                     )
                   , ("priv_queue_function"
-                    , voidTypeM
+                    , voidType
                     , [privQueueTypeM, closureTypeM, voidPtrType, procTypeM]
                     )
                   , ("priv_queue_access"
-                    , voidTypeM
+                    , voidType
                     , [ privQueueTypeM
                       , closTypeTypeM
                       , voidPtrType
@@ -77,21 +77,21 @@ declareQsFuncs =
                     )
                   , ("priv_queue_last_was_func", int1TypeM, [privQueueTypeM])
                   , ("priv_queue_shutdown"
-                    , voidTypeM
+                    , voidType
                     , [privQueueTypeM, procTypeM]
                     )
 
                   , ("create_executors"
-                    , voidTypeM
+                    , voidType
                     , [syncDataTypeM, int64TypeM]
                     )
-                  , ("join_executors", voidTypeM, [])
+                  , ("join_executors", voidType, [])
 
                   , ("notifier_spawn", notifierTypeM, [syncDataTypeM])
-                  , ("notifier_join", voidTypeM, [notifierTypeM])
+                  , ("notifier_join", voidType, [notifierTypeM])
 
                   , ("sync_data_new", syncDataTypeM, [int64TypeM])
-                  , ("sync_data_free", voidTypeM, [syncDataTypeM])
+                  , ("sync_data_free", voidType, [syncDataTypeM])
                   ]
 
 voidPtrType :: Build Type

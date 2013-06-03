@@ -19,8 +19,7 @@ import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Statement
 import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Util
+import Language.QuickSilver.Generate.LLVM.Build
 
 allocDecl :: Decl -> Build Value
 allocDecl (Decl n t) = typeOfM t >>= flip alloca n
@@ -118,7 +117,7 @@ genExternal name =
 
      Just externFunc <- getNamedFunction name
      
-     v <- call' externFunc args
+     v <- call externFunc args
      debug "generated external call"
      debugDump v
      resultMb <- lookupEnvM "Result"
@@ -149,10 +148,10 @@ clause c = do
 throw :: Build ()
 throw = do
   int4 <- int 4
-  excp <- call "__cxa_allocate_exception" [int4]
+  excp <- call' "__cxa_allocate_exception" [int4]
   i8 <- int8TypeM
   i32 <- int32TypeM
-  vd  <- voidTypeM
+  vd  <- voidType
   intptr <- bitcast excp (pointer0 i32) "excpCast"
   int32 <- int 32
   store int32 intptr
@@ -161,7 +160,7 @@ throw = do
   stdType <- lookupEnv "_ZTIi"
   castType <- bitcast stdType (pointer0 i8) "stdTypeCast"
 
-  call "__cxa_throw" [excp, castType, nul (pointer0 voidF)]
+  call' "__cxa_throw" [excp, castType, nul (pointer0 voidF)]
   return ()
 
 preCond :: TRoutine -> Build ()

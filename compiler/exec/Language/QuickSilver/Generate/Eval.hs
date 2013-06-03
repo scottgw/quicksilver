@@ -28,9 +28,7 @@ import Language.QuickSilver.Position
 import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Util
-import Language.QuickSilver.Generate.LLVM.Values
+import Language.QuickSilver.Generate.LLVM.Build
 import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.Memory.Object
 
@@ -154,9 +152,9 @@ genBinOp op e1 e2 _resType =
          br afterB
 
          positionAtEnd afterB
-         phi <- join (buildPhi <$> int1TypeM <*> pure "")
-         addIncoming phi [(tr, startB), (e2', fullEvalB)]
-         return phi
+         phiNode <- join (phi <$> int1TypeM <*> pure "")
+         addIncoming phiNode [(tr, startB), (e2', fullEvalB)]
+         return phiNode
 
     andThen _str =
       do startB <- getInsertBlock
@@ -175,9 +173,9 @@ genBinOp op e1 e2 _resType =
          br afterB
 
          positionAtEnd afterB
-         phi <- join (buildPhi <$> int1TypeM <*> pure "")
-         addIncoming phi [(fl, startB), (e2', fullEvalB)]
-         return phi
+         phiNode <- join (phi <$> int1TypeM <*> pure "")
+         addIncoming phiNode [(fl, startB), (e2', fullEvalB)]
+         return phiNode
 
 
 genUnOp :: UnOp -> TExpr -> Typ -> Build Value
@@ -238,7 +236,7 @@ evalUnPos (StaticCall (ClassType moduleType _) name args retVal) =
        args' <- mapM eval args
        debugDump fn
        mapM_ debugDump (pre ++ args')
-       call' fn (pre ++ args')
+       call fn (pre ++ args')
 
 evalUnPos (EqExpr op e1 e2) =
   do let ccmp | isIntegerType (texpr e1) || texpr e1 == CharType=
@@ -323,11 +321,11 @@ evalUnPos (Access trg attr typ) = do
 
          -- Really should use a phi node here.
          positionAtEnd afterAccessB
-         phi <- join (buildPhi <$> typeOfM typ <*> pure "")
-         addIncoming phi [ (directVal, directAccessB)
+         phiNode <- join (phi <$> typeOfM typ <*> pure "")
+         addIncoming phiNode [ (directVal, directAccessB)
                          , (sepCallVal, sepAccessB)
                          ]
-         return phi
+         return phiNode
     else debugDump attrLoc >> load' attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
@@ -361,7 +359,7 @@ evalUnPos (LitString s) = do
   debugDump strPtr
  --  str <- load strPtr "loading created string"
   -- debugDump str
-  call' f [currProc, strPtr, n, rawStrPtr]
+  call f [currProc, strPtr, n, rawStrPtr]
   debug "Creating string done"
   return strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
@@ -384,7 +382,7 @@ nonSeparateCall trg fName args retType =
                      ,show (trg:args)])
        debugDump f
 
-       call' f (currProc:trg':args')
+       call f (currProc:trg':args')
 
 separateCall trg fName args retType =
   do let cName = classTypeName (texpr trg)
@@ -431,7 +429,7 @@ separateCall trg fName args retType =
             let Sep _ _ baseType = texpr trg
             baseTypeL <- typeOfM baseType
             castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
-            directVal <- call' f (trgProc : castedNonSepTrg : args')
+            directVal <- call f (trgProc : castedNonSepTrg : args')
             br afterSepCallB
 
             positionAtEnd sepFuncCallB
@@ -449,13 +447,13 @@ separateCall trg fName args retType =
             br afterSepCallB
 
             positionAtEnd afterSepCallB
-            phi <- join (buildPhi <$> typeOfM retType <*> pure "")
-            addIncoming phi [ (directVal, directFuncB)
-                            , (sepCallVal, sepFuncCallB)
-                            ]
+            phiNode <- join (phi <$> typeOfM retType <*> pure "")
+            addIncoming phiNode [ (directVal, directFuncB)
+                                , (sepCallVal, sepFuncCallB)
+                                ]
             if not (isBasic retType || isSeparate retType)
-              then wrapSepResult trgProc retType phi
-              else return phi
+              then wrapSepResult trgProc retType phiNode
+              else return phiNode
 
 prepareClosure retType trg f args trgProc nonSepTrg args' =
   do let Sep _ _ nonSepTrgType = texpr trg

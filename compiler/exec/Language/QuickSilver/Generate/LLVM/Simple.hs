@@ -94,6 +94,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
     , addIncoming
 
       -- ** Types
+    , TypeKind(..)
     , intType
     , doubleType
     , voidType
@@ -119,9 +120,8 @@ module Language.QuickSilver.Generate.LLVM.Simple
     , setInstructionCallConv
     ) where
 
-import Control.Applicative
-import Control.Monad.Reader
-import Control.Monad.Identity
+import           Control.Applicative
+import           Control.Monad.Reader
 
 import           Data.Text (Text)
 import qualified Data.Text as Text
@@ -136,15 +136,6 @@ import           LLVM.Wrapper.Core ( Builder, Context, Module
                                    , constInt, constReal, constPtrToInt
                                    )
 
--- import Language.QuickSilver.Generate.LLVM.Types
--- import Language.QuickSilver.Generate.LLVM.Util
-
--- My specific stuff
-
---
--- Real module stuff
---
-
 class (Functor m, MonadIO m) => LLVM m where
   askBuild :: m Builder
   askContext :: m Context
@@ -156,16 +147,22 @@ data LLVMData =
            , llvmModule :: Module
            }
 
+type LLVMReaderT m = ReaderT LLVMData m
+newtype LLVMReader a = LLVMReader { unLLVMReader :: LLVMReaderT IO a }
+
+runLLVMReader :: LLVMReader a -> LLVMData -> IO a
+runLLVMReader (LLVMReader m) = runReaderT m 
+
+instance Applicative LLVMReader where
+  pure x   = return x
+  (LLVMReader f) <*> (LLVMReader m) = LLVMReader (f <*> m)
+
 instance Functor LLVMReader where
   fmap f (LLVMReader m) = LLVMReader (fmap f m)
 
 instance Monad LLVMReader where
   (LLVMReader m) >>= f = LLVMReader (m >>= (unLLVMReader . f))
   return a = LLVMReader (return a)
-
--- instance MonadReader LLVMReader where
---   ask = LLVMReader ask
---   local f (LLVMReader m) = LLVMReader (local f m)
 
 instance MonadIO LLVMReader where
   liftIO m = LLVMReader (liftIO m)
@@ -179,12 +176,6 @@ instance LLVM (ReaderT r LLVMReader) where
   askBuild = lift askBuild
   askContext = lift askContext
   askModule = lift askModule
-
-type LLVMReaderT m = ReaderT LLVMData m
-newtype LLVMReader a = LLVMReader { unLLVMReader :: LLVMReaderT IO a }
-                       
-runLLVMReader :: LLVMReader a -> LLVMData -> IO a
-runLLVMReader (LLVMReader m) = runReaderT m 
 
 dumpModule :: LLVM m => m ()
 dumpModule = askModule >>= liftIO . W.dumpModule

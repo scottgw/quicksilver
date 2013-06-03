@@ -17,8 +17,7 @@ import Language.QuickSilver.Generate.DepGen
 import Language.QuickSilver.Generate.Memory.Declarations
 import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Util
-import Language.QuickSilver.Generate.LLVM.Types
+import Language.QuickSilver.Generate.LLVM.Build
 
 import Language.QuickSilver.TypeCheck.TypedExpr
 
@@ -31,18 +30,18 @@ preamble clas = do
   let declTrans = updEnv (union declMap)
   return (declTrans .  env vt)
       where
-        vtables = (lift . depGenInt . view className) clas >>=
+        vtables = (liftIO . depGenInt . view className) clas >>=
                   either (error . show)  genClassStructs 
         env classEnv =
           setCurrent (clasInterface $ untype clas) . setClassEnv classEnv
 
 ptr :: Build Type
-ptr = pointerType <$> int8TypeM <*> pure 0
+ptr = pointer0 <$> int8TypeM
 
 constDecls :: [(Text, Build Type)]
 constDecls = 
-    [ ("llvm.sqrt.f64", funcType' doubleTypeM [doubleTypeM])
-    , ("GC_init",       funcType' voidTypeM [])   
+    [ ("llvm.sqrt.f64", funcType' doubleType [doubleType])
+    , ("GC_init",       funcType' voidType [])   
     , ("GC_malloc",     funcType' ptr [int64TypeM])
     , ("qs_init",     funcType' ptr [])
     , ("qs_malloc",     funcType' ptr [int64TypeM])
@@ -51,7 +50,7 @@ constDecls =
     , ("__cxa_allocate_exception", 
                         funcType' ptr [int32TypeM])
     , ("__cxa_begin_catch", funcType' ptr [ptr])
-    , ("__cxa_end_catch", funcType' voidTypeM [])
+    , ("__cxa_end_catch", funcType' voidType [])
 
     , ("__gxx_personality_v0", funcTypeVar' int32TypeM [])
 
@@ -63,7 +62,7 @@ constDecls =
 addConstDecls :: Build (Map Text Value)
 addConstDecls = fromList `fmap` mapM addDecl constDecls
     where
-      addDecl (str, t) = (str,) <$> (addFunc str =<< t)
+      addDecl (str, t) = (str,) <$> (addFunction str =<< t)
 
 stringConsts :: [(Text, Build Value, Linkage)]
 stringConsts = 
@@ -80,8 +79,8 @@ addStringConsts = fromList `fmap` mapM addConst stringConsts
 cxaThrowType :: Build Type
 cxaThrowType = do
   -- t <- stdTypeInfoType
-  destr <- funcType' voidTypeM [ptr]
-  funcType' voidTypeM [ptr, ptr, return $ pointerType destr 0]
+  destr <- funcType' voidType [ptr]
+  funcType' voidType [ptr, ptr, return $ pointer0 destr]
 
 stdTypeInfoType :: Build Type
 stdTypeInfoType = do

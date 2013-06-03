@@ -15,8 +15,7 @@ import Language.QuickSilver.Generate.Routine
 import Language.QuickSilver.Generate.Memory.Declarations
 import Language.QuickSilver.Generate.Preamble
 import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Util
-import Language.QuickSilver.Generate.LLVM.Types
+import Language.QuickSilver.Generate.LLVM.Build
 
 genClass :: TClass -> Bool -> Build ()
 genClass clas isMain = do
@@ -41,10 +40,10 @@ genClass' clas isMain = do
 genMain :: TClass -> Build ()
 genMain clas = do
   i64T <- int64TypeM
-  fRef <- addFunc "main" (funcType i64T [])
+  fRef <- addFunction "main" (funcType i64T [])
   atNewBlock fRef "mainStart"
 
-  call "qs_init" []
+  call' "qs_init" []
   let mainName  = fullNameStr (view className clas) "main"
 
   Just mainFunc <- getNamedFunction mainName

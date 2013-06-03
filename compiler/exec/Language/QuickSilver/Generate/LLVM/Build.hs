@@ -8,6 +8,7 @@ import           Language.QuickSilver.Syntax
 import           Language.QuickSilver.TypeCheck.TypedExpr
 
 import           Data.Array.Storable
+import           Data.Char
 import           Data.Hashable
 import qualified Data.HashMap.Strict as Map
 import           Data.List (lookup)
@@ -104,9 +105,6 @@ currentClass = bsCurrent <$> ask
 
 currentRoutine :: Build RoutineI
 currentRoutine = bsRoutine `fmap` ask
-
-writeModuleToFile :: Module -> String -> IO ()
-writeModuleToFile = W.writeBitcodeToFile
 
 updEnv :: (Env -> Env) -> BuildState -> BuildState
 updEnv f bs = bs { bsEnv = f (bsEnv bs) }
@@ -225,3 +223,17 @@ gepInt v is = do
   i32 <- int32TypeM
   gep v $ map (\ i -> W.constInt i32 (fromIntegral i) True) is
 
+true, false :: Build Value
+true  = constInt <$> int1TypeM <*> pure 1 <*> pure False
+false = constInt <$> int1TypeM <*> pure 0 <*> pure False
+
+char :: Char -> Build Value
+char c = constInt <$> int8TypeM <*> pure (fromIntegral $ ord c) <*> pure False
+
+int :: Int -> Build Value
+int i = constInt <$> int64TypeM <*> pure (fromIntegral i) <*> pure False
+
+dbl :: Double -> Build Value
+dbl d = 
+    let toRealFloat = uncurry encodeFloat (decodeFloat d)
+    in constReal <$> doubleType <*> pure toRealFloat

@@ -21,8 +21,7 @@ import qualified Data.HashMap.Strict as Map
 import           Language.QuickSilver.Syntax
 import           Language.QuickSilver.Generate.LibQs
 import           Language.QuickSilver.Generate.LLVM.Simple
-import           Language.QuickSilver.Generate.LLVM.Types
-import           Language.QuickSilver.Generate.LLVM.Util
+import           Language.QuickSilver.Generate.LLVM.Build
 
 typeOfDecl :: Decl -> Build Type
 typeOfDecl = typeOfM . declType
@@ -30,7 +29,7 @@ typeOfDecl = typeOfM . declType
 typeOf :: ClassEnv -> Typ -> Build Type
 typeOf e t =
     case t of
-      NoType -> voidTypeM
+      NoType -> voidType
       VoidType -> pointer0 <$> int8TypeM
       AnyIntType -> int64TypeM
       Int8Type -> int8TypeM
@@ -38,7 +37,7 @@ typeOf e t =
       Int32Type -> int32TypeM
       Int64Type -> int64TypeM
       BoolType -> int1TypeM
-      DoubleType -> doubleTypeM
+      DoubleType -> doubleType
       CharType -> int8TypeM
       AnyRefType _ -> pointer0 <$> int8TypeM
       ProcessorType -> procTypeM

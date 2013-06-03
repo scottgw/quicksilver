@@ -15,7 +15,7 @@ import Language.QuickSilver.Generate.Eval
 import Language.QuickSilver.Generate.LibQs
 import Language.QuickSilver.Generate.Memory.Object
 import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Util
+import Language.QuickSilver.Generate.LLVM.Build
 
 fetchCurrentAttr :: Text -> Build Value
 fetchCurrentAttr ident = do

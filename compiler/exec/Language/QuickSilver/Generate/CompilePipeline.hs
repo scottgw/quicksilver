@@ -13,8 +13,11 @@ import Language.QuickSilver.Syntax
 import Language.QuickSilver.TypeCheck.TypedExpr as T
 import Language.QuickSilver.Generate.Clas
 import Language.QuickSilver.Generate.LLVM.Simple
+import Language.QuickSilver.Generate.LLVM.Build
 
-import LLVM.Wrapper.Core
+-- import LLVM.Wrapper.Core
+import LLVM.Wrapper.BitWriter
+
 -- import LLVM.FFI.Core (setDataLayout, setTarget)
 -- import LLVM.FFI.Support 
 
@@ -74,7 +77,7 @@ generate debug outFile genMain clas = do
 
   setLayoutAndTriple modul
 
-  _ <- writeModuleToFile modul outFile
+  _ <- writeBitcodeToFile modul outFile
   return ()
 
 generateModule :: Bool -> Bool -> TClass -> IO Module

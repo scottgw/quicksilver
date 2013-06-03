@@ -2,12 +2,11 @@
 module Language.QuickSilver.Generate.Util where
 
 import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Values
+import Language.QuickSilver.Generate.LLVM.Build
 
 mallocSz :: Value -> Build Value
 -- mallocSz = call "GC_malloc" . (:[])
-mallocSz = call "qs_malloc" . (:[])
+mallocSz = call' "qs_malloc" . (:[])
 
 mallocTyp :: Type -> Build Value
 mallocTyp t = do

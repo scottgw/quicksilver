@@ -24,8 +24,7 @@ import Language.QuickSilver.Util
 import Language.QuickSilver.TypeCheck.TypedExpr
 import Language.QuickSilver.Generate.Memory.Types
 import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Types
-import Language.QuickSilver.Generate.LLVM.Util
+import Language.QuickSilver.Generate.LLVM.Build
 
 -- Generate the class structres and the routine prototypes
 -- so they are available to be looked up later.
@@ -62,9 +61,10 @@ setupRoutines pcMap (ClassInfo cls _t) =
              -- function matches the type of the outer declaration,
              -- so we just reuse it.
              case routineImpl rtn of
-                       EmptyExternal extern _ -> void (addFunc extern fType)
+                       EmptyExternal extern _ ->
+                           void (addFunction extern fType)
                        _ -> return ()
-             fPtr <- addFunc name fType
+             fPtr <- addFunction name fType
              debug $ concat [ "Adding routine prototype "
                             , Text.unpack name ," @ ", show fPtr
                             ]
@@ -116,7 +116,7 @@ modRoutineArgs go ci rout =
 
 -- Creation routines
 mkCreateFunc :: ClasInterface -> RoutineI -> Build ()
-mkCreateFunc c f = featDeclType f' >>= addFunc crName >> return ()
+mkCreateFunc c f = featDeclType f' >>= addFunction crName >> return ()
     where crName = featureAsCreate (view className c) (routineName f)
           f' = f {routineName = crName
                  ,routineResult = ClassType (view className c) [ClassType "G" []]
