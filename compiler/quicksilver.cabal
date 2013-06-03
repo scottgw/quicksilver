@@ -82,8 +82,7 @@ Executable qs
                        Language.QuickSilver.Generate.Statement
                        Language.QuickSilver.Generate.Util
                        Language.QuickSilver.Generate.LLVM.Simple
-                       Language.QuickSilver.Generate.LLVM.Util
-                       Language.QuickSilver.Generate.LLVM.Values
+                       Language.QuickSilver.Generate.LLVM.Build
                        Language.QuickSilver.Generate.Memory.Declarations
                        Language.QuickSilver.Generate.Memory.Object
                        Language.QuickSilver.Generate.Memory.Types
