@@ -3,6 +3,9 @@
 #include <time.h>
 #include <unistd.h>
 
+#define GC_THREADS
+#include <gc.h>
+
 #include "libqs/debug_log.h"
 #include "libqs/sync_ops.h"
 #include "libqs/processor.h"
@@ -109,9 +112,9 @@ sync_data_dequeue_runnable(sync_data_t sync_data, void* exec)
         }
     }
 
+  usleep(1000);
   if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
     {
-      usleep(500);
       DEBUG_LOG(1, "%p runnable dequeue start\n", exec);
       pthread_mutex_lock(&sync_data->run_mutex);
       while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
