@@ -23,9 +23,9 @@ create make
       until i > 10
       loop
         separate data
-          require data.get_value() \\ 2 = sign
+          require data.value \\ 2 = sign
           do
-            v := data.get_value()
+            v := data.value
             {Prelude}.print(("Incr of sign ").append
                             ({Prelude}.int_to_str(sign)).append(" "))
             {Prelude}.print({Prelude}.int_to_str(v).append("%N"))

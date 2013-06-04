@@ -15,14 +15,15 @@ class Condition_Worker
   run()
     local
       i: Integer
+      l_sign: Integer
     do
+      l_sign := sign
       from i := 1
       until i > 5000 
       loop
---        {Prelude}.print ("Working%N")
         separate data
           require
-            data.get_value() \\ 2 = sign
+            data.value \\ 2 = l_sign
           do
             data.incr()
           end

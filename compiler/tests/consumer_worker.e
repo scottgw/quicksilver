@@ -19,7 +19,7 @@ class Consumer_Worker
       loop
         separate stack
           require
-            stack.get_count() > 0
+            stack.count > 0
           do
             stack.pop()
           end
