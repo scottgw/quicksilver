@@ -10,7 +10,6 @@
 
 extern "C"
 {
-
   typedef struct
   {
     char* str;
@@ -18,13 +17,35 @@ extern "C"
   } log_info;
 
   tbb::concurrent_queue<log_info> *log_queue;
+  tbb::concurrent_queue<binary_info> *binary_log;
   int log_level;
 
   void
   log_setup(int level)
   {
     log_queue = new tbb::concurrent_queue<log_info>();
+    binary_log = new tbb::concurrent_queue<binary_info>();
     log_level = level;
+  }
+
+
+  void
+  log_binary(int level, log_event event, void* p1, void* p2)
+  {
+    if (level <= log_level)
+      {
+        timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+
+        binary_info info;
+
+        info.timestamp = ts;
+        info.event = event;
+        info.p1 = p1;
+        info.p2 = p2;
+
+        binary_log->push(info);
+      }    
   }
 
   void
@@ -50,6 +71,26 @@ extern "C"
   }
 
   void
+  binary_write()
+  {
+    if (log_level != 0)
+      {
+        std::cout << "writing binary log" << std::endl;
+        std::ofstream outfile("qs_binary.log",
+                              std::ios::out | std::ios::binary);
+        binary_info info;
+        while (binary_log->try_pop(info))
+          {
+            outfile.write((const char*) &info, sizeof(binary_info));
+          }
+        outfile.flush();
+        outfile.close();
+      }
+    delete log_queue;
+    delete binary_log;    
+  }
+
+  void
   log_write()
   {
     if (log_level != 0)
@@ -69,5 +110,6 @@ extern "C"
         outfile.close();
       }
     delete log_queue;
+    delete binary_log;
   }
 }

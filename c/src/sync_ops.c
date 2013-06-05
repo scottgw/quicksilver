@@ -66,7 +66,7 @@ sync_data_free(sync_data_t sync_data)
   queue_impl_free(sync_data->runnable_queue);
   queue_impl_free(sync_data->sleep_list);
   free(sync_data);
-  log_write();
+  binary_write();
 }
 
 void
@@ -137,7 +137,6 @@ sync_data_dequeue_runnable(sync_data_t sync_data, void* exec)
       proc = NULL;
       pthread_cond_broadcast(&sync_data->not_empty);    
     }
-
   return proc;
 }
 

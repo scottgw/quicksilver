@@ -21,9 +21,9 @@ void
 switch_to_next_processor(executor_t exec)
 {
   // take a new piece of work.
-
+  BINARY_LOG(2, SYNCOPS_DEQUEUE_START, exec, NULL);
   volatile processor_t proc = sync_data_dequeue_runnable(exec->task->sync_data, exec);
-
+  BINARY_LOG(2, SYNCOPS_DEQUEUE_END, exec, NULL);
   if (proc != NULL)
     {
       DEBUG_LOG(2, "%p is dequeued by executor %p\n", proc, exec);

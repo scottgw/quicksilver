@@ -10,12 +10,12 @@ libqs_la_SOURCES = executor.c list.c task.c processor.c notifier.c \
 HEADER_FILES = executor.h list.h task.h processor.h notifier.h \
 	sync_ops.h task_mutex.h task_condition.h ctx.h bounded_queue.h \
 	closure.h private_queue.h queue_impl.h spsc_queue.h \
-	types.h
+	types.h debug_log.h
 
 pkginclude_HEADERS = $(addprefix libqs/, $(HEADER_FILES))
 
-FLAGS = -pthread -U_FORTIFY_SOURCE -Wall -Wno-unused-value\
-	-Wno-unused-variable -Werror
+FLAGS = -pthread -U_FORTIFY_SOURCE -DENABLE_LOG\
+	-Wall -Wno-unused-value -Wno-unused-variable -Werror
 libqs_la_CFLAGS = -std=gnu99 $(FLAGS) $(DEPS_CFLAGS)
 libqs_la_CXXFLAGS = -std=c++11 $(FLAGS) $(DEPS_CFLAGS)
 
