@@ -249,3 +249,20 @@ priv_queue_function(priv_queue_t pq,
       closure_free(clos);
     }
 }
+
+
+
+void
+priv_queue_sync(priv_queue_t pq, processor_t client)
+{
+  if (!pq->last_was_func)
+    {
+      closure_t sync_clos = closure_new_sync(client);
+
+      priv_queue_link_enqueue(pq, sync_clos, client);
+
+      task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
+      proc_yield_to_executor(client);
+    }
+  pq->last_was_func = true;
+}

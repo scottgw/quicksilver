@@ -40,4 +40,8 @@ priv_queue_function(priv_queue_t pq,
                     closure_t clos,
                     void* res,
                     processor_t proc);
+
+void
+priv_queue_sync(priv_queue_t pq, processor_t client);
+
 #endif // _PRIVATE_QUEUE_H

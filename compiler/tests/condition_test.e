@@ -12,12 +12,12 @@ module Condition_Test
       worker: separate Condition_Worker
       n: Integer
     do
-      n := 64
+      n := 32
       create data.make()
-      create workers.make(n)
+      create workers.make(2*n)
 
       from i := 0
-      until i >= n
+      until i >= 2*n
       loop
         create worker.make(i \\ 2, data)
         separate worker
@@ -29,7 +29,7 @@ module Condition_Test
       end
 
       from i := 0
-      until i >= n
+      until i >= 2*n
       loop
         shutdown workers.item(i)
         i := i + 1

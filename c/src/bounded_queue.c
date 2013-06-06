@@ -107,16 +107,9 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
       task_mutex_unlock(q->not_full_mutex, proc);
     }
 
-  if (q->waiters > 1)
-    {
-      task_condition_signal(q->not_empty);
-    }
-  else
-    {
-      task_mutex_lock(q->not_empty_mutex, proc);
-      task_condition_signal(q->not_empty);
-      task_mutex_unlock(q->not_empty_mutex, proc);
-    }
+  task_mutex_lock(q->not_empty_mutex, proc);
+  task_condition_signal(q->not_empty);
+  task_mutex_unlock(q->not_empty_mutex, proc);
 }
 
 

@@ -4,6 +4,13 @@
 
 #include "types.h"
 
+typedef enum 
+{
+  CLOS_NORMAL,
+  CLOS_END,
+  CLOS_SYNC
+} clos_mode;
+
 struct closure
 {
   void *fn;
@@ -12,13 +19,16 @@ struct closure
   void ***args;
   clos_type_t *arg_types;
   
-  bool is_end;
+  clos_mode mode;
 
   void* next;
 };
 
 closure_t
 closure_new_end();
+
+closure_t
+closure_new_sync(processor_t client);
 
 closure_t
 closure_new(void *fn,
@@ -32,6 +42,9 @@ closure_free(closure_t clos);
 
 bool
 closure_is_end(closure_t clos);
+
+bool
+closure_is_sync(closure_t clos);
 
 clos_type_t
 closure_uint1_type ();
