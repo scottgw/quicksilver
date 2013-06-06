@@ -8,6 +8,6 @@ OBJFILE=${1%.*}.o
 QS_LIB_PATH=`pwd`/lib
 
 qs $1 -m
-llvm-link lib/stdlib.bc ${BCFILE} ${@:2} | opt -O3 | llc -filetype=obj -o ${OBJFILE}
+llvm-link lib/stdlib.bc ${BCFILE} ${@:2} | opt -O3 -std-compile-opts -std-link-opts | llc -filetype=obj -o ${OBJFILE}
 # gcc ${SFILE} -c 
 gcc ${OBJFILE} `pkg-config libqs --libs` -lgc -lstdc++ -o ${1%.*}

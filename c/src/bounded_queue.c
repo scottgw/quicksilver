@@ -84,16 +84,16 @@ bqueue_use(bounded_queue_t q)
 void
 bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
 {
-  /* for (int i = 0; i < 512; i++) */
-  /*   { */
-  /*     if(queue_impl_enqueue(q->impl, data)) */
-  /*       { */
-  /*         task_mutex_lock(q->not_empty_mutex, proc); */
-  /*         task_condition_signal(q->not_empty); */
-  /*         task_mutex_unlock(q->not_empty_mutex, proc); */
-  /*         return; */
-  /*       } */
-  /*   } */
+  for (int i = 0; i < 512; i++)
+    {
+      if(queue_impl_enqueue(q->impl, data))
+        {
+          task_mutex_lock(q->not_empty_mutex, proc);
+          task_condition_signal(q->not_empty);
+          task_mutex_unlock(q->not_empty_mutex, proc);
+          return;
+        }
+    }
 
   if (!queue_impl_enqueue(q->impl, data))
     {
@@ -107,33 +107,25 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
       task_mutex_unlock(q->not_full_mutex, proc);
     }
 
-  if (q->waiters > 1)
-    {
-      task_condition_signal(q->not_empty);
-    }
-  else
-    {
-      task_mutex_lock(q->not_empty_mutex, proc);
-      task_condition_signal(q->not_empty);
-      task_mutex_unlock(q->not_empty_mutex, proc);
-    }
+  task_mutex_lock(q->not_empty_mutex, proc);
+  task_condition_signal(q->not_empty);
+  task_mutex_unlock(q->not_empty_mutex, proc);
 }
 
 
 void
 bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
 {
-  /* for (int i = 0; i < 512; i++) */
-  /*   { */
-  /*     if(queue_impl_dequeue(q->impl, data)) */
-  /*       { */
-  /*         task_mutex_lock(q->not_full_mutex, proc); */
-  /*         task_condition_signal(q->not_full); */
-  /*         task_mutex_unlock(q->not_full_mutex, proc); */
-  /*         return; */
-  /*       } */
-  /*   } */
-
+  for (int i = 0; i < 512; i++)
+    {
+      if(queue_impl_dequeue(q->impl, data))
+        {
+          task_mutex_lock(q->not_full_mutex, proc);
+          task_condition_signal(q->not_full);
+          task_mutex_unlock(q->not_full_mutex, proc);
+          return;
+        }
+    }
 
   if (!queue_impl_dequeue(q->impl, data))
     {
@@ -149,7 +141,7 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
       task_mutex_unlock(q->not_empty_mutex, proc);
     }
 
-  /* task_mutex_lock(q->not_full_mutex, proc); */
+  task_mutex_lock(q->not_full_mutex, proc);
   task_condition_signal(q->not_full);
-  /* task_mutex_unlock(q->not_full_mutex, proc); */
+  task_mutex_unlock(q->not_full_mutex, proc);
 }

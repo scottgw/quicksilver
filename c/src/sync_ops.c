@@ -96,7 +96,7 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
 }
 
 processor_t
-sync_data_dequeue_runnable(sync_data_t sync_data, void* exec)
+sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec)
 {
   volatile processor_t proc;
   proc = NULL;
@@ -111,7 +111,7 @@ sync_data_dequeue_runnable(sync_data_t sync_data, void* exec)
 
   if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
     {
-      usleep(500);
+      usleep(5000);
       DEBUG_LOG(1, "%p runnable dequeue start\n", exec);
       pthread_mutex_lock(&sync_data->run_mutex);
       while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 

@@ -148,8 +148,17 @@ proc_loop(processor_t proc)
               notify_available(proc);
               break;
             }
-
-          closure_apply(clos, NULL);
+          
+          if (closure_is_sync(clos))
+            {
+              processor_t client = (processor_t) clos->fn;
+              while (client->task->state != TASK_WAITING);
+              proc_wake(client);
+            }
+          else
+            {
+              closure_apply(clos, NULL);
+            }
 
           if (__sync_bool_compare_and_swap(&clos->next, NULL, priv_queue))
             {
