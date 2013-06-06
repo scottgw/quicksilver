@@ -37,7 +37,7 @@ void
 sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc);
 
 processor_t
-sync_data_dequeue_runnable(sync_data_t sync_data, void* exec);
+sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec);
 
 void
 sync_data_add_sleeper(sync_data_t sync_data,

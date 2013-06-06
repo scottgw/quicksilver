@@ -14,6 +14,8 @@ struct executor
   processor_t current_proc;
   pthread_t thread;
   int id;
+
+  uint32_t backoff_us;
 };
 
 // Constructs the executor thread and adds the executor

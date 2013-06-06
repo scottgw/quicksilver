@@ -15,9 +15,21 @@ closure_t
 closure_new_end()
 {
   closure_t clos = (closure_t) malloc(sizeof(struct closure));
-  clos->is_end = true;
+  clos->mode = CLOS_END;
   return clos;
 }
+
+
+closure_t
+closure_new_sync(processor_t client)
+{
+  closure_t clos = (closure_t) malloc(sizeof(struct closure));
+  clos->mode = CLOS_SYNC;
+  clos->fn = (void*) client;
+  clos->next = NULL;
+  return clos;
+}
+
 
 closure_t
 closure_new(void *fn,
@@ -53,7 +65,7 @@ closure_new(void *fn,
   clos->argc = argc;
   clos->args = *args;
   clos->arg_types = *arg_types;
-  clos->is_end = false;
+  clos->mode = CLOS_NORMAL;
   clos->next = NULL;
 
   return clos;
@@ -62,8 +74,15 @@ closure_new(void *fn,
 bool
 closure_is_end(closure_t clos)
 {
-  return clos->is_end;
+  return clos->mode == CLOS_END;
 }
+
+bool
+closure_is_sync(closure_t clos)
+{
+  return clos->mode == CLOS_SYNC;
+}
+
 
 clos_type_t
 closure_void_type ()

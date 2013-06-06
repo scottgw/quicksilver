@@ -118,7 +118,8 @@ make_executor(sync_data_t sync_data)
   exec->current_proc = NULL;
   exec->done = false;
   exec->id = exec_count++;
-
+  exec->backoff_us = 500;
+  
   return exec;
 }
 

@@ -287,46 +287,12 @@ evalUnPos (Access trg attr typ) = do
   attrLoc <- accessLoc trg attr
   let trgType = texpr trg
   debug "access: have location"
-  if isSeparate trgType
-    then
-      do startB <- getInsertBlock
-         func   <- getBasicBlockParent startB
-         afterAccessB <- appendBasicBlock func "afterAccess"
-         directAccessB <- appendBasicBlock func "directAccess"
-         sepAccessB <- appendBasicBlock func "sepAccess"
-
-         privQ <- getQueueFor trg
-         
-         lastWasFunc <- "priv_queue_last_was_func" <#> [privQ]
-
-         condBr lastWasFunc directAccessB sepAccessB
-
-         positionAtEnd directAccessB
-         directVal <- load' attrLoc
-         br afterAccessB
-
-         positionAtEnd sepAccessB
-         closT <- closType typ
-         voidPtr <- voidPtrType
-         closResLoc <- closLocFor typ
-         attrVoidPtr <- bitcast attrLoc voidPtr ""
-         closResVoidPtr <- bitcast closResLoc voidPtr ""
-         currProc <- getCurrProc
-         mapM_ debugDump [privQ, closT, attrVoidPtr, closResLoc, currProc]
-         "priv_queue_access" <#> 
-            [privQ, closT, attrVoidPtr, closResVoidPtr, currProc]
-         debug "sep access done"
-         sepCallVal <- load' closResLoc
-         br afterAccessB
-
-         -- Really should use a phi node here.
-         positionAtEnd afterAccessB
-         phiNode <- join (phi <$> typeOfM typ <*> pure "")
-         addIncoming phiNode [ (directVal, directAccessB)
-                         , (sepCallVal, sepAccessB)
-                         ]
-         return phiNode
-    else debugDump attrLoc >> load' attrLoc
+  when (isSeparate trgType) $ 
+    do privQ <- getQueueFor trg
+       currProc <- getCurrProc
+       "priv_queue_sync" <#> [privQ, currProc]
+       return ()
+  load' attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
 
@@ -414,46 +380,19 @@ separateCall trg fName args retType =
             currProc <- getCurrProc
             "priv_queue_routine" <#> [privQ, closure, currProc]
        else
-         do startB <- getInsertBlock
-            func   <- getBasicBlockParent startB
+         do privQ <- getQueueFor trg
+            currProc <- getCurrProc
+            "priv_queue_sync" <#> [privQ, currProc]
 
-            directFuncB <- appendBasicBlock func "directFuncCall"
-            sepFuncCallB <- appendBasicBlock func "sepFuncCall"
-            afterSepCallB <- appendBasicBlock func "afterSepCall"
-
-            lastWasFunc <- "priv_queue_last_was_func" <#> [privQ]
-            condBr lastWasFunc directFuncB sepFuncCallB
-
-            positionAtEnd directFuncB
             debug "building direct call"
             let Sep _ _ baseType = texpr trg
             baseTypeL <- typeOfM baseType
             castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
-            directVal <- call f (trgProc : castedNonSepTrg : args')
-            br afterSepCallB
+            resultVal <- call f (trgProc : castedNonSepTrg : args')
 
-            positionAtEnd sepFuncCallB
-            closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
-            debug "sepCall: calling underlying function"
-            currProc <- getCurrProc
-            voidPtr <- voidPtrType
-
-            -- Dig out the appropriate storage type and cast to a void
-            -- pointer priv_queue_function can take it.
-            resLoc <- closLocFor retType
-            resLocCast <- bitcast resLoc voidPtr "closure_result_cast"
-            "priv_queue_function" <#> [privQ, closure, resLocCast, currProc]
-            sepCallVal <- load' resLoc
-            br afterSepCallB
-
-            positionAtEnd afterSepCallB
-            phiNode <- join (phi <$> typeOfM retType <*> pure "")
-            addIncoming phiNode [ (directVal, directFuncB)
-                                , (sepCallVal, sepFuncCallB)
-                                ]
             if not (isBasic retType || isSeparate retType)
-              then wrapSepResult trgProc retType phiNode
-              else return phiNode
+              then wrapSepResult trgProc retType resultVal
+              else return resultVal
 
 prepareClosure retType trg f args trgProc nonSepTrg args' =
   do let Sep _ _ nonSepTrgType = texpr trg
