@@ -62,4 +62,13 @@ module Prelude
 
       Result := str
     end
+
+  int_max(x: Integer; y: Integer): Integer
+    do
+      if x >= y then
+        Result := x
+      else
+        Result := y
+      end
+    end
 end

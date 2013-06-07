@@ -13,7 +13,16 @@ module Pointer
   pointer_64_get (p: Pointer_64; i: Integer): Integer_64
     external "pointer_64_get"
   end
- 
+
+
+  pointer_real_put (p: Pointer_64; i: Integer; v: Real)
+    external "pointer_real_put"
+    end
+
+  pointer_real_get (p: Pointer_64; i: Integer): Real
+    external "pointer_real_get"
+  end
+  
   new_pointer_8 (size: Integer): Pointer_8
     external "new_pointer_8"
     end

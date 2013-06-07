@@ -1,7 +1,9 @@
 all: condition_test mutex_test prodcons_test share_test noshare_test\
-	randmat_test\
+	randmat_test thresh_test\
 	array_test odd_even_test separate_test http_test socket_test helloworld
 
+thresh_test: thresh_test.e thresh_histogram.ebc lib/stdlib.bc
+	./qsc $< thresh_histogram.ebc
 
 randmat_test: randmat_test.e randmat_worker.ebc lib/stdlib.bc
 	./qsc $< randmat_worker.ebc
