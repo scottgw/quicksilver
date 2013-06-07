@@ -24,14 +24,18 @@ create make
   
   make(a_start: Integer; a_final: Integer;
        a_ncols: Integer
+       a_sep_max: separate Int_Array
+       a_sep_hist: separate Int_Array
        a_source: separate Int_Matrix)
     do
       start := a_start
       final := a_final
       ncols := a_ncols
 
-      source := a_source
+      sep_max := a_sep_max
+      sep_hist := a_sep_hist
 
+      source := a_source
       create local_mat.make(ncols, final - start)
     end
 
@@ -118,7 +122,7 @@ create make
         i := i + 1
       end
     end      
-  
+
   -- Util
   fetch_matrix()
     local
