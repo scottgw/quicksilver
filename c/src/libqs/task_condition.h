@@ -16,6 +16,9 @@ void
 task_condition_signal(task_condition_t cv);
 
 void
+task_condition_signal_all(task_condition_t cv);
+
+void
 task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t prop);
 
 #endif // _TASK_CONDITION_H

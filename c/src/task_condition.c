@@ -44,6 +44,19 @@ task_condition_signal(task_condition_t cv)
     }
 }
 
+
+void
+task_condition_signal_all(task_condition_t cv)
+{
+  processor_t proc;
+
+  while (queue_impl_dequeue(cv->wait_queue, (void**)&proc))
+    {
+      proc_wake(proc);
+    }
+}
+
+
 void
 task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
 {
