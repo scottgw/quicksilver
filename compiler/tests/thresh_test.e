@@ -20,7 +20,7 @@ module Thresh_Test
       start: Integer
       height: Integer
 
-      result_mat: Int_Matrix
+      result_mask: Int_Matrix
       mat: separate Int_Matrix
 
       sep_hist: separate Int_Array
@@ -29,16 +29,17 @@ module Thresh_Test
       thresh: Integer
 
       hist: separate Thresh_Histogram
+      worker_mask: separate Int_Matrix
       workers: Array [separate Thresh_Histogram]
     do
       n := 32
-      rows := 800
-      cols := 800
+      rows := 8000
+      cols := 8000
       percent := 1
 
       create workers.make(n)
       create mat.make (rows, cols)
-      create result_mat.make (rows, cols)
+      create result_mask.make (rows, cols)
       create sep_max.make (1)
       create sep_hist.make (101)
 
@@ -90,20 +91,24 @@ module Thresh_Test
         hist := workers.item(i)
         separate hist
           do
-            from
-              start := hist.start
-              ii := start
-              iend := hist.final
-            until ii >= iend
-            loop
-              from jj := 0
-              until jj >= cols
-              loop
-                result_mat.put (ii, jj, hist.local_mat.item(ii - start, jj))
-                jj := jj + 1
+            worker_mask := hist.mask
+            separate worker_mask
+              do
+                from
+                  start := hist.start
+                  ii := start
+                  iend := hist.final
+                until ii >= iend
+                loop
+                  from jj := 0
+                  until jj >= cols
+                  loop
+                    result_mask.put (ii, jj, worker_mask.item(jj, ii))
+                    jj := jj + 1
+                  end
+                  ii := ii + 1
+                end
               end
-              ii := ii + 1
-            end
           end
         shutdown hist
         i := i + 1

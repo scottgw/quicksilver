@@ -13,7 +13,8 @@ create make
   source: separate Int_Matrix
 
   local_mat: Int_Matrix
-
+  mask: Int_Matrix
+  
   -- Histogram
   hist: Int_Array
   max: Integer
@@ -36,7 +37,8 @@ create make
       sep_hist := a_sep_hist
 
       source := a_source
-      create local_mat.make(ncols, final - start)
+      create local_mat.make_with_start_row(ncols, final - start, start)
+      create mask.make_with_start_row(ncols, final - start, start)
     end
 
   -- Histogram calculation
@@ -90,7 +92,7 @@ create make
         from j := 1
         until j >= ncols
         loop
-          e        := local_mat.item(i - start, j)
+          e        := local_mat.item(j, i)
           hist.put(e, hist.item(e) + 1)
           max      := {Prelude}.int_max(e, max)
           j := j + 1
@@ -111,10 +113,10 @@ create make
         from j := 0
         until j >= ncols
         loop
-          if local_mat.item(i - start, j) >= cutoff then
-            local_mat.put(i - start, j, 1)
+          if local_mat.item(j, i) >= cutoff then
+            mask.put(j, i, 1)
           else
-            local_mat.put(i - start, j, 0)
+            mask.put(j, i, 0)
           end
           
           j := j + 1
@@ -137,7 +139,7 @@ create make
             from j := 0
             until j >= ncols
             loop
-              local_mat.put(i - start, j, source.item(i, j))
+              local_mat.put(j, i, source.item(j, i))
               j := j + 1
             end
             i := i + 1

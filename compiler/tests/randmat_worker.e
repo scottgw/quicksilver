@@ -12,7 +12,7 @@ create make
       ncols := a_ncols
       seed := a_seed
       done := False
-      create matrix.make (height, ncols)
+      create matrix.make_with_start_row (height, ncols, start)
     end
 
     
@@ -33,32 +33,12 @@ create make
         until j >= ncols
         loop
           s := lcg_a * s + lcg_c
-          matrix.put(j, i - start, s \\ rand_max)
+          matrix.put(j, i, s \\ rand_max)
           j := j + 1
         end
         i := i + 1
       end
       done := True
-    end
-
-  is_done(): Boolean
-    do
-      Result := done
-    end
-
-  get_height(): Integer
-    do
-      Result := height
-    end
-
-  get_start(): Integer
-    do
-      Result := start
-    end
-  
-  get (i, j: Integer): Integer
-    do
-      Result := matrix.item (j, i - start)
     end
 
   done: Boolean
