@@ -33,7 +33,9 @@ lookupVarAccess e = error ("lookupVarAccess: not Var or Access: " ++ show e)
 locOf :: TExpr -> Build Value
 locOf te =
   case contents te of
-    T.Access trg name _type -> accessLoc trg name
+    T.Access trg name _type ->
+      do trg' <- eval trg
+         accessLoc trg' (T.texpr trg) name
     T.Var n _type -> lookupEnv n
     T.ResultVar _ -> lookupEnv "Result"
     _ -> error $ "locOf: " ++ show te
@@ -43,7 +45,7 @@ genStmt :: UnPosTStmt -> Build ()
 genStmt (CallStmt e)        = eval e >> return ()
 genStmt (Block ss)          = mapM_ (genStmt . contents) ss
 genStmt (Assign lhs rhs) = do
-  debug $ "Assign to: " ++ show lhs
+  debug $ "Assign " ++ show rhs ++ " to " ++ show lhs
 
   lhsLoc <- locOf lhs
   debug "Assign: lhs"

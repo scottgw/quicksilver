@@ -165,32 +165,26 @@ expr (QualCall trg name args) = do
   case findAbsRoutine instClass name of
     Nothing ->
       case findAttrInt instClass name of
-        Just a -> tagPos (T.Access trg' name (declType $ attrDecl a))
+        Just a ->
+          do let resType = declType $ attrDecl a
+             access <- tagPos $ T.Access trg' name resType
+             castResult trg' access resType resType
         Nothing -> throwError $
                    concat ["expr.QualCall: ", show trg, ": "
                           , Text.unpack name, show args'
                           , show (map (routineName) $ view routines instClass)
                           ]
-    Just feat -> do
+    Just rout -> do
       origClass <- getFlat' targetType
        
-      let formArgs = map declType (routineArgs feat)
-          resType = routineResult feat
-          Just originalResType =
-              routineResult <$> findAbsRoutine origClass name
-          Just originalArgTypes =
-              map declType <$> routineArgs <$> findAbsRoutine origClass name
+      let formArgs = map declType (routineArgs rout)
+          resType = routineResult rout
+          Just routn = findAbsRoutine origClass name
+          originalResType = routineResult routn
+          originalArgTypes = map declType (routineArgs routn)
       castedArgs <- argsConform args' originalArgTypes
       baseCall <- tagPos (T.Call trg' name castedArgs resType)
-      case targetType of
-        -- FIXME: Separate target with a generic parameter?
-        Sep _ _ _ ->
-            if not (isBasic resType)
-            then tagPos (T.InheritProc trg' baseCall)
-            else return baseCall
-        _ -> if isAnyRefType originalResType
-             then tagPos (T.Cast resType baseCall)
-             else return baseCall
+      castResult trg' baseCall originalResType resType
 
 expr (CreateExpr typ name args) = do
   -- this comes basically from the above 
@@ -204,6 +198,7 @@ expr (CreateExpr typ name args) = do
       args'   <- mapM typeOfExpr args
       argsConform args' (map declType (routineArgs feat))
       tagPos (T.CreateExpr typ name args')
+
 expr (Lookup targ args) = do
   targ' <- typeOfExpr targ
   cls <- getFlat' (T.texpr targ')
@@ -211,6 +206,7 @@ expr (Lookup targ args) = do
     Nothing -> throwError $ 
       "expr.BinOp.Lookup: [] not found in " ++ show (T.texpr targ')
     Just feat -> expr $ QualCall targ (routineName feat) args
+
 expr (VarOrCall s) =
   do tyMb <- typeOfVar s
      case tyMb of
@@ -219,10 +215,29 @@ expr (VarOrCall s) =
          do !curr <- currentM
             !currCls <- getFlat' (T.texpr curr)
             case findAttrInt currCls s of
-              Just a -> tagPos (T.Access curr s (declType $ attrDecl a))
+              Just a ->
+                do let resType = declType $ attrDecl a
+                   access <- tagPos $ T.Access curr s resType
+                   castResult curr access resType resType
               Nothing ->
                 throwError "TypeCheck.Expr.expr: var or attribute not found"
+
 expr t = throwError ("TypeCheck.Expr.expr: " ++ show t)
+
+-- | Based on target and result type cast the result to separate
+-- or to the appropriate generic
+castResult target originalExpr originalResType resultType =
+  case targetType of
+    -- FIXME: Separate target with a generic parameter?
+    Sep _ _ _ ->
+      if not (isBasic resultType)
+      then tagPos (T.InheritProc target originalExpr)
+      else return originalExpr
+    _ -> if isAnyRefType originalResType
+         then tagPos (T.Cast resultType originalExpr)
+         else return originalExpr
+  where
+    targetType = T.texpr target
 
 -- | Checks that a list of args conform to a list of types. Raises an error
 -- if the check fails.

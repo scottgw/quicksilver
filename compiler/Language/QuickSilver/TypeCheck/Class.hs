@@ -171,7 +171,9 @@ uStmt (Assign var e) = do
          then tagPos (T.Cast varType e') 
          else if T.texpr e' == T.texpr var' 
               then return e'
-              else throwError "Assignment: source and target don't match"
+              else
+                throwError $ "Assignment: source and target don't match" ++
+                             show (varType, eType)
   return $ inheritPos (Assign var') e''
 
 uStmt (If cond body elseIfs elsePart) = do

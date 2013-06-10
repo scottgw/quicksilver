@@ -195,17 +195,15 @@ genUnOp op e _resType =
       , (Not, nott)
       ]
 
-accessLoc :: TExpr -> Text.Text -> Build Value
-accessLoc trg attr =
+accessLoc :: Value -> Typ -> Text.Text -> Build Value
+accessLoc trg trgType attr =
   do debug $ "Access: " ++ show (trg, attr)
-     trgV <- eval trg
-     let trgType = texpr trg
      baseTrg <- case trgType of
                   Sep _ _ t ->
-                      do (_, r) <- splitSepRef trgV
+                      do (_, r) <- splitSepRef trg
                          inst <- load' r
                          castType t inst
-                  _ -> return trgV
+                  _ -> return trg
      debugDump baseTrg
      let cname = classTypeName trgType
      clas <- lookupClas cname
@@ -284,15 +282,21 @@ evalUnPos (UnOpExpr op e resType) = genUnOp op e resType
 evalUnPos (BinOpExpr op e1 e2 resType) = genBinOp op e1 e2 resType
 
 evalUnPos (Access trg attr typ) = do
-  attrLoc <- accessLoc trg attr
+  trg' <- eval trg
   let trgType = texpr trg
+  attrLoc <- accessLoc trg' trgType attr
   debug "access: have location"
-  when (isSeparate trgType) $ 
-    do privQ <- getQueueFor trg
-       currProc <- getCurrProc
-       "priv_queue_sync" <#> [privQ, currProc]
-       return ()
-  load' attrLoc
+  if isSeparate trgType
+    then
+      do privQ <- getQueueFor trg
+         currProc <- getCurrProc
+         "priv_queue_sync" <#> [privQ, currProc]
+         result <- load' attrLoc
+         trgProc <- getProc trg'
+         if not (isBasic typ || isSeparate typ)
+           then wrapSepResult trgProc typ result
+           else return result
+    else load' attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
 
@@ -380,8 +384,7 @@ separateCall trg fName args retType =
             currProc <- getCurrProc
             "priv_queue_routine" <#> [privQ, closure, currProc]
        else
-         do privQ <- getQueueFor trg
-            currProc <- getCurrProc
+         do currProc <- getCurrProc
             "priv_queue_sync" <#> [privQ, currProc]
 
             debug "building direct call"
@@ -441,10 +444,17 @@ prepareClosure retType trg f args trgProc nonSepTrg args' =
 splitSepRef ref = (,) <$> gepInt ref [0, 0] <*> gepInt ref [0, 1]
 
 wrapSepResult trgProc retType result =
-  do sepInst <- mallocSeparate retType
+  do debug "wrap separate result"
+     sepInst <- mallocSeparate retType
      (procRef, objRef) <- splitSepRef sepInst
+     debug "wrap sep: storing processor"
      store trgProc procRef
-     store result objRef
+     voidPtr <- voidPtrType
+     voidResult <- bitcast result voidPtr ""
+     debug "wrap sep: storing object"
+     debugDump result
+     debugDump objRef
+     store voidResult objRef
      return sepInst
 
 getQueueFor :: TExpr -> Build Value
