@@ -79,7 +79,7 @@ isSpecialClassName name = name `elem` map fst nameAndType
 nameAndType :: [(Text, Build Type)]
 nameAndType =
     [("Pointer_8", pointer0 <$> int8TypeM)
-    ,("Array", pointer0 <$> pointer0 <$> voidPtrType)
+    ,("Array_Inner", pointer0 <$> pointer0 <$> voidPtrType)
     ]
 
 mkSpecialClassType :: Text -> Build Type

@@ -1,16 +1,26 @@
+import Array_Inner
+
 class Array [G]
 
 create make
 
+  count: Integer
+  data: Array_Inner [G]
+  
   make(n: Integer)
-    external "array_make"
+    do
+      create data.make (n)
+      count := n
     end
 
   item(i: Integer): G
-    external "array_item"
+    do
+      Result := data.item (i)
     end
 
   put(i: Integer; v: G)
-    external "array_put"
+    do
+      data.put(i, v)
     end
+
 end

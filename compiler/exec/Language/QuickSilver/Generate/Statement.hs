@@ -19,9 +19,11 @@ import Language.QuickSilver.Generate.LLVM.Build
 
 fetchCurrentAttr :: Text -> Build Value
 fetchCurrentAttr ident = do
+  debug $ "fetching current attr " ++ show ident
   curr <- lookupEnv  "Current"
   clas <- currentClass
   obj  <- load curr ""
+  debugDump obj
   getAttribute clas ident obj
 
 lookupVarAccess :: UnPosTExpr -> Build Value
@@ -199,9 +201,11 @@ genStmt (Create _typeMb var fName args) =
       do debug "nonsep create"
          varRef <- lookupVarAccess (contents var)
          debugDump varRef
+         debug "create malloc"
          newInst <- lookupMalloc varType fName args
          debugDump newInst
          store newInst varRef
+         debug "create call"
          genStmt (CallStmt $
                   attachPos (position var) (Call var fName args NoType)
                  )
