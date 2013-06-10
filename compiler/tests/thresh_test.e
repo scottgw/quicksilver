@@ -33,8 +33,8 @@ module Thresh_Test
       workers: Array [separate Thresh_Histogram]
     do
       n := 32
-      rows := 8000
-      cols := 8000
+      rows := 800
+      cols := 800
       percent := 1
 
       create workers.make(n)
@@ -103,7 +103,7 @@ module Thresh_Test
                   from jj := 0
                   until jj >= cols
                   loop
-                    result_mask.put (ii, jj, worker_mask.item(jj, ii))
+                    result_mask.put (jj, ii, worker_mask.item(jj, ii))
                     jj := jj + 1
                   end
                   ii := ii + 1
