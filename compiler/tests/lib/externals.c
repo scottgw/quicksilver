@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -86,6 +87,22 @@ double
 pointer_real_get (int64_t* p, int64_t i)
 {
   return (double)p[i];
+}
+
+/************************************
+ *  Real math functions
+ *
+ ***********************************/
+double
+real_sqrt(double x)
+{
+  return sqrt(x);
+}
+
+double
+real_from_int(int64_t i)
+{
+  return (double) i;
 }
 
 

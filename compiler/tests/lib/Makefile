@@ -1,4 +1,5 @@
 EFILES=pointer_8 pointer_64 prelude pointer string socket_util \
+       real_math \
 	int_array int_matrix \
 	real_array real_matrix \
 	int_stack int_stack_link \

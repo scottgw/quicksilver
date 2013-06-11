@@ -11,4 +11,4 @@ qs $1 -m
 llvm-link lib/stdlib.bc ${BCFILE} ${@:2} |\
   opt -O3 -std-compile-opts |\
   llc -filetype=obj -o  ${OBJFILE}
-gcc ${OBJFILE} `pkg-config libqs --libs` -lgc -lstdc++ -o ${1%.*}
+gcc ${OBJFILE} `pkg-config libqs --libs` -lgc -lstdc++ -lm -o ${1%.*}
