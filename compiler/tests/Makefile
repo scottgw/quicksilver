@@ -1,6 +1,9 @@
 all: condition_test mutex_test prodcons_test share_test noshare_test\
-	randmat_test thresh_test winnow_test outer_test\
+	randmat_test thresh_test winnow_test outer_test product_test\
 	array_test odd_even_test separate_test http_test socket_test helloworld
+
+product_test: product_test.e product_worker.ebc lib/stdlib.bc
+	./qsc $< product_worker.ebc
 
 outer_test: outer_test.e outer_worker.ebc winnow_point.ebc lib/stdlib.bc
 	./qsc $< outer_worker.ebc winnow_point.ebc
