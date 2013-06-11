@@ -36,7 +36,7 @@ module Winnow_Test
       rows := 800
       nelts := 80
       n := 32
-      
+
       -- Create mask and matrix
       sep_mask := load_mask (cols, rows)
       sep_matrix := load_matrix (cols, rows)
