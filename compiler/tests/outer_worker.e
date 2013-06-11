@@ -1,4 +1,5 @@
 import Array
+import Int_Array
 import Prelude
 import Real_Matrix
 import Real_Array
@@ -17,19 +18,23 @@ create make
   matrix: Real_Matrix
   vector: Real_Array
 
-  sep_points: separate Array [Winnow_Point]
+  sep_x_points: separate Int_Array
+  sep_y_points: separate Int_Array
   points: Array [Winnow_Point]
 
-  make(a_start: Integer; a_final: Integer; a_nelts: Integer
-      ;a_sep_points: separate Array [Winnow_Point])
+  make(a_start: Integer; a_final: Integer; a_nelts: Integer;
+       a_sep_x_points: separate Int_Array;
+       a_sep_y_points: separate Int_Array)
     do
       start := a_start
       final := a_final
       nelts := a_nelts
 
-      sep_points := a_sep_points
-      
-      create matrix.make_with_start_row (nelts, final - start, nelts)
+      sep_x_points := a_sep_x_points
+      sep_y_points := a_sep_y_points
+
+      create points.make (nelts)
+      create matrix.make_with_start_row (nelts, final - start, start)
       create vector.make_with_base (final - start, start)
     end
 
@@ -44,12 +49,12 @@ create make
       i: Integer
       pt: Winnow_Point
     do
-      separate sep_points
+      separate sep_x_points sep_y_points
         do
-          from i := start
-          until i >= final
+          from i := 0
+          until i >= nelts
           loop
-            create pt.make (sep_points.item(i).x, sep_points.item(i).y)
+            create pt.make (sep_x_points.item(i), sep_y_points.item(i))
             points.put (i, pt)
             i := i + 1
           end
