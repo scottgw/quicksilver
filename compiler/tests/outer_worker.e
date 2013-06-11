@@ -12,26 +12,57 @@ create make
   start: Integer
   final: Integer
 
-  cols: Integer
   nelts: Integer
   
   matrix: Real_Matrix
   vector: Real_Array
 
-  make()
+  sep_points: separate Array [Winnow_Point]
+  points: Array [Winnow_Point]
+
+  make(a_start: Integer; a_final: Integer; a_nelts: Integer
+      ;a_sep_points: separate Array [Winnow_Point])
     do
+      start := a_start
+      final := a_final
+      nelts := a_nelts
+
+      sep_points := a_sep_points
+      
+      create matrix.make_with_start_row (nelts, final - start, nelts)
+      create vector.make_with_base (final - start, start)
     end
 
-  get_result(a_points: Array [Winnow_Point])
+  calculate()
+    do
+      fetch_points()
+      calc_outer(points)
+    end
+
+  fetch_points()
+    local
+      i: Integer
+      pt: Winnow_Point
+    do
+      separate sep_points
+        do
+          from i := start
+          until i >= final
+          loop
+            create pt.make (sep_points.item(i).x, sep_points.item(i).y)
+            points.put (i, pt)
+            i := i + 1
+          end
+        end
+    end
+
+  calc_outer(a_points: Array [Winnow_Point])
     local
       nmax: Real
       d: Real
       p1, p2: Winnow_Point
       i, j: Integer
     do
-      create matrix.make_with_start_row (cols, final - start, nelts)
-      create vector.make_with_base (final - start, start)
-
       from i := start
       until i >= final
       loop
