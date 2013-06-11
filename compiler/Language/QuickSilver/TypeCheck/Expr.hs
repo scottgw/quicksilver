@@ -230,7 +230,7 @@ castResult target originalExpr originalResType resultType =
   case targetType of
     -- FIXME: Separate target with a generic parameter?
     Sep _ _ _ ->
-      if not (isBasic resultType)
+      if not (isBasic resultType) && not (isSeparate resultType)
       then tagPos (T.InheritProc target originalExpr)
       else return originalExpr
     _ -> if isAnyRefType originalResType
