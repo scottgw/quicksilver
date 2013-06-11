@@ -255,10 +255,12 @@ argsConform args formArgs
           | eType == typ = return e
           | eType == AnyIntType && isIntegerType typ
               = tagPos (T.Cast typ e)
-          | not (isBasic eType) && (isAnyRefType typ || isSeparate typ)
+          | not (isBasic eType) && isAnyRefType typ
               = tagPos (T.Cast typ e)
-          | not (isBasic typ) && (isAnyRefType eType || isSeparate eType)
+          | not (isBasic typ) && isAnyRefType eType
               = tagPos (T.Cast typ e)
+          | not (isBasic eType || isSeparate eType) && isSeparate typ
+              = tagPos (T.CurrSep e)
           | otherwise =
               throwError $ "Argument type doesn't match: " ++ show (e, typ)
           where

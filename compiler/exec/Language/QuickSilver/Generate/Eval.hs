@@ -214,6 +214,11 @@ evalUnPos (Cast t e) =
      v <- eval e
      castType t v
 
+evalUnPos (CurrSep e) =
+  do currProc <- getCurrProc 
+     e' <- eval e
+     wrapSepResult currProc (T.texpr e) e' 
+
 evalUnPos (StaticCall (ClassType moduleType _) name args _retType) =
     do debug "evalUnPos: static call"
        Just rout <- findAbsRoutine <$> lookupClas moduleType <*> pure name

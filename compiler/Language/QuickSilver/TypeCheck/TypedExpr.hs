@@ -64,6 +64,7 @@ data UnPosTExpr
   | Box Typ TExpr
   | Unbox Typ TExpr
   | Cast Typ TExpr
+  | CurrSep TExpr
   | LitArray [TExpr]
   | LitChar Char
   | LitString Text
@@ -142,6 +143,7 @@ untypeExpr' (CurrentVar _t)
 untypeExpr' (Old e) = E.UnOpExpr E.Old (untypeExpr e)
 untypeExpr' (Cast _ e) 
     = contents $ untypeExpr e
+untypeExpr' (CurrSep e) = contents $ untypeExpr e
 untypeExpr' (ResultVar _t)
     = E.ResultVar
 untypeExpr' (EqExpr op e1 e2)
@@ -179,6 +181,7 @@ texprTyp (UnOpExpr _ _ t) = t
 texprTyp (Agent _ _ _ t) = t
 texprTyp (Var _ t)   = t
 texprTyp (Cast t _)  = t
+texprTyp (CurrSep e) = Sep Nothing [] (texpr e)
 texprTyp (ResultVar t) = t
 texprTyp (CurrentVar t) = t
 texprTyp (InheritProc _inh base) = Sep Nothing [] (texpr base)
