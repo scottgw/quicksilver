@@ -5,14 +5,15 @@ class Threadring_Worker
 
 create make
 
+  has_token: Boolean
+  token: separate Token
   next: separate Threadring_Worker
-  n: Integer
   id: Integer
 
-  make (a_id: Integer; a_next: separate Threadring_Worker; a_n: Integer)
+  make (a_id: Integer; a_next: separate Threadring_Worker)
     do
+      has_token := False
       id := a_id
-      n := a_n
       set_next (a_next)
     end
 
@@ -21,30 +22,31 @@ create make
       next := a_next
     end
 
-  pass (a_token: separate Token)
-    local
-      keep_going: Boolean
-    do
-      separate a_token
-        do
-          -- {Prelude}.print({Prelude}.int_to_str (id))
-          -- {Prelude}.print(" saw token number: ")
-          -- {Prelude}.print({Prelude}.int_to_str (a_token.count))
-          -- {Prelude}.print("%N")
-          keep_going := a_token.count < n
-          if keep_going then
-            a_token.incr()
-          end
-        end
 
-      if keep_going then 
-        separate next
-          do
-            next.pass (a_token)
-          end
-      else
-        {Prelude}.print ("Done!%N")
-        {Prelude}.exit_with (0)
+  take_token(): separate Token
+    do
+      has_token := False
+      Result := token
+    end
+  
+  pass (a_token: separate Token)
+    do
+      token := a_token
+      has_token := True
+    end
+
+  
+  run()
+    do
+      separate next
+        require
+          next.has_token
+        do
+          token := next.take_token()
+          has_token := True
+          separate token do token.incr(id) end
+          next.run()
+        end
       end
     end
   

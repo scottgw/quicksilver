@@ -14,25 +14,26 @@ module Threadring_Test
       num_passes: Integer
     do
       n := 503
-      num_passes := 50000
+      num_passes := 50000000
 
-      create token.make()
+      create token.make(num_passes)
       
-      create first_worker.make (0, Void, num_passes)
+      create first_worker.make (0, Void)
       last_worker := first_worker
       
       from i := 1
       until i >= n
       loop
-        create worker.make (i, last_worker, num_passes)
+        create worker.make (i, last_worker)
         last_worker := worker
+        separate worker do worker.run() end
         i := i + 1
       end
 
       separate first_worker
         do
           first_worker.set_next (worker)
-          first_worker.pass(token)
+          first_worker.pass (token)
         end
     end
 end
