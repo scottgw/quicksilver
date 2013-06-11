@@ -39,8 +39,11 @@ module Language.QuickSilver.Generate.LLVM.Simple
     , constInt
     , constReal
     , add
+    , fadd
     , sub
+    , fsub
     , mul
+    , fmul
     , fdiv
     , neg
     , fneg
@@ -345,13 +348,16 @@ positionAtEnd = withBuilder1 W.positionAtEnd
 getInsertBlock :: LLVM m => m Value
 getInsertBlock = withBuilder0 W.getInsertBlock
 
-add, sub, orr, andd, mul, fdiv, sdiv, srem :: 
+add, fadd, sub, fsub, orr, andd, mul, fmul, fdiv, sdiv, srem :: 
    LLVM m => Value -> Value -> String -> m Value
 add = withBuilder3 W.buildAdd
+fadd = withBuilder3 W.buildFAdd
 sub = withBuilder3 W.buildSub
+fsub = withBuilder3 W.buildFSub
 orr = withBuilder3 W.buildOr
 andd = withBuilder3 W.buildAnd
 mul = withBuilder3 W.buildMul
+fmul = withBuilder3 W.buildFMul
 fdiv = withBuilder3 W.buildFDiv
 sdiv = withBuilder3 W.buildSDiv
 srem = withBuilder3 W.buildSRem

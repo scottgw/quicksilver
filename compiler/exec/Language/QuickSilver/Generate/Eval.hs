@@ -104,31 +104,26 @@ genBinOp op e1 e2 _resType =
     Nothing -> error $ "genBinOp: operation not found: " ++ show op
   where
     opFuncs =
-      [ (Add, strictApply add)
-      , (Sub, strictApply sub)
-      , (Mul, strictApply mul)
+      [ (Add, dblIntSel add fadd)
+      , (Sub, dblIntSel sub fsub)
+      , (Mul, dblIntSel mul fmul)
       , (Rem, strictApply srem)
       , (Quot, strictApply sdiv)
-      , (Div, if isIntegerType (texpr e1)
-              then strictApply sdiv
-              else strictApply fdiv)
+      , (Div, dblIntSel sdiv fdiv)
       , (Or, strictApply orr)
       , (And, strictApply andd)
       , (OrElse, orElse)
       , (AndThen, andThen)
-      , (RelOp Gt NoType, if isIntegerType (texpr e1)
-                          then strictApply (icmp IntSGT)
-                          else strictApply (fcmp FPOGT))
-      , (RelOp Gte NoType, if isIntegerType (texpr e1)
-                           then strictApply (icmp IntSGE)
-                           else strictApply (fcmp FPOGE))
-      , (RelOp Lt NoType, if isIntegerType (texpr e1)
-                          then strictApply (icmp IntSLT)
-                          else strictApply (fcmp FPOLT))
-      , (RelOp Lte NoType, if isIntegerType (texpr e1)
-                           then strictApply (icmp IntSLE)
-                           else strictApply (fcmp FPOLE))        
+      , (RelOp Gt NoType, dblIntSel (icmp IntSGT) (fcmp FPOGT))
+      , (RelOp Gte NoType, dblIntSel (icmp IntSGE) (fcmp FPOGE))
+      , (RelOp Lt NoType, dblIntSel (icmp IntSLT) (fcmp FPOLT))
+      , (RelOp Lte NoType, dblIntSel (icmp IntSLE) (fcmp FPOLE))
       ]
+
+    -- Select an integer or double instruction
+    dblIntSel f1 f2
+      | isIntegerType (texpr e1) = strictApply f1
+      | otherwise = strictApply f2
 
     strictApply f str =
       do e1' <- eval e1
