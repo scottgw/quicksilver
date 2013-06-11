@@ -1,6 +1,10 @@
 all: condition_test mutex_test prodcons_test share_test noshare_test\
+	threadring_test \
 	randmat_test thresh_test winnow_test outer_test product_test\
 	array_test odd_even_test separate_test http_test socket_test helloworld
+
+threadring_test: threadring_test.e threadring_worker.ebc token.ebc lib/stdlib.bc
+	./qsc $< threadring_worker.ebc token.ebc
 
 product_test: product_test.e product_worker.ebc lib/stdlib.bc
 	./qsc $< product_worker.ebc
