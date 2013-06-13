@@ -44,10 +44,9 @@ create make
         do
           token := next.take_token()
           has_token := True
-          separate token do token.incr(id) end
           next.run()
         end
-      end
+      separate token do token.incr(id) end
     end
   
 end
