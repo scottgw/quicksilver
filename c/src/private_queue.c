@@ -256,7 +256,7 @@ void
 priv_queue_lock_sync(priv_queue_t pq, processor_t client)
 {
   closure_t sync_clos = closure_new_sync(client);
-  
+  pq->last = NULL;
   priv_queue_link_enqueue(pq, sync_clos, client);
 
   bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
