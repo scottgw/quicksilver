@@ -84,7 +84,7 @@ bqueue_use(bounded_queue_t q)
 void
 bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
 {
-  for (int i = 0; i < 512; i++)
+  for (int i = 0; i < 128; i++)
     {
       if(queue_impl_enqueue(q->impl, data))
         {
@@ -116,7 +116,7 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
 void
 bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
 {
-  for (int i = 0; i < 512; i++)
+  for (int i = 0; i < 128; i++)
     {
       if(queue_impl_dequeue(q->impl, data))
         {
@@ -130,14 +130,12 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
   if (!queue_impl_dequeue(q->impl, data))
     {
       task_mutex_lock(q->not_empty_mutex, proc);
-      __sync_fetch_and_add(&q->waiters, 1);
       while (!queue_impl_dequeue(q->impl, data))
         {
           DEBUG_LOG(2, "%p waiting to dequeue in %p\n", proc, q);
           task_condition_wait(q->not_empty, q->not_empty_mutex, proc);
         }
       task_condition_signal(q->not_empty);
-      __sync_fetch_and_sub(&q->waiters, 1);
       task_mutex_unlock(q->not_empty_mutex, proc);
     }
 
