@@ -1,3 +1,4 @@
+#include <cassert>
 #include <stdlib.h>
 #include <tbb/concurrent_queue.h>
 
@@ -7,15 +8,14 @@ extern "C"
 {
   struct queue_impl
   {
-    tbb::concurrent_bounded_queue<void*> *impl;
+    tbb::concurrent_queue<void*> *impl;
   };
 
   queue_impl_t
   queue_impl_new(size_t size)
   {
     queue_impl_t q = (queue_impl_t) malloc(sizeof(struct queue_impl));
-    q->impl = new tbb::concurrent_bounded_queue<void*>();
-    q->impl->set_capacity(size);
+    q->impl = new tbb::concurrent_queue<void*>();
     return q;
   }
 
@@ -35,13 +35,14 @@ extern "C"
   int
   queue_impl_size(queue_impl_t q)
   {
-    return q->impl->size();
+    return q->impl->unsafe_size();
   }
 
   bool
   queue_impl_enqueue(queue_impl_t q, void* data)
   {
-    return q->impl->try_push(data);
+    q->impl->push(data);
+    return true;
   }
 
   bool
@@ -63,8 +64,9 @@ extern "C"
   queue_impl_dequeue_wait(queue_impl_t q, void** data_out)
   {
     void *data;
-    q->impl->pop(data);
+    q->impl->try_pop(data);
     *data_out = data;
+    assert (false && "queue_impl_dequeue_wait: unimplemented");
   }
 
   queue_impl_t
