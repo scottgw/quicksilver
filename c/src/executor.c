@@ -4,9 +4,6 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#define GC_THREADS
-#include <gc.h>
-
 #include "libqs/debug_log.h"
 #include "libqs/executor.h"
 #include "libqs/processor.h"
