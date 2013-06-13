@@ -6,7 +6,7 @@ class Threadring_Worker
 create make
 
   has_token: Boolean
-  token: separate Token
+  token: Integer
   next: separate Threadring_Worker
   id: Integer
 
@@ -23,13 +23,13 @@ create make
     end
 
 
-  take_token(): separate Token
+  take_token(): Integer
     do
       has_token := False
       Result := token
     end
   
-  pass (a_token: separate Token)
+  pass (a_token: Integer)
     do
       token := a_token
       has_token := True
@@ -43,10 +43,15 @@ create make
           next.has_token
         do
           token := next.take_token()
+          if token = 0 then
+            {Prelude}.print({Prelude}.int_to_str(id))
+            {Prelude}.print("%N")
+            {Prelude}.exit_with (0)
+          end
+          token := token - 1
           has_token := True
           next.run()
         end
-      separate token do token.incr(id) end
     end
   
 end

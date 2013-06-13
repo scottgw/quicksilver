@@ -33,7 +33,7 @@ module Threadring_Test
       separate first_worker
         do
           first_worker.set_next (worker)
-          first_worker.pass (token)
+          first_worker.pass (num_passes)
         end
     end
 end
