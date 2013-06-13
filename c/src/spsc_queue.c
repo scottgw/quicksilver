@@ -12,7 +12,7 @@
 #include "libqs/task_mutex.h"
 #include "libqs/task_condition.h"
 
-// #define SPSC_CUSTOM
+#define SPSC_CUSTOM
 
 struct spsc_queue
 {
@@ -22,7 +22,9 @@ struct spsc_queue
   volatile processor_t waiter;
 
 #ifdef SPSC_CUSTOM
+  uint64_t idx;
   ck_fifo_spsc_t *impl;
+  ck_fifo_spsc_entry_t *entries;
 #else
   bounded_queue_t impl;
 #endif
@@ -38,9 +40,10 @@ spsc_new(uint32_t size)
   q->max    = size;
   q->waiter = NULL;
 #ifdef SPSC_CUSTOM
+  q->idx    = 0;
   q->impl   = (ck_fifo_spsc_t*)malloc(sizeof(ck_fifo_spsc_t));
-  ck_fifo_spsc_entry_t *stub = malloc(sizeof(*stub));
-  ck_fifo_spsc_init (q->impl, stub);
+  q->entries = malloc((size+2) * sizeof(ck_fifo_spsc_entry_t));
+  ck_fifo_spsc_init (q->impl, q->entries);
 #else
   q->impl   = bqueue_new(size);
 #endif
@@ -52,12 +55,8 @@ void
 spsc_free(spsc_queue_t q)
 {
 #ifdef SPSC_CUSTOM
-  ck_fifo_spsc_entry_t *entry;
-  CK_FIFO_SPSC_FOREACH(q->impl, entry)
-    {
-      free(entry);
-    }
   free(q->impl);
+  free(q->entries);
 #else
   bqueue_free(q->impl);
 #endif
@@ -69,7 +68,8 @@ void
 spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
 {
   int n = __sync_fetch_and_add(&q->count, 1);
-  ck_fifo_spsc_entry_t *entry = malloc(sizeof(*entry));
+  q->idx++;
+  ck_fifo_spsc_entry_t *entry = q->entries + (q->idx % (q->max + 2));
 
   if (n == -1)
     {
@@ -79,7 +79,7 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
 
       processor_t waiter = q->waiter;
       q->waiter = NULL;
-      proc_wake(waiter);
+      proc_wake(waiter, proc->executor);
     }
   else if (n == q->max)
     {
@@ -111,7 +111,7 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
       // At this point no other processors can be in the queue.
       processor_t waiter = q->waiter;
       q->waiter = NULL;
-      proc_wake(waiter);
+      proc_wake(waiter, proc->executor);
     }
   else if (n == 0)
     {
