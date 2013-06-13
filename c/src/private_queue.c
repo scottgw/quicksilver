@@ -253,6 +253,22 @@ priv_queue_function(priv_queue_t pq,
 
 
 void
+priv_queue_lock_sync(priv_queue_t pq, processor_t client)
+{
+  closure_t sync_clos = closure_new_sync(client);
+  
+  priv_queue_link_enqueue(pq, sync_clos, client);
+
+  bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
+
+  task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
+  proc_yield_to_executor(client);
+
+  pq->last_was_func = true;
+}
+
+
+void
 priv_queue_sync(priv_queue_t pq, processor_t client)
 {
   if (!pq->last_was_func)
