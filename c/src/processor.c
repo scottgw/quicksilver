@@ -57,7 +57,7 @@ notify_available(processor_t proc)
   task_mutex_lock(proc->mutex, proc);
   proc->last_waiter = NULL;
   DEBUG_LOG(2, "%p signaling availability\n", proc);
-  task_condition_signal(proc->cv);
+  task_condition_signal(proc->cv, proc);
   task_mutex_unlock(proc->mutex, proc);
 }
 
@@ -153,7 +153,7 @@ proc_loop(processor_t proc)
             {
               processor_t client = (processor_t) clos->fn;
               while (client->task->state != TASK_WAITING);
-              proc_wake(client);
+              proc_wake(client, proc->executor);
             }
           else
             {
@@ -181,7 +181,7 @@ proc_loop(processor_t proc)
 
 
 void
-proc_wake(processor_t proc)
+proc_wake(processor_t proc, executor_t exec)
 { 
   while(task_get_state(proc->task) != TASK_WAITING);
   task_set_state(proc->task, TASK_RUNNABLE);

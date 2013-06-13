@@ -54,7 +54,7 @@ void
 proc_deref_priv_queues(processor_t proc);
 
 void
-proc_wake(processor_t proc);
+proc_wake(processor_t proc, executor_t exec);
 
 void
 proc_yield_to_other(executor_t, processor_t);

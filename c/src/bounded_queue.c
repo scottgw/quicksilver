@@ -89,7 +89,7 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
       if(queue_impl_enqueue(q->impl, data))
         {
           task_mutex_lock(q->not_empty_mutex, proc);
-          task_condition_signal(q->not_empty);
+          task_condition_signal(q->not_empty, proc);
           task_mutex_unlock(q->not_empty_mutex, proc);
           return;
         }
@@ -103,12 +103,12 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
           DEBUG_LOG(2, "%p waiting to enqueue in %p\n", proc, q);
           task_condition_wait(q->not_full, q->not_full_mutex, proc);
         }
-      task_condition_signal(q->not_full);
+      /* task_condition_signal(q->not_full, proc); */
       task_mutex_unlock(q->not_full_mutex, proc);
     }
 
   task_mutex_lock(q->not_empty_mutex, proc);
-  task_condition_signal(q->not_empty);
+  task_condition_signal(q->not_empty, proc);
   task_mutex_unlock(q->not_empty_mutex, proc);
 }
 
@@ -121,7 +121,7 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
       if(queue_impl_dequeue(q->impl, data))
         {
           task_mutex_lock(q->not_full_mutex, proc);
-          task_condition_signal(q->not_full);
+          task_condition_signal(q->not_full, proc);
           task_mutex_unlock(q->not_full_mutex, proc);
           return;
         }
@@ -135,11 +135,11 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
           DEBUG_LOG(2, "%p waiting to dequeue in %p\n", proc, q);
           task_condition_wait(q->not_empty, q->not_empty_mutex, proc);
         }
-      task_condition_signal(q->not_empty);
+      /* task_condition_signal(q->not_empty); */
       task_mutex_unlock(q->not_empty_mutex, proc);
     }
 
   task_mutex_lock(q->not_full_mutex, proc);
-  task_condition_signal(q->not_full);
+  task_condition_signal(q->not_full, proc);
   task_mutex_unlock(q->not_full_mutex, proc);
 }

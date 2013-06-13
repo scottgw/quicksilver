@@ -34,25 +34,25 @@ task_condition_free(task_condition_t cv)
 }
 
 void
-task_condition_signal(task_condition_t cv)
+task_condition_signal(task_condition_t cv, processor_t curr_proc)
 {
   processor_t proc;
 
   if(queue_impl_dequeue(cv->wait_queue, (void**)&proc))
     {
-      proc_wake(proc);
+      proc_wake(proc, curr_proc->executor);
     }
 }
 
 
 void
-task_condition_signal_all(task_condition_t cv)
+task_condition_signal_all(task_condition_t cv, processor_t curr_proc)
 {
   processor_t proc;
 
   while (queue_impl_dequeue(cv->wait_queue, (void**)&proc))
     {
-      proc_wake(proc);
+      proc_wake(proc, curr_proc->executor);
     }
 }
 

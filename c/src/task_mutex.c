@@ -129,6 +129,6 @@ task_mutex_unlock(volatile task_mutex_t mutex, volatile processor_t proc)
       // Spinning is OK here because we only have to wait between when they
       // increased the counter and when the enqueue themselves which
       // is a finite amount of time.
-      proc_wake(other_proc);
+      proc_wake(other_proc, proc->executor);
     }
 }
