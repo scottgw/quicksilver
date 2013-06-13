@@ -131,39 +131,19 @@ closure_pointer_type ()
 void
 closure_apply(closure_t clos, void* res)
 {
-  if (clos->fn == function_wrapper)
-    {
-      void (*fn)(closure_t, void*, processor_t);
-      fn = clos->fn;
-      fn(*((closure_t*)clos->args[0]),
-         *(clos->args[1]),
-         *((processor_t*)clos->args[2]));
-    }
-  else if (clos->fn == access_wrapper)
-    {
-      void (*fn)(processor_t, clos_type_t, void*, void *);
-      fn = clos->fn;
-      fn(*((processor_t*)clos->args[0]),
-         *((clos_type_t*)clos->args[1]),
-         *(clos->args[2]),
-         *(clos->args[3]));
-    }
-  else
-    {
-      ffi_type *ffi_res_type = (ffi_type *)clos->res_type;
-      ffi_type **ffi_arg_types = (ffi_type **)clos->arg_types;
-      ffi_cif cif;
+  ffi_type *ffi_res_type = (ffi_type *)clos->res_type;
+  ffi_type **ffi_arg_types = (ffi_type **)clos->arg_types;
+  ffi_cif cif;
 
-      int result = ffi_prep_cif(&cif,
-                                FFI_DEFAULT_ABI,
-                                clos->argc,
-                                ffi_res_type,
-                                ffi_arg_types);
+  int result = ffi_prep_cif(&cif,
+                            FFI_DEFAULT_ABI,
+                            clos->argc,
+                            ffi_res_type,
+                            ffi_arg_types);
         
-      assert(result == FFI_OK);
+  assert(result == FFI_OK);
 
-      ffi_call(&cif, clos->fn, res, (void**)clos->args);
-    }
+  ffi_call(&cif, clos->fn, res, (void**)clos->args);
 }
 
 void
