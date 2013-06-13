@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#include "ck_fifo.h"
+
 #include "libqs/spsc_queue.h"
 #include "libqs/bounded_queue.h"
 #include "libqs/debug_log.h"
@@ -20,7 +22,7 @@ struct spsc_queue
   volatile processor_t waiter;
 
 #ifdef SPSC_CUSTOM
-  queue_impl_t impl;
+  ck_fifo_spsc_t *impl;
 #else
   bounded_queue_t impl;
 #endif
@@ -36,7 +38,9 @@ spsc_new(uint32_t size)
   q->max    = size;
   q->waiter = NULL;
 #ifdef SPSC_CUSTOM
-  q->impl   = queue_impl_new (size);
+  q->impl   = (ck_fifo_spsc_t*)malloc(sizeof(ck_fifo_spsc_t));
+  ck_fifo_spsc_entry_t *stub = malloc(sizeof(*stub));
+  ck_fifo_spsc_init (q->impl, stub);
 #else
   q->impl   = bqueue_new(size);
 #endif
@@ -48,7 +52,12 @@ void
 spsc_free(spsc_queue_t q)
 {
 #ifdef SPSC_CUSTOM
-  queue_impl_free(q->impl);
+  ck_fifo_spsc_entry_t *entry;
+  CK_FIFO_SPSC_FOREACH(q->impl, entry)
+    {
+      free(entry);
+    }
+  free(q->impl);
 #else
   bqueue_free(q->impl);
 #endif
@@ -60,10 +69,11 @@ void
 spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
 {
   int n = __sync_fetch_and_add(&q->count, 1);
+  ck_fifo_spsc_entry_t *entry = malloc(sizeof(*entry));
+
   if (n == -1)
     {
-      bool success = queue_impl_enqueue(q->impl, data);
-      assert(success);
+      ck_fifo_spsc_enqueue(q->impl, entry, data);
 
       while (q->waiter == NULL);
 
@@ -76,13 +86,11 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
       q->waiter = proc;
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
       proc_yield_to_executor(proc);
-
-      bool success = queue_impl_enqueue(q->impl, data);
-      assert(success);
-    }
+      ck_fifo_spsc_enqueue(q->impl, entry, data);
+   }
   else
     {
-      while(!queue_impl_enqueue(q->impl, data));
+      ck_fifo_spsc_enqueue(q->impl, entry, data);
       /* bool success = queue_impl_enqueue(q->impl, data); */
       /* assert(success); */
     }
@@ -95,7 +103,7 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
   int n = __sync_fetch_and_sub(&q->count, 1);
   if (n == q->max + 1)
     {
-      bool success = queue_impl_dequeue(q->impl, data);
+      bool success = ck_fifo_spsc_dequeue(q->impl, data);
       assert(success);
 
       while (q->waiter == NULL);
@@ -111,12 +119,12 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
       proc_yield_to_executor(proc);
 
-      bool success = queue_impl_dequeue(q->impl, data);
+      bool success = ck_fifo_spsc_dequeue(q->impl, data);
       assert(success);
     }
   else
     {
-      while(!queue_impl_dequeue(q->impl, data));
+      while(!ck_fifo_spsc_dequeue(q->impl, data));
       /* bool success = queue_impl_dequeue(q->impl, data); */
       /* assert(success); */
     }
