@@ -29,8 +29,8 @@ module Winnow_Test
       val_pt: Winnow_Value_Point
       sep_val_points: separate Array [Winnow_Value_Point]
       val_points: Array [Winnow_Value_Point]
-
-      points: Array [Winnow_Point]
+      x_points: Int_Array
+      y_points: Int_Array
     do
       cols := 800
       rows := 800
@@ -69,10 +69,12 @@ module Winnow_Test
       shutdown sep_mask
       shutdown sep_matrix
 
+      create x_points.make (nelts)
+      create y_points.make (nelts)
       
       -- Pull out every kth element from the sorted list, throw away 
       -- the 'value' part.
-      chunk_points (val_points, nelts)
+      chunk_points (val_points, nelts, x_points, y_points)
       
     end
 
@@ -199,16 +201,15 @@ module Winnow_Test
       {Winnow_Sort}.sort_val_points (val_points)
     end
 
-  chunk_points (val_points: Array [Winnow_Value_Point];
-                nelts: Integer): Array [Winnow_Point]
+  chunk_points (val_points: Array [Winnow_Value_Point]; nelts: Integer;
+                x_points: Int_Array; y_points: Int_Array)
     local
       n: Integer
       i: Integer
+      val_pt: Winnow_Value_Point
       index: Integer
       chunk: Integer
     do
-      create Result.make (nelts)
-
       n := val_points.count
       chunk := n // nelts
       
@@ -216,7 +217,10 @@ module Winnow_Test
       until i > nelts
       loop
         index := (i - 1) * chunk + 1
-        Result.put (i, val_points.item (index))
+        val_pt := val_points.item (index)
+        x_points.put (i, val_pt.x)
+        y_points.put (i, val_pt.y)
+
         i := i + 1
       end
     end

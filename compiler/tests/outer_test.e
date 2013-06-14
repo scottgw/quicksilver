@@ -71,7 +71,7 @@ module Outer_Test
                            result_matrix, result_vector)
         i := i + 1
       end
-      
+      {Prelude}.exit_with (0)      
       shutdown x_points
       shutdown y_points
     end
@@ -97,7 +97,7 @@ module Outer_Test
             i := i + 1
           end
         end
-      shutdown worker
+--      shutdown worker
     end
 
   fill_points(points: separate Int_Array; nelts: Integer)

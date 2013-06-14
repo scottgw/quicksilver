@@ -31,6 +31,7 @@ module Winnow_Sort
       i: Integer
       val_pt: Winnow_Value_Point
       tmp_pt: Winnow_Value_Point
+      curr_pt: Winnow_Value_Point
       store_idx: Integer
     do      
       val_pt := points.item(pivot_idx)
@@ -43,11 +44,11 @@ module Winnow_Sort
       from i := start
       until i >= final - 1
       loop
-        if points.item (i).value <= val_pt.value then --FIXME: use coords after value
+        curr_pt := points.item (i)
+        if curr_pt.value <= val_pt.value or curr_pt.x <= val_pt.y or curr_pt.y <= val_pt.y then --FIXME: use coords after value
           -- swap the current element with the partition
-          tmp_pt := points.item (i)
           points.put (i, points.item (store_idx))
-          points.put (store_idx, tmp_pt)
+          points.put (store_idx, curr_pt)
           
           store_idx := store_idx + 1
         end
