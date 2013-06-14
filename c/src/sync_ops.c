@@ -23,6 +23,9 @@ struct sync_data
   volatile uint64_t num_runnable;
   pthread_mutex_t run_mutex;
   pthread_cond_t not_empty;
+
+  // List of executors
+  GArray *executors;
 };
 
 sync_data_t
@@ -49,8 +52,9 @@ sync_data_new(uint32_t max_tasks)
   pthread_cond_init(&sync_data->not_empty, NULL);
 
   sync_data->num_sleepers = 0;
-
   sync_data->sleep_list = queue_impl_new(max_tasks);
+
+  sync_data->executors = g_array_new (false, false, sizeof(executor_t));
 
   return sync_data;
 }
@@ -71,6 +75,13 @@ sync_data_use(sync_data_t sync_data)
 {  
   queue_impl_use(sync_data->runnable_queue);
   queue_impl_use(sync_data->sleep_list);
+}
+
+
+GArray*
+sync_data_executors(sync_data_t sync_data)
+{
+  return sync_data->executors;
 }
 
 

@@ -8,11 +8,8 @@
 #include "libqs/debug_log.h"
 #include "libqs/executor.h"
 #include "libqs/processor.h"
-#include "libqs/list.h"
 #include "libqs/notifier.h"
 #include "libqs/task.h"
-
-list_t executors;
 
 static
 void
@@ -60,8 +57,8 @@ switch_to_next_processor(executor_t exec)
     {
       exec->done = true;
     }
-}
 
+}
 void
 executor_free(executor_t exec)
 {
@@ -96,9 +93,8 @@ executor_run(void* data)
 
 static
 void
-join_executor(void* elem, void* user)
+join_executor(executor_t exec)
 {
-  executor_t exec = (executor_t)elem;
   pthread_join(exec->thread, NULL);
   executor_free(exec);
 }
@@ -123,20 +119,24 @@ make_executor(sync_data_t sync_data)
 
 // Joins the list of executors.
 void
-join_executors()
+join_executors(sync_data_t sync_data)
 {
-  list_foreach(executors, join_executor, NULL);
-  list_free(executors);
+  GArray *executors = sync_data_executors(sync_data);
+  for (int i = 0; i < executors->len; i++)
+    {
+      join_executor (g_array_index (executors, executor_t, i));
+    }
 }
 
 void
 create_executors(sync_data_t sync_data, int n)
 {
-  executors = list_make(n+1);
+  GArray *executors = sync_data_executors(sync_data);
   for(int i = 0; i < n; i++)
     {
       executor_t exec = make_executor(sync_data);
-      list_add(executors, exec);
+      
+      g_array_append_val (executors, exec);
       pthread_create(&exec->thread, NULL, executor_run, exec);
     }
 }

@@ -2,6 +2,7 @@
 #define _SYNC_OPS_H
 
 #include <stdint.h>
+#include <glib.h>
 
 #include "queue_impl.h"
 #include "types.h"
@@ -23,6 +24,9 @@ sync_data_free(sync_data_t sync_data);
 
 void
 sync_data_use(sync_data_t);
+
+GArray*
+sync_data_executors(sync_data_t);
 
 void
 sync_data_register_proc(sync_data_t sync_data);
