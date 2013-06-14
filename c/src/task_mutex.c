@@ -92,7 +92,7 @@ task_mutex_lock(volatile task_mutex_t mutex, volatile processor_t proc)
 {
   DEBUG_LOG(2, "%p requests mutex %p\n", proc, mutex);
 
-  if (__atomic_add_fetch(&mutex->count, 1, __ATOMIC_SEQ_CST) > 1)
+  if (__atomic_add_fetch(&mutex->count, 1, __ATOMIC_RELAXED) > 1)
     {
       // if the owner is already set then we add to the wait list
       // and yield to the executor.
@@ -117,7 +117,7 @@ task_mutex_unlock(volatile task_mutex_t mutex, volatile processor_t proc)
   
   DEBUG_LOG(2, "%p unlocks mutex %p\n", proc, mutex);
 
-  if (__atomic_sub_fetch(&mutex->count, 1, __ATOMIC_SEQ_CST) > 0)
+  if (__atomic_sub_fetch(&mutex->count, 1, __ATOMIC_RELAXED) > 0)
     {
       DEBUG_LOG(2, "%p found another waiting on mutex %p\n", proc, mutex);
       processor_t other_proc = NULL;

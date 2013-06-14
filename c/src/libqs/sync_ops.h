@@ -29,6 +29,12 @@ GArray*
 sync_data_executors(sync_data_t);
 
 void
+sync_data_signal_work(sync_data_t sync_data);
+
+bool
+sync_data_wait_for_work(sync_data_t);
+
+void
 sync_data_register_proc(sync_data_t sync_data);
 
 void
@@ -39,6 +45,10 @@ sync_data_num_processors(sync_data_t sync_data);
 
 void
 sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc);
+
+bool
+sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, processor_t *proc);
+
 
 processor_t
 sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec);

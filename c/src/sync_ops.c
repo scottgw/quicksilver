@@ -85,6 +85,29 @@ sync_data_executors(sync_data_t sync_data)
 }
 
 
+void
+sync_data_signal_work(sync_data_t sync_data)
+{
+  pthread_cond_signal(&sync_data->not_empty);
+}
+
+
+bool
+sync_data_wait_for_work(sync_data_t sync_data)
+{
+  struct timespec current_time;
+  clock_gettime(CLOCK_REALTIME, &current_time);
+  current_time.tv_nsec += 10*1000*1000;
+
+  pthread_mutex_lock(&sync_data->run_mutex);
+  pthread_cond_timedwait(&sync_data->not_empty,
+                         &sync_data->run_mutex,
+                         &current_time);
+  pthread_mutex_unlock(&sync_data->run_mutex);
+
+  return sync_data->num_processors > 0;
+}
+
 /* -------------------- */
 /* Run queue operations */
 /* -------------------- */
@@ -145,6 +168,12 @@ sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec)
       pthread_cond_broadcast(&sync_data->not_empty);    
     }
   return proc;
+}
+
+bool
+sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, processor_t *proc)
+{
+  return queue_impl_dequeue(sync_data->runnable_queue, (void**) proc);
 }
 
 

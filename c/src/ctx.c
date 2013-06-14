@@ -52,7 +52,7 @@ ctx_wrapper_f(ctx_wrapper_data* data, ucontext_t *next_uctx)
 
   free(data);
 
-  if (setjmp(ctx->jbuf) == 0)
+  if (sigsetjmp(ctx->jbuf, 0) == 0)
     {
       // First time through we want to jump back to
       // the setup routine that just made us.
@@ -99,7 +99,7 @@ ctx_save(ctx_t ctx)
 uint32_t
 ctx_set(ctx_t ctx)
 {
-  longjmp(ctx->jbuf, 1);
+  siglongjmp(ctx->jbuf, 1);
   assert (false && "ctx_set: should not reach this point after longjmp");
   return 0;
 }

@@ -185,7 +185,8 @@ proc_wake(processor_t proc, executor_t exec)
 { 
   while(task_get_state(proc->task) != TASK_WAITING);
   task_set_state(proc->task, TASK_RUNNABLE);
-  sync_data_enqueue_runnable(proc->task->sync_data, proc);
+  exec_push(exec, proc);
+  /* sync_data_enqueue_runnable(proc->task->sync_data, proc); */
 }
 
 void

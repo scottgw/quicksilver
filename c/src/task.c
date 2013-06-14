@@ -50,6 +50,7 @@ task_wrapper(wrapper_data* data)
   void* ptr = data->ptr;
   free(data);
 
+  /* printf("task_wrapper\n"); */
   task->state = TASK_RUNNING;
   f(ptr);
   task->state = TASK_TRANSITION_TO_FINISHED;
@@ -69,7 +70,8 @@ task_get_state(task_t task)
 void
 task_set_state(task_t task, task_state state)
 {
-  return __atomic_store_4(&task->state, state, __ATOMIC_SEQ_CST);
+  task->state = state;
+  /* return __atomic_store_4(&task->state, state, __ATOMIC_SEQ_CST); */
 }
 
 
@@ -90,6 +92,7 @@ task_set_func(task_t task, void (*f)(void*), void* data)
 void
 task_run(task_t task)
 {
+  /* printf("task_run\n"); */
   task->state = TASK_RUNNING;
   int result = ctx_set(task->ctx);
   assert(result == 0);
@@ -98,8 +101,8 @@ task_run(task_t task)
 void
 yield_to(task_t from_task, task_t to_task)
 {
-  assert(from_task->state == TASK_TRANSITION_TO_RUNNABLE ||
-         from_task->state == TASK_TRANSITION_TO_WAITING);
+  /* printf("task_yield\n"); */
+  assert(from_task->state >= TASK_TRANSITION_TO_WAITING);
   volatile bool flag = ctx_save(from_task->ctx);
   if (flag)
     {

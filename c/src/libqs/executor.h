@@ -6,6 +6,7 @@
 #include "processor.h"
 
 #include "sync_ops.h"
+#include "types.h"
 
 struct executor
 {
@@ -16,12 +17,17 @@ struct executor
   int id;
 
   uint32_t backoff_us;
+
+  ws_deque_t local_deque;
 };
 
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t
 make_executor(sync_data_t);
+
+void
+exec_push (executor_t exec, processor_t proc);
 
 // Free the memory for the executor.
 void

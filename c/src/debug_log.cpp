@@ -68,6 +68,10 @@ extern "C"
 
         log_queue->push(info);
       }
+    // va_list args;
+    // va_start(args, str);
+    // vprintf(str, args);
+    // va_end(args);
   }
 
   void

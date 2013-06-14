@@ -84,16 +84,16 @@ bqueue_use(bounded_queue_t q)
 void
 bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
 {
-  for (int i = 0; i < 128; i++)
-    {
-      if(queue_impl_enqueue(q->impl, data))
-        {
-          task_mutex_lock(q->not_empty_mutex, proc);
-          task_condition_signal(q->not_empty, proc);
-          task_mutex_unlock(q->not_empty_mutex, proc);
-          return;
-        }
-    }
+  /* for (int i = 0; i < 128; i++) */
+  /*   { */
+  /*     if(queue_impl_enqueue(q->impl, data)) */
+  /*       { */
+  /*         task_mutex_lock(q->not_empty_mutex, proc); */
+  /*         task_condition_signal(q->not_empty, proc); */
+  /*         task_mutex_unlock(q->not_empty_mutex, proc); */
+  /*         return; */
+  /*       } */
+  /*   } */
 
   if (!queue_impl_enqueue(q->impl, data))
     {
@@ -107,6 +107,7 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
       task_mutex_unlock(q->not_full_mutex, proc);
     }
 
+  DEBUG_LOG(2, "%p bounded queue notifying not empty %p\n", proc, q);
   task_mutex_lock(q->not_empty_mutex, proc);
   task_condition_signal(q->not_empty, proc);
   task_mutex_unlock(q->not_empty_mutex, proc);
@@ -116,16 +117,16 @@ bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc)
 void
 bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
 {
-  for (int i = 0; i < 128; i++)
-    {
-      if(queue_impl_dequeue(q->impl, data))
-        {
-          task_mutex_lock(q->not_full_mutex, proc);
-          task_condition_signal(q->not_full, proc);
-          task_mutex_unlock(q->not_full_mutex, proc);
-          return;
-        }
-    }
+  /* for (int i = 0; i < 128; i++) */
+  /*   { */
+  /*     if(queue_impl_dequeue(q->impl, data)) */
+  /*       { */
+  /*         task_mutex_lock(q->not_full_mutex, proc); */
+  /*         task_condition_signal(q->not_full, proc); */
+  /*         task_mutex_unlock(q->not_full_mutex, proc); */
+  /*         return; */
+  /*       } */
+  /*   } */
 
   if (!queue_impl_dequeue(q->impl, data))
     {
@@ -139,6 +140,7 @@ bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc)
       task_mutex_unlock(q->not_empty_mutex, proc);
     }
 
+  DEBUG_LOG(2, "%p bounded queue notifying not full %p\n", proc, q);
   task_mutex_lock(q->not_full_mutex, proc);
   task_condition_signal(q->not_full, proc);
   task_mutex_unlock(q->not_full_mutex, proc);
