@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 
+#include "libqs/ws_deque.h"
 #include "libqs/debug_log.h"
 #include "libqs/executor.h"
 #include "libqs/processor.h"

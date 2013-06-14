@@ -55,5 +55,9 @@ typedef struct closure* closure_t;
 struct clos_type;
 typedef struct clos_type* clos_type_t;
 
+// work stealing
+struct ws_deque;
+typedef struct ws_deque* ws_deque_t;
+
 
 #endif // _TYPES_H
