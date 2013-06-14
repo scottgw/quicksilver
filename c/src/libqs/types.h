@@ -59,5 +59,11 @@ typedef struct clos_type* clos_type_t;
 struct ws_deque;
 typedef struct ws_deque* ws_deque_t;
 
+// MPSC queues
+struct mpscq_node;
+typedef struct mpscq_node mpscq_node_t;
+
+struct mpscq;
+typedef struct mpscq mpscq_t;
 
 #endif // _TYPES_H

@@ -86,6 +86,7 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
       q->waiter = proc;
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
       proc_yield_to_executor(proc);
+
       ck_fifo_spsc_enqueue(q->impl, entry, data);
    }
   else

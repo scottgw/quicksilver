@@ -5,56 +5,6 @@
 #include "libqs/task.h"
 #include "libqs/types.h"
 
-struct mpscq_node
-{
-  struct mpscq_node* volatile  next;
-  void*                   state; 
-};
-
-typedef struct mpscq_node mpscq_node_t;
-
-struct mpscq
-{
-  mpscq_node_t* volatile  head;
-  mpscq_node_t*           tail;
-
-};
-
-typedef struct mpscq mpscq_t;
-
-void mpscq_create(mpscq_t* self, mpscq_node_t* stub)
-{
-  stub->next = 0;
-  self->head = stub;
-  self->tail = stub;
-}
-
-void mpscq_push(mpscq_t* self, mpscq_node_t* n)
-{
-  n->next = 0;
-  mpscq_node_t* prev;
-  __atomic_exchange(&self->head, &n, &prev,  __ATOMIC_SEQ_CST);
-  //(*)
-  prev->next = n;
-
-}
-
-bool
-mpscq_pop(mpscq_t* self, void **data)
-{
-  mpscq_node_t* tail = self->tail; 
-  mpscq_node_t* next = tail->next; // serialization-point wrt producers, acquire
-  if (next) 
-    { 
-      self->tail = next; 
-      tail->state = next->state;
-      *data = tail->state;
-      return true;
-    }
-  return false;
-} 
-
-
 struct mpsc_queue
 {
   volatile uint32_t count;

@@ -1,8 +1,9 @@
 #include <assert.h>
 #include <stdlib.h>
+
 #include "libqs/debug_log.h"
 #include "libqs/processor.h"
-#include "libqs/queue_impl.h"
+#include "libqs/mpsc_impl.h"
 #include "libqs/sync_ops.h"
 #include "libqs/task.h"
 #include "libqs/task_mutex.h"
@@ -14,7 +15,8 @@ struct task_mutex
 {
   volatile uint32_t count;
   volatile processor_t owner;
-  volatile queue_impl_t wait_queue;
+  mpscq_node_t stub;
+  mpscq_t wait_queue;
 };
 
 task_mutex_t
@@ -23,7 +25,7 @@ task_mutex_new()
   task_mutex_t mutex = (task_mutex_t)malloc(sizeof(struct task_mutex));
   mutex->count = 0;
   mutex->owner = NULL;
-  mutex->wait_queue = queue_impl_new(INIT_WAIT_QUEUE_SIZE);
+  mpscq_create(&mutex->wait_queue, &mutex->stub);
 
   return mutex;
 }
@@ -31,7 +33,6 @@ task_mutex_new()
 void
 task_mutex_free(task_mutex_t mutex)
 {
-  queue_impl_free(mutex->wait_queue);
   free (mutex);
 }
 
@@ -88,7 +89,7 @@ task_mutex_owner(task_mutex_t mutex)
 /* } */
 
 void
-task_mutex_lock(volatile task_mutex_t mutex, volatile processor_t proc)
+task_mutex_lock(volatile task_mutex_t mutex, processor_t proc)
 {
   DEBUG_LOG(2, "%p requests mutex %p\n", proc, mutex);
 
@@ -97,8 +98,10 @@ task_mutex_lock(volatile task_mutex_t mutex, volatile processor_t proc)
       // if the owner is already set then we add to the wait list
       // and yield to the executor.
       DEBUG_LOG(2, "%p fails to attain %p\n", proc, mutex);
-      bool success = queue_impl_enqueue(mutex->wait_queue, proc);
-      assert(success);
+      /* mpscq_node_t* node = malloc (sizeof(*node)); */
+      /* node->state = proc; */
+      proc->node.state = proc;
+      mpscq_push(&mutex->wait_queue, &proc->node);
 
       task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
       proc_yield_to_executor(proc);
@@ -110,18 +113,25 @@ task_mutex_lock(volatile task_mutex_t mutex, volatile processor_t proc)
 }
 
 void
-task_mutex_unlock(volatile task_mutex_t mutex, volatile processor_t proc)
+task_mutex_unlock(volatile task_mutex_t mutex, processor_t proc)
 {
   assert(mutex->owner == proc);
   assert(mutex->count > 0);
-  
+
   DEBUG_LOG(2, "%p unlocks mutex %p\n", proc, mutex);
 
   if (__atomic_sub_fetch(&mutex->count, 1, __ATOMIC_RELAXED) > 0)
     {
       DEBUG_LOG(2, "%p found another waiting on mutex %p\n", proc, mutex);
-      processor_t other_proc = NULL;
-      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
+      
+      mpscq_node_t* node = mpscq_pop(&mutex->wait_queue);
+
+      while(node == 0)
+        {
+          node = mpscq_pop(&mutex->wait_queue);
+        }
+      processor_t other_proc = (processor_t) node->state;
+      /* free(node); */
       DEBUG_LOG(2, "%p is awoken out of mutex %p\n", other_proc, mutex);
       // If there's someone in the loop, spin to dequeue them from the
       // wait-queue.
