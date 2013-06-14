@@ -12,6 +12,7 @@
 
 struct processor
 {
+  void* next;
   // Underlying task
   task_t task;
 
