@@ -209,7 +209,6 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
-  proc->node.state = proc;
   proc->qoq = bqueue_new(25000);
   proc->task = task_make(sync_data);
   proc->id = global_id++;

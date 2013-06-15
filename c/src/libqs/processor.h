@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <glib.h>
 
-#include "mpsc_impl.h"
+/* #include "mpsc_impl.h" */
 #include "closure.h"
 #include "task_mutex.h"
 #include "task_condition.h"
@@ -16,7 +16,8 @@ struct processor
   // Underlying task
   task_t task;
 
-  mpscq_node_t node;
+  processor_t next;
+
   // Current executor
   executor_t executor;
 
