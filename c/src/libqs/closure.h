@@ -27,8 +27,8 @@ struct closure
 closure_t
 closure_new_end();
 
-closure_t
-closure_new_sync(processor_t client);
+void
+closure_new_sync(closure_t clos, processor_t client);
 
 closure_t
 closure_new(void *fn,

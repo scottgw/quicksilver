@@ -20,14 +20,12 @@ closure_new_end()
 }
 
 
-closure_t
-closure_new_sync(processor_t client)
+void
+closure_new_sync(closure_t clos, processor_t client)
 {
-  closure_t clos = (closure_t) malloc(sizeof(struct closure));
   clos->mode = CLOS_SYNC;
   clos->fn = (void*) client;
   clos->next = NULL;
-  return clos;
 }
 
 

@@ -96,7 +96,10 @@ priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
       else
         {
           // If we couldn't swap this closure in, queue it up.
-          closure_free(last);
+          if (!closure_is_sync(last))
+            {
+              closure_free(last);
+            }
           DEBUG_LOG(1, "%p priv enqueue start\n", wait_proc);
           spsc_enqueue_wait(pq->q, clos, wait_proc);
           DEBUG_LOG(1, "%p priv enqueue end\n", wait_proc);
@@ -255,8 +258,11 @@ priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 void
 priv_queue_lock_sync(priv_queue_t pq, processor_t client)
 {
-  closure_t sync_clos = closure_new_sync(client);
+  /* struct closure sync_clos; */
+  closure_t sync_clos = malloc(sizeof(*sync_clos));
+  closure_new_sync(sync_clos, client);
   pq->last = NULL;
+
   priv_queue_link_enqueue(pq, sync_clos, client);
 
   bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
@@ -273,7 +279,10 @@ priv_queue_sync(priv_queue_t pq, processor_t client)
 {
   if (!pq->last_was_func)
     {
-      closure_t sync_clos = closure_new_sync(client);
+      /* struct closure sync_clos; */
+      closure_t sync_clos = malloc(sizeof(*sync_clos));
+      closure_new_sync(sync_clos, client);
+      pq->last = NULL;
 
       priv_queue_link_enqueue(pq, sync_clos, client);
 
