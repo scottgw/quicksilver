@@ -69,7 +69,7 @@ get_work (executor_t exec)
               {
                 steal_success = sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc);
               }
-          } while (!steal_success && attempts < 1024);
+          } while (!steal_success && attempts < 4);
 
           if (steal_success)
             {
