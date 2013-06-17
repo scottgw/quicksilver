@@ -152,7 +152,6 @@ proc_loop(processor_t proc)
           if (closure_is_sync(clos))
             {
               processor_t client = (processor_t) clos->fn;
-              while (client->task->state != TASK_WAITING);
               proc_wake(client, proc->executor);
             }
           else
