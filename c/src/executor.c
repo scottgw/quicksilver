@@ -14,6 +14,7 @@
 bool
 exec_steal (executor_t victim_exec, processor_t *proc)
 {
+  assert(victim_exec != NULL);
   return ws_deque_steal(victim_exec->local_deque, (void**)proc);
 }
 
@@ -94,6 +95,7 @@ switch_to_next_processor(executor_t exec)
   BINARY_LOG(2, SYNCOPS_DEQUEUE_END, exec, NULL);
   if (proc != NULL)
     {
+      assert(proc->task->state == TASK_RUNNABLE);
       DEBUG_LOG(2, "%p is dequeued by executor %p\n", proc, exec);
       proc->executor = exec;
       exec->current_proc = proc;
