@@ -98,7 +98,7 @@ task_mutex_unlock(volatile task_mutex_t mutex, processor_t proc)
 
       /*  /\* = (processor_t) node->state; *\/ */
 
-      queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc);
+      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
 
       while (other_proc->task->state != TASK_WAITING);
 
