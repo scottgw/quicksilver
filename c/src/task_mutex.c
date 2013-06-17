@@ -81,7 +81,6 @@ task_mutex_unlock(volatile task_mutex_t mutex, processor_t proc)
 {
   assert(mutex->owner == proc);
   assert(mutex->count > 0);
-  assert (mutex->count < 100);
 
   DEBUG_LOG(2, "%p unlocks mutex %p\n", proc, mutex);
 
@@ -90,7 +89,7 @@ task_mutex_unlock(volatile task_mutex_t mutex, processor_t proc)
       DEBUG_LOG(2, "%p found another waiting on mutex %p\n", proc, mutex);
       
       /* mpscq_node_t* node; */
-      processor_t other_proc;
+      volatile processor_t other_proc;
 
       /* do */
       /*   { */
