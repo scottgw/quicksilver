@@ -110,13 +110,15 @@ module Thresh_Test
                 end
               end
           end
-        shutdown hist
+--        shutdown hist
         i := i + 1
       end
 
-      shutdown sep_hist
-      shutdown sep_max
-      shutdown mat
+      {Prelude}.exit_with(0)
+
+--      shutdown sep_hist
+--      shutdown sep_max
+--      shutdown mat
     end
 
   calculate_threshold (nrows, ncols, percent: Integer;

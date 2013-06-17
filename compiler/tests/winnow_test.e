@@ -66,8 +66,8 @@ module Winnow_Test
       val_points := merge_val_points (workers)
       sort_list (val_points)
 
-      shutdown sep_mask
-      shutdown sep_matrix
+--      shutdown sep_mask
+--      shutdown sep_matrix
 
       create x_points.make (nelts)
       create y_points.make (nelts)
@@ -75,7 +75,7 @@ module Winnow_Test
       -- Pull out every kth element from the sorted list, throw away 
       -- the 'value' part.
       chunk_points (val_points, nelts, x_points, y_points)
-      
+      {Prelude}.exit_with(0) 
     end
 
   

@@ -86,13 +86,13 @@ module Randmat_Test
         i := i + 1
       end
         
-
-      from i := 0 
-      until i >= num_workers
-      loop
-        shutdown workers.item(i)
-        i := i + 1
-      end
+      {Prelude}.exit_with(0)
+--      from i := 0 
+--      until i >= num_workers
+--      loop
+--        shutdown workers.item(i)
+--        i := i + 1
+--      end
     end
 
 end
