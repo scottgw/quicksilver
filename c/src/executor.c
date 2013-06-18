@@ -53,7 +53,7 @@ get_work (executor_t exec)
         {
           bool steal_success = false;
           
-          int vi = g_random_int_range (0, len);
+          int vi = 0;
 
           for (int i = 0; i < MAX_ATTEMPTS && !steal_success; i++)
             {
