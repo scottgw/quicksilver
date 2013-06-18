@@ -6,6 +6,8 @@
 struct circ_array
 {
   int64_t log_size;
+  uint64_t size;
+  uint64_t size_mask;
   void **array;
 };
 
@@ -18,6 +20,8 @@ circ_array_new(int64_t log_size)
   circ_array_t c_array = (circ_array_t) malloc(sizeof(struct circ_array));
 
   c_array->log_size = log_size;
+  c_array->size = 1 << log_size;
+  c_array->size_mask = c_array->size - 1;
   c_array->array = malloc((1 << log_size) * sizeof(void*));
   
   return c_array;
@@ -27,14 +31,14 @@ static
 int64_t
 circ_array_size(circ_array_t c_array)
 {
-  return 1 << c_array->log_size;
+  return c_array->size;
 }
 
-static
+
 void*
 circ_array_get(circ_array_t c_array, int64_t i)
 {
-  return c_array->array[i % circ_array_size(c_array)];
+  return c_array->array[i & c_array->size_mask];
 }
 
 static
