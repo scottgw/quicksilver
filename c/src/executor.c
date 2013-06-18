@@ -53,28 +53,26 @@ get_work (executor_t exec)
         {
           bool steal_success = false;
           
-          int vi = 0; // g_random_int_range (0, len);    
+          int vi = g_random_int_range (0, len);
 
           for (int i = 0; i < MAX_ATTEMPTS && !steal_success; i++)
             {
               // Get random victim that's not ourselves
-              victim = g_array_index(executors, executor_t, vi);
+              victim = g_array_index(executors, executor_t, (vi + i) % len);
 
               if (victim == exec)
                 {
-                  vi = (vi + 1) % len;
-                  victim = g_array_index(executors, executor_t, vi);
+                  continue;
                 }
-              vi = (vi + 1) % len;
 
               steal_success = exec_steal(victim, &proc);
+            }
 
-              if (!steal_success)
-                {
-                  steal_success =
-                    sync_data_try_dequeue_runnable(exec->task->sync_data,
-                                                   exec, &proc);
-                }
+          if (!steal_success)
+            {
+              steal_success =
+                sync_data_try_dequeue_runnable(exec->task->sync_data,
+                                               exec, &proc);
             }
 
           if (steal_success)
