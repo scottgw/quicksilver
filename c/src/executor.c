@@ -13,6 +13,8 @@
 
 #define MAX_ATTEMPTS 4
 
+pthread_barrier_t barrier;
+
 bool
 exec_steal (executor_t victim_exec, processor_t *proc)
 {
@@ -164,6 +166,8 @@ executor_run(void* data)
 {
   executor_t exec = data;
 
+  pthread_barrier_wait(&barrier);
+
   task_set_func(exec->task, executor_loop, exec);
   task_run(exec->task);
   assert (false && "executor_run: should never reach this point");  
@@ -211,6 +215,7 @@ void
 create_executors(sync_data_t sync_data, int n)
 {
   GArray *executors = sync_data_executors(sync_data);
+  pthread_barrier_init(&barrier, NULL, n);
   for(int i = 0; i < n; i++)
     {
       executor_t exec = make_executor(sync_data);
