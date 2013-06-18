@@ -11,6 +11,8 @@
 #include "libqs/notifier.h"
 #include "libqs/task.h"
 
+#define MAX_ATTEMPTS 4
+
 bool
 exec_steal (executor_t victim_exec, processor_t *proc)
 {
@@ -41,7 +43,6 @@ get_work (executor_t exec)
   processor_t proc;
   GArray *executors = sync_data_executors (exec->task->sync_data);
   int len = executors->len;
-  int attempts;
   executor_t victim;
 
   if (!exec_steal(exec, &proc))
@@ -52,25 +53,27 @@ get_work (executor_t exec)
           
           int vi = 0; // g_random_int_range (0, len);    
 
-          attempts = 0;
-          do {
-            attempts++;
-        
-            // Get random victim that's not ourselves
-            victim = g_array_index(executors, executor_t, vi);
+          for (int i = 0; i < MAX_ATTEMPTS && !steal_success; i++)
+            {
+              // Get random victim that's not ourselves
+              victim = g_array_index(executors, executor_t, vi);
 
-            if (victim == exec)
-              {                
-                vi = (vi + 1) % len;
-                victim = g_array_index(executors, executor_t, vi);
-              }
-            vi = (vi + 1) % len;
-            steal_success = exec_steal(victim, &proc);
-            if (!steal_success)
-              {
-                steal_success = sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc);
-              }
-          } while (!steal_success && attempts < 4);
+              if (victim == exec)
+                {
+                  vi = (vi + 1) % len;
+                  victim = g_array_index(executors, executor_t, vi);
+                }
+              vi = (vi + 1) % len;
+
+              steal_success = exec_steal(victim, &proc);
+
+              if (!steal_success)
+                {
+                  steal_success =
+                    sync_data_try_dequeue_runnable(exec->task->sync_data,
+                                                   exec, &proc);
+                }
+            }
 
           if (steal_success)
             {
