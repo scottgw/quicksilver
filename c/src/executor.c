@@ -11,7 +11,8 @@
 #include "libqs/notifier.h"
 #include "libqs/task.h"
 
-#define MAX_ATTEMPTS 4
+#define MAX_ATTEMPTS 64
+#define MIN_ATTEMPTS 4
 
 pthread_barrier_t barrier;
 
