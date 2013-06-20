@@ -26,7 +26,11 @@ void
 exec_push (executor_t exec, processor_t proc)
 {
   ws_deque_push_bottom(exec->local_deque, proc);
-  if (ws_deque_size(exec->local_deque) > 4)
+
+  // We only inform other processors we have more than 1 piece of work,
+  // because this prevents us from contending with the other executors
+  // over the only work we have.
+  if (ws_deque_size(exec->local_deque) > 1)
     {
       sync_data_signal_work(exec->task->sync_data);
     }
