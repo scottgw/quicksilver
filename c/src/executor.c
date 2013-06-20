@@ -108,6 +108,7 @@ switch_to_next_processor(executor_t exec)
 
       exec->task->state = TASK_TRANSITION_TO_RUNNABLE;
       yield_to(exec->task, proc->task);
+      proc = exec->current_proc;
 
       assert(proc->task->state >= TASK_TRANSITION_TO_WAITING);
       // If the came back finished, then remove it from the

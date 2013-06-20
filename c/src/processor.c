@@ -152,7 +152,11 @@ proc_loop(processor_t proc)
           if (closure_is_sync(clos))
             {
               processor_t client = (processor_t) clos->fn;
-              proc_wake(client, proc->executor);
+              while (client->task->state != TASK_WAITING);
+              proc->task->state = TASK_WAITING;
+              client->executor = proc->executor;
+              yield_to(proc->task, client->task);
+              /* proc_wake(client, proc->executor); */
             }
           else
             {
@@ -192,6 +196,7 @@ void
 proc_yield_to_executor(processor_t proc)
 {
   DEBUG_LOG(2, "%p yielding to executor %p\n", proc, proc->executor);
+  proc->executor->current_proc = proc;
   yield_to(proc->task, proc->executor->task);
 }
 

@@ -102,7 +102,7 @@ void
 yield_to(task_t from_task, task_t to_task)
 {
   /* printf("task_yield\n"); */
-  assert(from_task->state >= TASK_TRANSITION_TO_WAITING);
+  /* assert(from_task->state >= TASK_TRANSITION_TO_WAITING); */
   volatile bool flag = ctx_save(from_task->ctx);
   if (flag)
     {

@@ -48,6 +48,18 @@ priv_queue_free(priv_queue_t pq)
   free(pq);
 }
 
+
+static
+void
+priv_queue_resume_supplier(priv_queue_t pq, processor_t client)
+{
+  if (pq->last_was_func)
+    {
+      proc_wake(pq->supplier_proc, client->executor);
+    }
+}
+
+
 void
 priv_queue_shutdown(priv_queue_t pq, processor_t client)
 {
@@ -66,6 +78,7 @@ priv_queue_lock(priv_queue_t pq, processor_t client)
 void
 priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
+  priv_queue_resume_supplier(pq, client);
   pq->last_was_func = false;
   spsc_enqueue_wait(pq->q, NULL, client);
 }
@@ -122,8 +135,9 @@ priv_queue_last_was_func(priv_queue_t pq)
 void
 priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
-  pq->last_was_func = false;
   priv_queue_link_enqueue(pq, clos, wait_proc);
+  priv_queue_resume_supplier(pq, wait_proc);
+  pq->last_was_func = false;
 }
 
 void
@@ -135,7 +149,7 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
   pq->last = NULL;
 
   priv_queue_link_enqueue(pq, sync_clos, client);
-
+  assert (client->task->state == TASK_RUNNING);
   bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
 
   task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
