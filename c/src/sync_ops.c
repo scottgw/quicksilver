@@ -70,14 +70,6 @@ sync_data_free(sync_data_t sync_data)
   binary_write();
 }
 
-void
-sync_data_use(sync_data_t sync_data)
-{  
-  queue_impl_use(sync_data->runnable_queue);
-  queue_impl_use(sync_data->sleep_list);
-}
-
-
 GArray*
 sync_data_executors(sync_data_t sync_data)
 {
