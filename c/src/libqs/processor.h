@@ -1,4 +1,12 @@
-/*! \file */
+/*! \file processor.h
+  \brief SCOOP processor operations.
+
+  The operations on a SCOOP processor generated code to allocate
+  and deallocate a processor, log calls
+  (directly through the \a qoq field),
+  and wait for events.
+  
+ */
 
 /*! A SCOOP processor.
  *
