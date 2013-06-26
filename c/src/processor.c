@@ -22,6 +22,90 @@ reset_stack_to(void (*f)(void*), processor_t proc)
   task_set_func(proc->task, f, proc);
 }
 
+/*!
+  Look at the previous processor and runs proc_step_state on it
+  if it is not the argument processor.
+
+  \param proc processor whose executor will be checked for the
+  previous processor.
+*/
+void
+proc_step_previous(processor_t proc)
+{
+  executor_t exec = proc->executor;    
+  processor_t last_proc = exec->current_proc;
+
+  if (last_proc != proc && last_proc != NULL)
+    {
+      /* printf("%p transitioning %p\n", proc, last_proc); */
+      proc_step_state(last_proc, exec);
+    }  
+}
+
+void
+proc_step_state(processor_t proc, executor_t exec)
+{
+  /* printf("%p transitioning\n", proc); */
+  assert(proc->task->state >= TASK_TRANSITION_TO_WAITING);
+
+  switch (proc->task->state)
+    {
+    case TASK_TRANSITION_TO_RUNNABLE:
+      proc->task->state = TASK_RUNNABLE;
+      exec_push(exec, proc);
+      break;
+    case TASK_TRANSITION_TO_WAITING:
+      /* printf("%p set to waiting\n", proc); */
+      proc->task->state = TASK_WAITING;
+      break;
+    case TASK_TRANSITION_TO_FINISHED:
+      proc->task->state = TASK_FINISHED;
+      proc_free(proc);
+      break;
+    default:
+      break;
+    }
+}
+
+
+void
+proc_yield_to_proc(processor_t from, processor_t to)
+{
+  assert (from != to);
+  executor_t exec = from->executor;
+  exec->current_proc = from;
+
+  if (to == NULL)
+    {
+      yield_to(from->task, exec->task);
+    }
+  else
+    {
+      to->executor = exec;
+
+      /* // If this task is to finish, it should come back to this processor. */
+      /* // This decision may be dubious, perhaps it should switch the the */
+      /* // executor proper? */
+      /* if (proc->task->state == TASK_TRANSITION_TO_RUNNABLE) */
+      /*   { */
+      /*     next_proc->task->next = proc->task; */
+      /*   } */
+      /* else */
+      /*   { */
+      /*     next_proc->task->next = exec->task; */
+      /*   } */
+
+      to->task->next = exec->task;
+
+      /* printf("%p directly yielding to %p\n", from, to); */
+      // Switch to the task we found.
+      yield_to(from->task, to->task);
+    }
+
+  proc_step_previous(from);
+}
+
+
 priv_queue_t
 proc_get_queue(processor_t proc, processor_t supplier_proc)
 {
@@ -96,6 +180,7 @@ static
 void
 proc_loop(processor_t proc)
 {
+  proc_step_previous(proc);
   DEBUG_LOG(1, "%p starting\n", proc);
   while (proc->ref_count > 0)
     {
@@ -153,9 +238,10 @@ proc_loop(processor_t proc)
             {
               processor_t client = (processor_t) clos->fn;
               while (client->task->state != TASK_WAITING);
-              proc->task->state = TASK_WAITING;
-              client->executor = proc->executor;
-              yield_to(proc->task, client->task);
+              proc->task->state = TASK_TRANSITION_TO_WAITING;
+
+              proc_yield_to_proc(proc, client);
+
               /* proc_wake(client, proc->executor); */
             }
           else
@@ -195,9 +281,21 @@ proc_wake(processor_t proc, executor_t exec)
 void
 proc_yield_to_executor(processor_t proc)
 {
-  DEBUG_LOG(2, "%p yielding to executor %p\n", proc, proc->executor);
-  proc->executor->current_proc = proc;
-  yield_to(proc->task, proc->executor->task);
+  assert (proc->task->state >= TASK_TRANSITION_TO_WAITING);
+  executor_t exec = proc->executor;
+  processor_t next_proc;
+  
+  if (!exec_pop(exec, &next_proc))
+    {
+      next_proc = exec_get_work(exec, 8);
+      /* printf("%p stole %p\n", proc, next_proc); */
+    }
+  else
+    {
+      /* printf("%p popped %p\n", proc, next_proc); */
+    }
+
+  proc_yield_to_proc(proc, next_proc);
 }
 
 void

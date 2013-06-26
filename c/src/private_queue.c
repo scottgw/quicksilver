@@ -59,7 +59,6 @@ priv_queue_resume_supplier(priv_queue_t pq, processor_t client)
     }
 }
 
-
 void
 priv_queue_shutdown(priv_queue_t pq, processor_t client)
 {

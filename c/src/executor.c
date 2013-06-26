@@ -63,18 +63,23 @@ exec_get_work(executor_t exec, uint32_t attempts)
 
       if (exec_steal(victim, &proc))
         {
-          return proc;
+          goto check;
         }
     }
 
   if (sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc))
     {
-      return proc;
+      goto check;
     }
   else
     {
-      return NULL;
+      proc = NULL;
+      goto check;
     }
+
+ check:
+  assert (proc == NULL || proc->task->state == TASK_RUNNABLE);
+  return proc;
 }
 
 
@@ -114,7 +119,6 @@ switch_to_next_processor(executor_t exec)
   BINARY_LOG(2, SYNCOPS_DEQUEUE_END, exec, NULL);
   if (proc != NULL)
     {
-      assert(proc->task->state == TASK_RUNNABLE);
       DEBUG_LOG(2, "%p is dequeued by executor %p\n", proc, exec);
       proc->executor = exec;
       exec->current_proc = proc;
@@ -126,28 +130,9 @@ switch_to_next_processor(executor_t exec)
       yield_to(exec->task, proc->task);
       proc = exec->current_proc;
 
-      assert(proc->task->state >= TASK_TRANSITION_TO_WAITING);
-      // If the came back finished, then remove it from the
-      // work list.
-      switch (proc->task->state)
-        {
-        case TASK_TRANSITION_TO_RUNNABLE:
-          proc->task->state = TASK_RUNNABLE;
-          DEBUG_LOG(2, "%p is descheduled by executor %p\n", proc, exec);
-          exec_push(exec, proc);
-          break;
-        case TASK_TRANSITION_TO_WAITING:
-          DEBUG_LOG(2, "%p is set to wait by executor %p\n", proc, exec);
-          proc->task->state = TASK_WAITING;
-          break;
-        case TASK_TRANSITION_TO_FINISHED:
-          DEBUG_LOG(2, "%p is set to finished by executor %p\n", proc, exec);
-          proc->task->state = TASK_FINISHED;
-          proc_free(proc);
-          break;
-        default:
-          break;
-        }
+      /* printf("%p exec transitioning %p\n", exec, proc); */
+
+      proc_step_state(proc, exec);
     }
   else
     {

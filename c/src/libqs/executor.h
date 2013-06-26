@@ -26,6 +26,9 @@ struct executor
 executor_t
 make_executor(sync_data_t);
 
+bool
+exec_pop (executor_t exec, processor_t *proc);
+
 void
 exec_push (executor_t exec, processor_t proc);
 

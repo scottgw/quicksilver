@@ -122,6 +122,17 @@ void
 proc_yield_to_executor(processor_t proc);
 
 /*!
+  Step the state of the processor.
+  This is used when the processor is in a transitional state
+  and must be moved to its final state.
+
+  \param proc processor to step
+  \param exec executor to push the processor into if its runnable
+*/
+void
+proc_step_state(processor_t proc, executor_t exec);
+
+/*!
   Wait for a signal that the processor is available (has recently
   completed a work item that may have changed its state).
 
