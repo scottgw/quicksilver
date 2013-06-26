@@ -43,47 +43,58 @@ exec_pop (executor_t exec, processor_t *proc)
   return ws_deque_pop_bottom(exec->local_deque, (void**)proc);
 }
 
+processor_t
+exec_get_work(executor_t exec, uint32_t attempts)
+{
+  GArray *executors = sync_data_executors (exec->task->sync_data);
+  processor_t proc;
+  uint32_t len = executors->len;
+  executor_t victim;
 
+  for (uint32_t i = 0; i < attempts; i++)
+    {
+      // Get random victim that's not ourselves
+      victim = g_array_index(executors, executor_t, i % len);
+
+      if (victim == exec)
+        {
+          continue;
+        }
+
+      if (exec_steal(victim, &proc))
+        {
+          return proc;
+        }
+    }
+
+  if (sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc))
+    {
+      return proc;
+    }
+  else
+    {
+      return NULL;
+    }
+}
+
+
+static
 processor_t
 get_work (executor_t exec)
 {
   processor_t proc;
-  GArray *executors = sync_data_executors (exec->task->sync_data);
-  int len = executors->len;
-  executor_t victim;
 
   if (!exec_steal(exec, &proc))
     {
       while (true)
         {
-          bool steal_success = false;
-          
-          int vi = 0;
+          proc = exec_get_work(exec, MAX_ATTEMPTS);
 
-          for (int i = 0; i < MAX_ATTEMPTS && !steal_success; i++)
-            {
-              // Get random victim that's not ourselves
-              victim = g_array_index(executors, executor_t, (vi + i) % len);
-
-              if (victim == exec)
-                {
-                  continue;
-                }
-
-              steal_success = exec_steal(victim, &proc);
-            }
-
-          if (!steal_success)
-            {
-              steal_success =
-                sync_data_try_dequeue_runnable(exec->task->sync_data,
-                                               exec, &proc);
-            }
-
-          if (steal_success)
+          if (proc != NULL)
             {
               return proc;
             }
+
           if (!sync_data_wait_for_work (exec->task->sync_data))
             {
               return NULL;
