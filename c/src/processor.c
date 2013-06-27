@@ -207,11 +207,7 @@ proc_loop(processor_t proc)
       closure_t clos = NULL;
       while (priv_queue != NULL)
         {
-          // Dequeue a closure to perform
-          if (clos == NULL)
-            { 
-              clos = priv_dequeue(priv_queue, proc);
-            }
+          clos = priv_dequeue(priv_queue, proc);
 
           // If its empty we set the processor to 'available' and notify
           // any processors performing wait-conditions to wake up and
@@ -249,21 +245,7 @@ proc_loop(processor_t proc)
               closure_apply(clos, NULL);
             }
 
-          if (__sync_bool_compare_and_swap(&clos->next, NULL, priv_queue))
-            {
-              // If we finished the application first, then be sure to
-              // fetch another closure from the queue.
-              clos = NULL;
-            }
-          else
-            {
-              // If there's a valid closure in the next pointer, then
-              // make it the next closure to process, and free the 
-              // closure.
-              closure_t tmp = clos;
-              clos = clos->next;
-              closure_free(tmp);
-            }
+          closure_free(clos);
         }
     }
 }

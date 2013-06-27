@@ -91,40 +91,6 @@ priv_dequeue(priv_queue_t pq, processor_t proc)
   return clos;
 }
 
-
-static
-void
-priv_queue_link_enqueue(priv_queue_t pq, closure_t clos, processor_t wait_proc)
-{
-  closure_t last = pq->last;
-  pq->last = clos;
-
-  if (last != NULL)
-    {
-      if (__sync_bool_compare_and_swap(&last->next, NULL, clos))
-        {
-          // If the other closure hasn't finished yet, we don't do anything.
-        }
-      else
-        {
-          // If we couldn't swap this closure in, queue it up.
-          if (!closure_is_sync(last))
-            {
-              closure_free(last);
-            }
-          DEBUG_LOG(1, "%p priv enqueue start\n", wait_proc);
-          spsc_enqueue_wait(pq->q, clos, wait_proc);
-          DEBUG_LOG(1, "%p priv enqueue end\n", wait_proc);
-        }
-    }
-  else
-    {
-      DEBUG_LOG(1, "%p priv enqueue start\n", wait_proc);
-      spsc_enqueue_wait(pq->q, clos, wait_proc);
-      DEBUG_LOG(1, "%p priv enqueue end\n", wait_proc);
-    }
-}
-
 bool
 priv_queue_last_was_func(priv_queue_t pq)
 {
@@ -134,7 +100,7 @@ priv_queue_last_was_func(priv_queue_t pq)
 void
 priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
-  priv_queue_link_enqueue(pq, clos, wait_proc);
+  spsc_enqueue_wait(pq->q, clos, wait_proc);
   priv_queue_resume_supplier(pq, wait_proc);
   pq->last_was_func = false;
 }
@@ -147,7 +113,7 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
   closure_new_sync(sync_clos, client);
   pq->last = NULL;
 
-  priv_queue_link_enqueue(pq, sync_clos, client);
+  spsc_enqueue_wait(pq->q, sync_clos, client);
   assert (client->task->state == TASK_RUNNING);
   bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
 
@@ -168,7 +134,7 @@ priv_queue_sync(priv_queue_t pq, processor_t client)
       closure_new_sync(sync_clos, client);
       pq->last = NULL;
 
-      priv_queue_link_enqueue(pq, sync_clos, client);
+      spsc_enqueue_wait(pq->q, sync_clos, client);
 
       task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
       proc_yield_to_executor(client);
