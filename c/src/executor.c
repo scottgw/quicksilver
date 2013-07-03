@@ -111,6 +111,21 @@ get_work (executor_t exec)
 }
 
 void
+exec_step_previous(executor_t exec, processor_t ignore_proc)
+{
+  processor_t null_proc = NULL;
+  processor_t last_proc;
+  __atomic_exchange (&exec->current_proc, &null_proc, &last_proc,
+		     __ATOMIC_SEQ_CST);
+
+  if (last_proc != ignore_proc && last_proc != NULL)
+    {
+      /* printf("%p transitioning %p\n", proc, last_proc); */
+      proc_step_state(last_proc, exec);
+    }
+}
+
+void
 switch_to_next_processor(executor_t exec)
 {
   // take a new piece of work.
@@ -128,11 +143,7 @@ switch_to_next_processor(executor_t exec)
 
       exec->task->state = TASK_TRANSITION_TO_RUNNABLE;
       yield_to(exec->task, proc->task);
-      proc = exec->current_proc;
-
-      /* printf("%p exec transitioning %p\n", exec, proc); */
-
-      proc_step_state(proc, exec);
+      exec_step_previous (exec, NULL);
     }
   else
     {

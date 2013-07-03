@@ -32,42 +32,31 @@ reset_stack_to(void (*f)(void*), processor_t proc)
 void
 proc_step_previous(processor_t proc)
 {
-  executor_t exec = proc->executor;    
-  processor_t last_proc = exec->current_proc;
-
-  if (last_proc != proc && last_proc != NULL)
-    {
-      /* printf("%p transitioning %p\n", proc, last_proc); */
-      proc_step_state(last_proc, exec);
-    }  
+  executor_t exec = proc->executor;
+  exec_step_previous (exec, proc);
 }
 
 void
 proc_step_state(processor_t proc, executor_t exec)
 {
-  // FIXME: coordinate such that this check isn't needed.
-  // It should be a property that only one thread even calls this function.
-  if (proc->task->state >= TASK_TRANSITION_TO_WAITING)
-    {
-      assert(proc->task->state >= TASK_TRANSITION_TO_WAITING);
+  assert(proc->task->state >= TASK_TRANSITION_TO_WAITING);
 
-      switch (proc->task->state)
-        {
-        case TASK_TRANSITION_TO_RUNNABLE:
-          proc->task->state = TASK_RUNNABLE;
-          exec_push(exec, proc);
-          break;
-        case TASK_TRANSITION_TO_WAITING:
-          /* printf("%p set to waiting\n", proc); */
-          proc->task->state = TASK_WAITING;
-          break;
-        case TASK_TRANSITION_TO_FINISHED:
-          proc->task->state = TASK_FINISHED;
-          proc_free(proc);
-          break;
-        default:
-          break;
-        }
+  switch (proc->task->state)
+    {
+    case TASK_TRANSITION_TO_RUNNABLE:
+      proc->task->state = TASK_RUNNABLE;
+      exec_push(exec, proc);
+      break;
+    case TASK_TRANSITION_TO_WAITING:
+      /* printf("%p set to waiting\n", proc); */
+      proc->task->state = TASK_WAITING;
+      break;
+    case TASK_TRANSITION_TO_FINISHED:
+      proc->task->state = TASK_FINISHED;
+      proc_free(proc);
+      break;
+    default:
+      break;
     }
 }
 
