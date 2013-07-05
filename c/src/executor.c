@@ -89,25 +89,30 @@ get_work (executor_t exec)
 {
   processor_t proc;
 
-  if (!exec_steal(exec, &proc))
+  if (sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc))
     {
-      while (true)
-        {
-          proc = exec_get_work(exec, MAX_ATTEMPTS);
-
-          if (proc != NULL)
-            {
-              return proc;
-            }
-
-          if (!sync_data_wait_for_work (exec->task->sync_data))
-            {
-              return NULL;
-            }
-        }
+      return proc;
     }
-  
-  return proc;
+
+  if (exec_steal(exec, &proc))
+    {
+      return proc;
+    }
+
+  while (true)
+    {
+      proc = exec_get_work(exec, MAX_ATTEMPTS);
+
+      if (proc != NULL)
+	{
+	  return proc;
+            }
+
+      if (!sync_data_wait_for_work (exec->task->sync_data))
+	{
+	  return NULL;
+	}
+    }
 }
 
 void

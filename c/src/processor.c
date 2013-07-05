@@ -259,17 +259,21 @@ proc_yield_to_executor(processor_t proc)
   assert (proc->task->state >= TASK_TRANSITION_TO_WAITING);
   executor_t exec = proc->executor;
   processor_t next_proc;
-  
-  if (!exec_pop(exec, &next_proc))
+
+  if (sync_data_try_dequeue_runnable (proc->task->sync_data, exec, &next_proc))
     {
-      next_proc = exec_get_work(exec, 8);
-      /* printf("%p stole %p\n", proc, next_proc); */
-    }
-  else
-    {
-      /* printf("%p popped %p\n", proc, next_proc); */
+      goto yield;
     }
 
+  if (exec_steal(exec, &next_proc))
+    {
+      goto yield;
+      /* printf("%p stole %p\n", proc, next_proc); */
+    }
+
+  next_proc = exec_get_work(exec, 8);
+
+ yield:
   proc_yield_to_proc(proc, next_proc);
 }
 

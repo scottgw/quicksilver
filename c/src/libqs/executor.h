@@ -32,6 +32,9 @@ exec_pop (executor_t exec, processor_t *proc);
 void
 exec_push (executor_t exec, processor_t proc);
 
+bool
+exec_steal (executor_t victim_exec, processor_t *proc);
+
 processor_t
 exec_get_work(executor_t exec, uint32_t attempts);
 
