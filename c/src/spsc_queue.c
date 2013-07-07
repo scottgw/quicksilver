@@ -125,9 +125,11 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
     }
   else
     {
-      while(!ck_fifo_spsc_dequeue(q->impl, data));
-      /* bool success = queue_impl_dequeue(q->impl, data); */
-      /* assert(success); */
+      while(!ck_fifo_spsc_dequeue(q->impl, data))
+        {
+          proc->task->state = TASK_TRANSITION_TO_RUNNABLE;
+          proc_yield_to_executor(proc);
+        }
     }
   
 }
