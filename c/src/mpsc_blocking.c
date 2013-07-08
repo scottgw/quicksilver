@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 #include "libqs/clos_q.h"
+#include "libqs/mpsc_impl.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
 #include "libqs/task.h"
@@ -119,12 +120,7 @@ struct qo_queue
   volatile uint32_t count;
   volatile processor_t waiter;
   
-
-  task_mutex_t not_empty_mutex;
-  task_condition_t not_empty_cv;
-
-  task_mutex_t not_full_mutex;
-  task_condition_t not_full_cv;
+  mpscq_t producers;
 
   uint64_t max;
 
@@ -140,12 +136,7 @@ qo_q_new(uint32_t size)
   q->count  = 0;
   q->max    = size;
 
-  q->not_empty_mutex = task_mutex_new();
-  q->not_empty_cv = task_condition_new();
-
-  q->not_full_mutex = task_mutex_new();
-  q->not_full_cv = task_condition_new();
-
+  mpscq_create (&q->producers, NULL);
 
   q->impl   = malloc(sizeof(closq_t));
   closq_node_t *node = malloc (sizeof(*node));
@@ -167,19 +158,18 @@ qo_q_enqueue_wait(qo_queue_t q, void *data, processor_t proc)
       node->state = data;
       closq_push(q->impl, node);
 
-      task_mutex_lock(q->not_empty_mutex, proc);
-      task_condition_signal(q->not_empty_cv, proc);
-      task_mutex_unlock(q->not_empty_mutex, proc);
+      while (q->waiter == NULL);
+      proc_wake (q->waiter, proc->executor);
     }
   else if (n >= q->max)
     {
-      task_mutex_lock(q->not_full_mutex, proc);      
-      task_condition_wait(q->not_full_cv, q->not_full_mutex, proc);
+      mpscq_push(&q->producers, proc);
+      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
+      proc_yield_to_executor(proc);
 
       closq_node_t *node = malloc (sizeof(*node));
       node->state = data;
       closq_push(q->impl, node);
-      task_mutex_unlock(q->not_full_mutex, proc);
     }
   else
     {
@@ -196,22 +186,23 @@ qo_q_dequeue_wait(qo_queue_t q, void **data, processor_t proc)
   closq_node_t *node;
   if (n > q->max)
     {
-      node = closq_pop(q->impl);
+      while ((node = closq_pop(q->impl)) == NULL);
       *data = node->state;
       assert (*data != NULL);
 
-      task_mutex_lock(q->not_full_mutex, proc);
-      task_condition_signal(q->not_full_cv, proc);
-      task_mutex_unlock(q->not_full_mutex, proc);
+      processor_t producer;
+      while ((producer = mpscq_pop(&q->producers)) == NULL);
+      proc_wake (producer, proc->executor);
     }
   else if (n == 0)
     {
-      task_mutex_lock(q->not_empty_mutex, proc);
-      task_condition_wait(q->not_empty_cv, q->not_empty_mutex, proc);
+      q->waiter = proc;
+      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
+      proc_yield_to_executor(proc);
+
       node = closq_pop(q->impl);
       *data = node->state;
       assert (*data != NULL);
-      task_mutex_unlock(q->not_empty_mutex, proc);
     }
   else
     {

@@ -294,7 +294,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
-  proc->qoq = qo_q_new(20000);
+  proc->qoq = qo_q_new(2048);
   proc->task = task_make(sync_data);
   proc->id = global_id++;
 
