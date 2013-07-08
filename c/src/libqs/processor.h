@@ -31,7 +31,7 @@ struct processor
   executor_t executor;
 
   /*! Queue of queues which the processor will take requests from. */
-  bounded_queue_t qoq; 
+  qo_queue_t qoq; 
 
   /*! Processor availability flag */
   bool available;

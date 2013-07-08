@@ -3,6 +3,7 @@
 #include <ucontext.h>
 #include <assert.h>
 
+#include "libqs/clos_q.h"
 #include "libqs/bounded_queue.h"
 #include "libqs/closure.h"
 #include "libqs/debug_log.h"
@@ -181,24 +182,10 @@ proc_loop(processor_t proc)
 
       // Dequeue a private queue from the queue of queues.
       priv_queue_t priv_queue;
-      bqueue_dequeue_wait(proc->qoq, (void**)&priv_queue, proc);
-
-      if (priv_queue == NULL)
-        {
-          // This decrement corresponds to shutting down the processor.
-          // If the refcount is still above 0 then there may still be
-          // outstanding private queues that want to log their work.
-          int ref_count = __sync_sub_and_fetch(&proc->ref_count, 1);
-          proc_deref_priv_queues(proc);
-          assert (ref_count >= 0);
-          if (ref_count == 0)
-            {
-              break;
-            }
-        }
+      qo_q_dequeue_wait(proc->qoq, (void**)&priv_queue, proc);
 
       closure_t clos = NULL;
-      while (priv_queue != NULL)
+      while (!priv_queue->shutdown)
         {
           clos = priv_dequeue(priv_queue, proc);
 
@@ -240,6 +227,23 @@ proc_loop(processor_t proc)
 
           closure_free(clos);
         }
+
+
+      if (priv_queue->shutdown)
+        {
+          // This decrement corresponds to shutting down the processor.
+          // If the refcount is still above 0 then there may still be
+          // outstanding private queues that want to log their work.
+          int ref_count = __sync_sub_and_fetch(&proc->ref_count, 1);
+          priv_queue_free(priv_queue);
+          proc_deref_priv_queues(proc);
+          assert (ref_count >= 0);
+          if (ref_count == 0)
+            {
+              break;
+            }
+        }
+
     }
 }
 
@@ -290,7 +294,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
-  proc->qoq = bqueue_new(25000);
+  proc->qoq = qo_q_new(20000);
   proc->task = task_make(sync_data);
   proc->id = global_id++;
 
@@ -333,7 +337,10 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 void
 proc_shutdown(processor_t proc, processor_t wait_proc)
 {
-  bqueue_enqueue_wait(proc->qoq, NULL, wait_proc);
+  priv_queue_t shutdown_q = priv_queue_new(wait_proc);
+  shutdown_q->shutdown = true;
+
+  qo_q_enqueue_wait(proc->qoq, shutdown_q, wait_proc);
 }
 
 void
@@ -345,7 +352,7 @@ proc_free(processor_t proc)
   task_condition_free(proc->cv);
   task_mutex_free(proc->mutex);
 
-  bqueue_free(proc->qoq);
+  qo_q_free(proc->qoq);
 
 
   // Since *this* processor won't push any more work into its

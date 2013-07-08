@@ -3,22 +3,13 @@
 #include <stdlib.h>
 
 #include "libqs/bounded_queue.h"
+#include "libqs/clos_q.h"
 #include "libqs/closure.h"
 #include "libqs/debug_log.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
 #include "libqs/spsc_queue.h"
 #include "libqs/task.h"
-
-struct priv_queue
-{
-  spsc_queue_t q;
-  closure_t last;
-
-  processor_t supplier_proc;
-
-  bool last_was_func;
-};
 
 priv_queue_t
 priv_queue_new(processor_t proc)
@@ -29,6 +20,7 @@ priv_queue_new(processor_t proc)
   pq->last = NULL;
   pq->q = spsc_new(2048);
   pq->supplier_proc = proc;
+  pq->shutdown = false;
 
   __sync_fetch_and_add(&proc->ref_count, 1);
 
@@ -71,7 +63,7 @@ void
 priv_queue_lock(priv_queue_t pq, processor_t client)
 {
   pq->last_was_func = false;
-  bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
+  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client);
 }
 
 void
@@ -115,7 +107,7 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
 
   spsc_enqueue_wait(pq->q, sync_clos, client);
   assert (client->task->state == TASK_RUNNING);
-  bqueue_enqueue_wait(pq->supplier_proc->qoq, pq, client);
+  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client);
 
   task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
   proc_yield_to_executor(client);

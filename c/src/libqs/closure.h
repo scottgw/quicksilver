@@ -21,7 +21,7 @@ struct closure
   
   clos_mode mode;
 
-  void* next;
+  closure_t next;
 };
 
 closure_t

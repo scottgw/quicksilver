@@ -66,4 +66,9 @@ typedef struct mpscq_node mpscq_node_t;
 struct mpscq;
 typedef struct mpscq mpscq_t;
 
+// closure queues (MPSC)
+struct qo_queue;
+typedef struct qo_queue* qo_queue_t;
+
+
 #endif // _TYPES_H

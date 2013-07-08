@@ -2,8 +2,21 @@
 #define _PRIVATE_QUEUE_H
 
 #include "closure.h"
-
 #include "types.h"
+
+struct priv_queue
+{
+  spsc_queue_t q;
+  closure_t last;
+
+  processor_t supplier_proc;
+
+  bool last_was_func;
+  bool shutdown;
+
+  struct priv_queue *next;
+};
+
 
 priv_queue_t
 priv_queue_new(processor_t proc);

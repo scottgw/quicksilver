@@ -86,9 +86,11 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
    }
   else
     {
-      while(!ck_ring_enqueue_spsc(&q->impl, data));
-      /* bool success = queue_impl_enqueue(q->impl, data); */
-      /* assert(success); */
+      while(!ck_ring_enqueue_spsc(&q->impl, data))
+        {
+          proc->task->state = TASK_TRANSITION_TO_RUNNABLE;
+          proc_yield_to_executor(proc);
+        }
     }
 }
 
