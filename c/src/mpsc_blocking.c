@@ -118,6 +118,7 @@ struct qo_queue
 {
   volatile uint32_t count;
   volatile processor_t waiter;
+  
 
   task_mutex_t not_empty_mutex;
   task_condition_t not_empty_cv;
@@ -147,7 +148,8 @@ qo_q_new(uint32_t size)
 
 
   q->impl   = malloc(sizeof(closq_t));
-  closq_create (q->impl, &q->stub);
+  closq_node_t *node = malloc (sizeof(*node));
+  closq_create (q->impl, node);
 
   return q;
 }
@@ -156,46 +158,73 @@ void
 qo_q_enqueue_wait(qo_queue_t q, void *data, processor_t proc)
 {
   assert (data != NULL);
-  task_mutex_lock(q->not_full_mutex, proc);
-  while (q->count >= q->max)
-    {
-      task_condition_wait(q->not_full_cv, q->not_full_mutex, proc);
-    }
-
-  closq_node_t *node = malloc (sizeof(*node));
-  node->state = data;
-  closq_push(q->impl, node);
-  task_mutex_unlock(q->not_full_mutex, proc);
 
   int n = __sync_fetch_and_add(&q->count, 1);
 
-  if (n == 0)
+  if (n == -1)
     {
+      closq_node_t *node = malloc (sizeof(*node));
+      node->state = data;
+      closq_push(q->impl, node);
+
       task_mutex_lock(q->not_empty_mutex, proc);
       task_condition_signal(q->not_empty_cv, proc);
       task_mutex_unlock(q->not_empty_mutex, proc);
+    }
+  else if (n >= q->max)
+    {
+      task_mutex_lock(q->not_full_mutex, proc);      
+      task_condition_wait(q->not_full_cv, q->not_full_mutex, proc);
+
+      closq_node_t *node = malloc (sizeof(*node));
+      node->state = data;
+      closq_push(q->impl, node);
+      task_mutex_unlock(q->not_full_mutex, proc);
+    }
+  else
+    {
+      closq_node_t *node = malloc (sizeof(*node));
+      node->state = data;
+      closq_push(q->impl, node);
     }
 }
 
 void
 qo_q_dequeue_wait(qo_queue_t q, void **data, processor_t proc)
 {
-  task_mutex_lock(q->not_empty_mutex, proc);
-  while (q->count <= 0)
-    {
-      task_condition_wait(q->not_empty_cv, q->not_empty_mutex, proc);
-    }
-  closq_node_t *node = closq_pop(q->impl);
-  *data = node->state;
-  assert (*data != NULL);
-  task_mutex_unlock(q->not_empty_mutex, proc);
-
   int n = __sync_fetch_and_sub(&q->count, 1);
-
-  if (n >= q->max)
+  closq_node_t *node;
+  if (n > q->max)
     {
+      node = closq_pop(q->impl);
+      *data = node->state;
+      assert (*data != NULL);
+
       task_mutex_lock(q->not_full_mutex, proc);
       task_condition_signal(q->not_full_cv, proc);
       task_mutex_unlock(q->not_full_mutex, proc);
     }
+  else if (n == 0)
+    {
+      task_mutex_lock(q->not_empty_mutex, proc);
+      task_condition_wait(q->not_empty_cv, q->not_empty_mutex, proc);
+      node = closq_pop(q->impl);
+      *data = node->state;
+      assert (*data != NULL);
+      task_mutex_unlock(q->not_empty_mutex, proc);
+    }
+  else
+    {
+      while ((node = closq_pop(q->impl)) == NULL);
+      *data = node->state;
+      assert (*data != NULL);
+    }
+
+  free(node);
+}
+
+void
+qo_q_free(qo_queue_t q)
+{
+  
 }
