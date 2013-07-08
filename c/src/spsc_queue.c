@@ -39,7 +39,7 @@ spsc_new(uint32_t size)
   q->max    = size;
   q->waiter = NULL;
 #ifdef SPSC_CUSTOM
-  void **buffer = malloc(size * sizeof(void**));
+  void **buffer = malloc(size * sizeof(void*));
   ck_ring_init (&q->impl, buffer, size);
 #else
   q->impl   = bqueue_new(size);
