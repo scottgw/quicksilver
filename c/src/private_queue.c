@@ -122,11 +122,12 @@ priv_queue_sync(priv_queue_t pq, processor_t client)
   if (!pq->last_was_func)
     {
       /* struct closure sync_clos; */
-      closure_t sync_clos = malloc(sizeof(*sync_clos));
-      closure_new_sync(sync_clos, client);
+      /* closure_t sync_clos = malloc(sizeof(*sync_clos)); */
+      struct closure sync_clos;
+      closure_new_sync(&sync_clos, client);
       pq->last = NULL;
 
-      spsc_enqueue_wait(pq->q, sync_clos, client);
+      spsc_enqueue_wait(pq->q, &sync_clos, client);
 
       task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
       proc_yield_to_executor(client);

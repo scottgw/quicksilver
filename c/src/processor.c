@@ -223,9 +223,8 @@ proc_loop(processor_t proc)
           else
             {
               closure_apply(clos, NULL);
+              closure_free(clos);
             }
-
-          closure_free(clos);
         }
 
 
