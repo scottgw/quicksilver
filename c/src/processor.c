@@ -3,7 +3,7 @@
 #include <ucontext.h>
 #include <assert.h>
 
-#include "libqs/clos_q.h"
+#include "libqs/mpsc_blocking.h"
 #include "libqs/bounded_queue.h"
 #include "libqs/closure.h"
 #include "libqs/debug_log.h"

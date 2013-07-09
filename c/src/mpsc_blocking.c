@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "libqs/clos_q.h"
+#include "libqs/mpsc_blocking.h"
 #include "libqs/mpsc_impl.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"

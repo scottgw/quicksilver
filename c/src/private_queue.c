@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "libqs/bounded_queue.h"
-#include "libqs/clos_q.h"
+#include "libqs/mpsc_blocking.h"
 #include "libqs/closure.h"
 #include "libqs/debug_log.h"
 #include "libqs/private_queue.h"
