@@ -27,6 +27,8 @@ module Randmat_Test
       iend: Integer
       worker: separate Randmat_Worker
       worker_matrix: separate Int_Matrix
+      worker_start: Integer
+      worker_height: Integer
       workers: Array[separate Randmat_Worker]
     do
       nrows := 8000
@@ -65,23 +67,26 @@ module Randmat_Test
         separate worker
           require worker.done
           do
+            worker_start := worker.start
+            worker_height := worker.height
             worker_matrix := worker.matrix
-            separate worker_matrix
-              do
-                from
-                  ii := worker.start
-                  iend := ii + worker.height
-                until ii >= iend
-                loop
-                  from jj := 0
-                  until jj >= ncols
-                  loop
-                    matrix.put (jj, ii, worker_matrix.item (jj, ii))
-                    jj := jj + 1
-                  end
-                  ii := ii + 1
-                end
+          end
+
+        separate worker_matrix
+          do
+            from
+              ii := worker_start
+              iend := ii + worker_height
+            until ii >= iend
+            loop
+              from jj := 0
+              until jj >= ncols
+              loop
+                matrix.put (jj, ii, worker_matrix.item (jj, ii))
+                jj := jj + 1
               end
+              ii := ii + 1
+            end
           end
         i := i + 1
       end

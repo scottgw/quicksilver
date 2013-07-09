@@ -39,7 +39,7 @@ struct processor
   executor_t executor;
 
   /*! Queue of queues which the processor will take requests from. */
-  bounded_queue_t qoq; 
+  qo_queue_t qoq; 
 
   /*! Processor availability flag */
   bool available;
@@ -128,6 +128,17 @@ proc_wake(processor_t proc, executor_t exec);
 */
 void
 proc_yield_to_executor(processor_t proc);
+
+/*!
+  Step the state of the processor.
+  This is used when the processor is in a transitional state
+  and must be moved to its final state.
+
+  \param proc processor to step
+  \param exec executor to push the processor into if its runnable
+*/
+void
+proc_step_state(processor_t proc, executor_t exec);
 
 /*!
   Wait for a signal that the processor is available (has recently

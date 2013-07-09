@@ -26,11 +26,20 @@ struct executor
 executor_t
 make_executor(sync_data_t);
 
+bool
+exec_pop (executor_t exec, processor_t *proc);
+
 void
 exec_push (executor_t exec, processor_t proc);
 
+bool
+exec_steal (executor_t victim_exec, processor_t *proc);
+
 processor_t
 exec_get_work(executor_t exec, uint32_t attempts);
+
+void
+exec_step_previous(executor_t exec, processor_t ignore_proc);
 
 // Free the memory for the executor.
 void
