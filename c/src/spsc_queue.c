@@ -22,7 +22,6 @@ struct spsc_queue
   volatile processor_t waiter;
 
 #ifdef SPSC_CUSTOM
-  uint64_t idx;
   ck_ring_t impl;
 #else
   bounded_queue_t impl;
@@ -64,7 +63,6 @@ void
 spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
 {
   int n = __sync_fetch_and_add(&q->count, 1);
-  q->idx++;
 
   if (n == -1)
     {
