@@ -1,0 +1,50 @@
+\documentclass[a4]{article}
+
+\usepackage{cite}
+
+\begin{document}
+
+\section{Model}
+
+\subsection{Guarantees}
+Postcondition promises, proof lines.
+
+\section{Related work}
+\subsection{Work stealing}
+
+Work stealing~\cite{blumofe:1994:scheduling} assumes the scheduling
+forms a DAG. 
+We tolerate some cyclic schedules thorugh the use of queues.
+Since we use queues, processor A can log work on processor B at the 
+same time processor B logs work on A, as long as there is room in their
+respective queues, and they do not issue queries on one another
+(forcing a join edge).
+We are not strict: edges go into processors from outside other than at spawn;
+this is actually the normal case (loggin commands/queries).
+
+\textbf{Investigate for implementation:}
+Each processor maintains their own queue, and work can be stolen from
+other processor's queues when a processor finds their own queue empty.
+
+\subsection{X10 Help-first}
+The help-first stealing discipline~\cite{guo:2009:work} in X10
+offers that pushing the async/spawn work onto the stack has benefits
+as it avoids the necessity of the thiefs synchronizing.
+This only applies because the work-first steals 
+in a finish block in X10 are serialized, 
+whereas they are not for help-first.
+This seems to be a finish-specific problem/solution
+that is not directly applicable to SCOOP because
+SCOOP only has 'singleton' finish blocks where we have wait-by-necessity
+on results of a single  processor.
+
+Reading stack:
+
+\begin{itemize}
+\item arbitrary dependencies are impossible to schedule efficiciently:
+  Space efficient scheduling of multithreaded computations [Blumofe]
+\end{itemize}
+\bibliography{bibfile}{}
+\bibliographystyle{plain}
+
+\end{document}
