@@ -1,23 +1,150 @@
 \documentclass[a4]{article}
 
+\usepackage{calc}
 \usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{calc, shapes, arrows, chains}
 
 \begin{document}
 
+\section{Introduction}
+
 \section{Model}
 
+\subsection{SCOOP model}
+Existing operational model of SCOOP programs.
+
 \subsection{Guarantees}
-Postcondition promises, proof lines.
+% Postcondition promises, proof lines.
+
+The primary guarantee that the SCOOP model provides is that calls to a
+processor $p$ that occur while a processor $q$ has the lock
+will be executed in order.
+This enables processor $q$ to have
+a stream of pre-post condition reasoning that
+it can influence from the ``outside'' by logging new calls on $p$.
+Likewise $q$ can also manipulate a stream of operations on other
+processors that it has locked in parallel with $p$.
+Essentially $q$ functions as a coordinator between itself
+and the processors it has locked,
+dispatching calls as it desires for the suppliers to process.
+
+If the calls do not have a return value this description is enough,
+however if a logged call has a return value,
+there must be some policy on how to deal with it.
+One possibility is to use futures and promises to represent the value that has
+not yet been computed,
+another is to wait for the result of every asynchronous call.
+The first option offers more asynchronous behaviour,
+but introduces more design questions such as:
+
+\begin{itemize}
+\item when should the future be evaluated?
+\item how should futures be combined (i.e., adding two result promises)?
+\end{itemize}
+We do not contribute anything to deal with these questions;
+the E programming language~\cite{miller:2006:robust_composition}
+uses promises extensively in this way.
+
+This work uses the second option:
+waiting for the result before proceeding.
+It is not as asynchronous, but allows for a simpler execution model,
+and more optimization opportunities later.
+
+\section{Implementation}
+\subsection{High level design}
+The high level design that we use is that each processor is
+represented by a queue.
+This queue corresponds directly to the ``stream'' of computations
+that was mentioned previously.
+Additionally each processor also has a mechanism to
+guarantee exclusive access to the queue.
+This way,
+clients can ensure that when they have access,
+they will be able to maintain pre/postcondition reasoning
+between the successive calls in places in the supplier's queue.
+
+\tikzstyle{queue_block} =
+  [ draw
+  , fill=blue!20
+  , minimum size = 1em
+  ]
+
+\def\queueAt#1#2#3{
+  \foreach \x in {0, 1,...,4} {
+    \node[queue_block] at (#1 em + \x em, #2 em) (queue_block_\x_#3) {};
+  }
+}
+\begin{center}
+  \begin{tikzpicture}
+    \queueAt{0}{1}{0}
+  \end{tikzpicture}
+\end{center}
+\subsection{Refining the design}
+The above high level design is one which is able to provide
+the guarantees that are required of the programming model.
+It does, however, contain many things which make the
+direct implementation of the design inefficient.
+For example,
+using a mutex to maintain exclusive access to the queue
+has two problems:
+
+\begin{enumerate}
+\item Clients face mutex contention on every access to the queue,
+  possibly requiring an expensive context switch.
+\item Since there is a single queue, this increases memory contention between
+  the different processors.
+\end{enumerate}
+
+To reduce these effects,
+it is more efficient to introduce local queues which each client
+places their closures into for a particular supplier.
+That local queue is then given to the supplier,
+which maintains a queue of queues.
+\begin{center}
+  \begin{tikzpicture}
+
+    \foreach \y in {0, 1,..., 4} { \queueAt{2}{2*\y}{\y} }
+
+    \foreach \y in {0, 1,..., 4} { \node[queue_block, fill=red!20] at
+      (0, \real{2}*\y em) (main_block_\y) {}; }
+
+    \foreach \from/\to in {0/1, 1/2, 2/3, 3/4} { \draw
+      (main_block_\from) -- (main_block_\to); }
+
+    \foreach \y in {0, 1,..., 4} { \path[draw, thick] (main_block_\y)
+      -- (queue_block_0_\y); }
+  \end{tikzpicture}
+\end{center}
+To prevent the queues from growing without limit,
+a bound is placed on the number of elements they can handle.
+This means that some synchronization may still be necessary,
+but it only occurs in the slow path (only when the queue is full).
+The fast path, though, is quite efficient,
+only requiring a single atomic exchange and increment operation
+to implement.
+The mutex alternative requires at least one atomic operation in the fast path,
+and a context switch in the slow path.
+However, the slow path is encountered by $n - 1$ participants if
+$n$ clients are all vying for the same supplier.
+
+\section{Evaluation, performance}
+
+\subsection{Design evaluation}
+
+\subsection{Computation}
+
+\subsection{Coordination}
 
 \section{Related work}
 \subsection{Work stealing}
 
 Work stealing~\cite{blumofe:1994:scheduling} assumes the scheduling
 forms a DAG. 
-We tolerate some cyclic schedules thorugh the use of queues.
+We tolerate some cyclic schedules through the use of queues.
 Since we use queues, processor A can log work on processor B at the 
-same time processor B logs work on A, as long as there is room in their
-respective queues, and they do not issue queries on one another
+same time processor B logs work on A, as long as there is room in theirr
+espective queues, and they do not issue queries on one another
 (forcing a join edge).
 We are not strict: edges go into processors from outside other than at spawn;
 this is actually the normal case (loggin commands/queries).
@@ -44,6 +171,10 @@ Reading stack:
 \item arbitrary dependencies are impossible to schedule efficiciently:
   Space efficient scheduling of multithreaded computations [Blumofe]
 \end{itemize}
+
+
+\section{Conclusion}
+
 \bibliography{bibfile}{}
 \bibliographystyle{plain}
 
