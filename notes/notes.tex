@@ -1,21 +1,153 @@
 \documentclass[a4]{article}
 
+\usepackage{amsmath}
 \usepackage{calc}
 \usepackage{cite}
 \usepackage{tikz}
 \usetikzlibrary{calc, shapes, arrows, chains}
 
+\def\edcomm#1#2{%
+  \framebox{\textbf{#1:} #2}
+}
+
+
+\usepackage{semantic}
+
 \begin{document}
 
+%{{{ Introduction
 \section{Introduction}
+%}}}
+
+%{{{ Model
 
 \section{Model}
 
-\subsection{SCOOP model}
-Existing operational model of SCOOP programs.
+\subsection{Existing SCOOP models}
+The existing SCOOP model is defined operationally,
+either informally as a prose description \cite{nienaltowski:2007:SCOOP},
+or more formally as a 
+structural operational semantics \cite{morandi-et-al:2013:prototyping}.
+These descriptions are highly detailed and allow a complete
+picture about what SCOOP is doing under the covers.
+
+\subsection{One more model}
+
+Our model for SCOOP processors consists of both a past and a future:
+completed actions are remembered,
+and yet-to-be-executed actions stored.
+Each is represented by a list of actions:
+
+\def\proc{\mathit{Processor}}
+\def\act{\mathit{Action}}
+
+\[
+\proc = \act^{*} \times \act^{*}
+\]
+
+For example, a processor which has been requested to calculate
+two pieces of data may be at some intermediate state where
+only the first calculation has completed:
+
+\[
+\left(\left[\mathit{calc_1}\right],\left[\mathit{calc_2}\right] \right)
+\]
+
+For example, the following small program that first reserves access to
+\texttt{x} and \texttt{y} then makes several calls on them modifies
+the queues in the following way (with post state indicated with $\mathit{'}$):
+
+\def\dplus{+ \hskip -0.75em +}
+\begin{center}
+\begin{minipage}{0.7\linewidth}
+\texttt{separate x, y}
+
+\hfill $\mathit{access} = \{x,y\}$
+
+\hskip 2em \texttt{x.foo}
+
+\hfill $\mathit{x.future'} = \mathit{x.future} \dplus  [\mathit{foo}]$
+
+\hskip 2em \texttt{y.bar}
+
+\hfill $\mathit{y.future'} = \mathit{y.future} \dplus  [\mathit{bar}]$
+
+\hskip 2em \texttt{n := x.baz}
+\setlength{\abovedisplayskip}{0pt}
+\setlength{\belowdisplayskip}{0pt}
+\setlength\arraycolsep{1pt}
+\begin{flalign*}
+&&\mathit{x.past'} &= \mathit{x.past}  \dplus \mathit{x.future} \dplus [\mathit{baz}]\\
+&&\mathit{x.future'} &= []
+\end{flalign*}
+\texttt{end}
+
+\hfill $\mathit{access} = \{\}$
+
+\end{minipage}
+\end{center}
+
+In the first step, the separate processors that \texttt{x} and \texttt{y}
+live on are reserved.
+Then, the call \texttt{foo} is appended to the list of actions
+to be completed by the processor of \texttt{x};
+likewise for the call \texttt{bar} on \texttt{y}.
+
+
+If we take the above the above program, $\mathit{P}$,
+we can produce a trace of dispatches:
+
+\[
+\mathit{dispatches}\left(\mathit{P}\right) =
+  \left[\mathtt{x.foo}, \mathtt{y.bar}, \mathtt{x.baz}\right]
+\]
+
+Additionally, we can also project the trace on a particular processor.
+Here,
+
+\begin{flalign*}
+  \mathit{dispatches}_x\left(\mathit{P}\right) &=
+    \left[\mathtt{x.foo}, \mathtt{x.baz}\right] \\
+  \mathit{dispatches}_y\left(\mathit{P}\right) &=
+    \left[\mathtt{y.bar}\right] \\
+\end{flalign*}
+
+Given these projections,
+the desired property of the execution is that the calls are
+applied in the order they are logged.
+\edcomm{SW}{Define apply and logged earlier.}
+If we have a global ordering on events $<$
+and ordering of events the heap of processor \texttt{x},
+then we require the following holds
+
+\[
+\mathtt{foo} < \mathtt{baz} \wedge
+\neg \exists a . \mathtt{foo} <_x a <_x \mathtt{baz}
+\]
+
+Basically, \texttt{foo} must occur before \texttt{baz} and
+there must be no operations on the heap of processor \texttt{x}
+that occur between them.
+Therefore every sequence of dispatches to a particular processor
+places a restriction on the global ordering of their application,
+as well as a local restricted ordering on the local heap of that processor.
+The local ordering is important to reason that all calls logged
+to a separate processor will happen without any
+intervening modifications to the state on that processor.
 
 \subsection{Guarantees}
-% Postcondition promises, proof lines.
+While the operational model is useful to understand what may be happening
+in the runtime of SCOOP,
+it is not as suitable to understanding what the user's program
+is doing.
+For this, we would like to have an axiomatic semantics that describes
+what one can rely on in terms of the program state and separate processors.
+We define our axiomatic semantics on a simplified syntax.
+
+% \[
+% \inference[base]{}{\{P\}a\{Q\}}
+% \inference[sep]{}
+%\]
 
 The primary guarantee that the SCOOP model provides is that calls to a
 processor $p$ that occur while a processor $q$ has the lock
@@ -51,6 +183,9 @@ waiting for the result before proceeding.
 It is not as asynchronous, but allows for a simpler execution model,
 and more optimization opportunities later.
 
+%}}}
+
+%{{{ Implementation
 \section{Implementation}
 \subsection{High level design}
 The high level design that we use is that each processor is
@@ -127,7 +262,9 @@ The mutex alternative requires at least one atomic operation in the fast path,
 and a context switch in the slow path.
 However, the slow path is encountered by $n - 1$ participants if
 $n$ clients are all vying for the same supplier.
+%}}}
 
+%{{{ Evaluation, performance
 \section{Evaluation, performance}
 
 \subsection{Design evaluation}
@@ -135,7 +272,9 @@ $n$ clients are all vying for the same supplier.
 \subsection{Computation}
 
 \subsection{Coordination}
+%}}}
 
+%{{{ Related work
 \section{Related work}
 \subsection{Work stealing}
 
@@ -171,11 +310,17 @@ Reading stack:
 \item arbitrary dependencies are impossible to schedule efficiciently:
   Space efficient scheduling of multithreaded computations [Blumofe]
 \end{itemize}
+%}}}
 
-
+%{{{ Conclusion
 \section{Conclusion}
+%}}}
 
 \bibliography{bibfile}{}
 \bibliographystyle{plain}
 
 \end{document}
+
+;; Local variables:
+;; folded-file: t
+;; end:
