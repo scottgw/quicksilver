@@ -170,6 +170,51 @@ proc_deref_priv_queues(processor_t proc)
 }
 
 
+
+static
+void
+proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
+{
+  while (!priv_queue->shutdown)
+    {
+      closure_t clos = priv_dequeue(priv_queue, proc);
+
+      // If its empty we set the processor to 'available' and notify
+      // any processors performing wait-conditions to wake up and
+      // retry their conditions.
+      if (clos == NULL)
+	{
+	  notify_available(proc);
+	  break;
+	}
+      else if (closure_is_end(clos))
+	{
+	  free(clos);
+	  // The end of a private queue decrements the ref_count again.
+	  // This should have been incremented initially when the private
+	  // queue was bound to this processor.
+	  int n = __sync_sub_and_fetch(&proc->ref_count, 1);
+	  priv_queue_free(priv_queue);
+	  notify_available(proc);
+	  break;
+	}
+      else if (closure_is_sync(clos))
+	{
+	  processor_t client = (processor_t) clos->fn;
+	  while (client->task->state != TASK_WAITING);
+	  proc->task->state = TASK_TRANSITION_TO_WAITING;
+
+	  proc_yield_to_proc(proc, client);
+	  /* proc_wake(client, proc->executor); */
+	}
+      else
+	{
+	  closure_apply(clos, NULL);
+	  closure_free(clos);
+	}
+    }
+}
+
 static
 void
 proc_loop(processor_t proc)
@@ -185,47 +230,8 @@ proc_loop(processor_t proc)
       qo_q_dequeue_wait(proc->qoq, (void**)&priv_queue, proc);
 
       closure_t clos = NULL;
-      while (!priv_queue->shutdown)
-        {
-          clos = priv_dequeue(priv_queue, proc);
 
-          // If its empty we set the processor to 'available' and notify
-          // any processors performing wait-conditions to wake up and
-          // retry their conditions.
-          if (clos == NULL)
-            {
-              notify_available(proc);
-              break;
-            }
-
-          if (closure_is_end(clos))
-            {
-              free(clos);
-              // The end of a private queue decrements the ref_count again.
-              // This should have been incremented initially when the private
-              // queue was bound to this processor.
-              int n = __sync_sub_and_fetch(&proc->ref_count, 1);
-              priv_queue_free(priv_queue);
-              notify_available(proc);
-              break;
-            }
-          
-          if (closure_is_sync(clos))
-            {
-              processor_t client = (processor_t) clos->fn;
-              while (client->task->state != TASK_WAITING);
-              proc->task->state = TASK_TRANSITION_TO_WAITING;
-
-              proc_yield_to_proc(proc, client);
-
-              /* proc_wake(client, proc->executor); */
-            }
-          else
-            {
-              closure_apply(clos, NULL);
-              closure_free(clos);
-            }
-        }
+      proc_duty_loop(proc, priv_queue);
 
 
       if (priv_queue->shutdown)
