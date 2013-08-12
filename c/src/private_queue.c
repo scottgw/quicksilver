@@ -41,6 +41,19 @@ priv_queue_free(priv_queue_t pq)
 }
 
 
+void
+priv_queue_set_in_wait(priv_queue_t pq)
+{
+  pq->supplier_proc->processing_wait = true;
+}
+
+void
+priv_queue_set_in_body(priv_queue_t pq)
+{
+  pq->supplier_proc->processing_wait = false;
+}
+
+
 static
 void
 priv_queue_resume_supplier(priv_queue_t pq, processor_t client)

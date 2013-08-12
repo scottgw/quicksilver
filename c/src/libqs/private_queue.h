@@ -31,6 +31,12 @@ bool
 priv_queue_last_was_func(priv_queue_t pq);
 
 void
+priv_queue_set_in_wait(priv_queue_t pq);
+
+void
+priv_queue_set_in_body(priv_queue_t pq);
+
+void
 priv_queue_lock(priv_queue_t q, processor_t wait_proc);
 
 void
