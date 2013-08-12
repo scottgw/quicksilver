@@ -31,9 +31,13 @@ module Mutex_Test
       from i := 0
       until i >= n
       loop
-        shutdown workers.item(i)
+        worker := workers.item(i)
+        separate worker
+          do
+            worker.data
+          end
         i := i + 1
       end
-      shutdown data
+      {Prelude}.exit_with(0)
     end
 end
