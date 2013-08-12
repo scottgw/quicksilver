@@ -11,9 +11,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
-#define GC_THREADS
-#include <gc.h>
-
 void
 qs_init()
 {
