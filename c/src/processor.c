@@ -195,11 +195,40 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
 	  // queue was bound to this processor.
 	  int n = __sync_sub_and_fetch(&proc->ref_count, 1);
 	  priv_queue_free(priv_queue);
-	  notify_available(proc);
+
+	  // If we're processing a wait condition, then we don't want to
+	  // notify any other threads that this processor is available,
+	  // because here availability means:
+	  //
+	  //   This processor might have undergone a state change so
+	  //   check your wait-condition again.
+	  //
+	  // This is designed to prevent wait conditions from waking up other
+	  // wait conditions.
+	  if (!proc->processing_wait)
+	    {
+	      notify_available(proc);
+	    }
+
+	  // We set the processing wait to false so the next processor
+	  // starts out with the default.
+	  proc->processing_wait = false;
 	  break;
 	}
       else if (closure_is_sync(clos))
 	{
+	  // At the start of wait condition execution the
+	  // client is responsible for sending a closure with
+	  // the wait-condition flag enabled.
+	  //
+	  // The client is also responsible for setting it back,
+	  // which if done right after the wait-condition holds then
+	  // he can do directly on this processor.
+	  if (closure_is_wait_sync(clos))
+	    {
+	      proc->processing_wait = true;
+	    }
+
 	  processor_t client = (processor_t) clos->fn;
 	  while (client->task->state != TASK_WAITING);
 	  proc->task->state = TASK_TRANSITION_TO_WAITING;
@@ -306,6 +335,8 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
   proc->available = true;
   proc->mutex = task_mutex_new();
   proc->cv = task_condition_new();
+
+  proc->processing_wait = false;
 
   proc->privq_cache = g_hash_table_new(NULL, NULL);
 

@@ -46,6 +46,9 @@ struct processor
 
   /*! The previous processor to wait on this one to become available */
   volatile processor_t last_waiter;
+
+  /*! This processor is processing a wait condition */
+  bool processing_wait;
   
   /*! This processor's mutex */
   task_mutex_t mutex;

@@ -28,6 +28,13 @@ closure_new_sync(closure_t clos, processor_t client)
   clos->next = NULL;
 }
 
+void
+closure_new_wait_sync(closure_t clos, processor_t client)
+{
+  clos->mode = CLOS_WAIT_SYNC;
+  clos->fn = (void*) client;
+  clos->next = NULL;
+}
 
 closure_t
 closure_new(void *fn,
@@ -78,9 +85,14 @@ closure_is_end(closure_t clos)
 bool
 closure_is_sync(closure_t clos)
 {
-  return clos->mode == CLOS_SYNC;
+  return clos->mode == CLOS_SYNC || clos->mode == CLOS_WAIT_SYNC;
 }
 
+bool
+closure_is_wait_sync(closure_t clos)
+{
+  return clos->mode == CLOS_WAIT_SYNC;
+}
 
 clos_type_t
 closure_void_type ()

@@ -8,6 +8,7 @@ typedef enum
 {
   CLOS_NORMAL,
   CLOS_END,
+  CLOS_WAIT_SYNC,
   CLOS_SYNC
 } clos_mode;
 
@@ -45,6 +46,9 @@ closure_is_end(closure_t clos);
 
 bool
 closure_is_sync(closure_t clos);
+
+bool
+closure_is_wait_sync(closure_t clos);
 
 clos_type_t
 closure_uint1_type ();
