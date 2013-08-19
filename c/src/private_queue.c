@@ -128,7 +128,6 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
   pq->last_was_func = true;
 }
 
-
 void
 priv_queue_sync(priv_queue_t pq, processor_t client)
 {

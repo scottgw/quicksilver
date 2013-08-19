@@ -48,19 +48,6 @@ priv_dequeue(priv_queue_t q, processor_t proc);
 void
 priv_queue_routine(priv_queue_t q, closure_t clos, processor_t wait_proc);
 
-/* void */
-/* access_wrapper(processor_t proc, clos_type_t type, void* source, void *target); */
-
-/* void */
-/* function_wrapper(closure_t clos, void* res, processor_t proc); */
-
-/* void */
-/* priv_queue_function(priv_queue_t pq, */
-/*                     closure_t clos, */
-/*                     void* res, */
-/*                     processor_t proc); */
-
-
 void
 priv_queue_lock_sync(priv_queue_t pq, processor_t client);
 
