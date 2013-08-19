@@ -145,10 +145,10 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
   task_mutex_lock(waitee->mutex, waiter);
   waitee->last_waiter = waiter;
   DEBUG_LOG(2, "%p waiting availablitity of %p\n", waiter, waitee);
-  while (waitee->last_waiter == waiter)
-    {
+  /* while (waitee->last_waiter == waiter) */
+  /*   { */
       task_condition_wait(waitee->cv, waitee->mutex, waiter);
-    }
+    /* } */
   task_mutex_unlock(waitee->mutex, waiter);
 }
 
@@ -217,18 +217,6 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
 	}
       else if (closure_is_sync(clos))
 	{
-	  // At the start of wait condition execution the
-	  // client is responsible for sending a closure with
-	  // the wait-condition flag enabled.
-	  //
-	  // The client is also responsible for setting it back,
-	  // which if done right after the wait-condition holds then
-	  // he can do directly on this processor.
-	  if (closure_is_wait_sync(clos))
-	    {
-	      proc->processing_wait = true;
-	    }
-
 	  processor_t client = (processor_t) clos->fn;
 	  while (client->task->state != TASK_WAITING);
 	  proc->task->state = TASK_TRANSITION_TO_WAITING;
@@ -303,7 +291,7 @@ proc_yield_to_executor(processor_t proc)
       goto yield;
     }
 
-  if (exec_steal(exec, &next_proc))
+  if (exec_pop(exec, &next_proc))
     {
       goto yield;
       /* printf("%p stole %p\n", proc, next_proc); */
