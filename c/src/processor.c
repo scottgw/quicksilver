@@ -291,7 +291,7 @@ proc_yield_to_executor(processor_t proc)
       goto yield;
     }
 
-  if (exec_pop(exec, &next_proc))
+  if (exec_steal(exec, &next_proc))
     {
       goto yield;
       /* printf("%p stole %p\n", proc, next_proc); */
