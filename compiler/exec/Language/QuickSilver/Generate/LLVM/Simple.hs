@@ -134,10 +134,10 @@ import           LLVM.Wrapper.Core ( Builder, Context, Module
                                    , Value, BasicBlock, Type, TypeKind
                                    , CallingConvention, FPPredicate
                                    , IntPredicate
-                                   , Visibility
                                    , Linkage
                                    , constInt, constReal, constPtrToInt
                                    )
+import           LLVM.FFI.Core (Visibility)
 
 class (Functor m, MonadIO m) => LLVM m where
   askBuild :: m Builder
