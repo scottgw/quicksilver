@@ -145,10 +145,10 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
   task_mutex_lock(waitee->mutex, waiter);
   waitee->last_waiter = waiter;
   DEBUG_LOG(2, "%p waiting availablitity of %p\n", waiter, waitee);
-  /* while (waitee->last_waiter == waiter) */
-  /*   { */
+  while (waitee->last_waiter == waiter)
+    {
       task_condition_wait(waitee->cv, waitee->mutex, waiter);
-    /* } */
+    }
   task_mutex_unlock(waitee->mutex, waiter);
 }
 
