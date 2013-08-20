@@ -147,7 +147,9 @@ genStmt (Separate args clauses body) =
      br lockB
 
      positionAtEnd lockB
-     mapM_ lockSep' privQs
+     let setInWait q = "priv_queue_set_in_wait" <#> [q]
+         setInBody q = "priv_queue_set_in_body" <#> [q]
+     mapM_ (\q -> lockSep' q >> setInWait q) privQs
      -- FIXME: raise exception/exit on non-separate failure
      cond <- local (updateQueues (zip args privQs))
                    (evalClauses clauses)
@@ -159,6 +161,7 @@ genStmt (Separate args clauses body) =
      br lockB
 
      positionAtEnd sepBodyB
+     mapM_ setInBody privQs
      local (updateQueues (zip args privQs))
            (genStmt (contents body))
      unlockQueues privQs
