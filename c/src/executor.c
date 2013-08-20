@@ -63,23 +63,20 @@ exec_get_work(executor_t exec, uint32_t attempts)
 
       if (exec_steal(victim, &proc))
         {
-          goto check;
+	  assert (proc->task->state == TASK_RUNNABLE);
+          return proc;
         }
     }
 
   if (sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc))
     {
-      goto check;
+      assert (proc->task->state == TASK_RUNNABLE);
+      return proc;
     }
   else
     {
-      proc = NULL;
-      goto check;
+      return NULL;
     }
-
- check:
-  assert (proc == NULL || proc->task->state == TASK_RUNNABLE);
-  return proc;
 }
 
 
