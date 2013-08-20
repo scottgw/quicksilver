@@ -58,6 +58,14 @@ declareQsFuncs =
                     , voidType
                     , [privQueueTypeM, procTypeM]
                     )
+                  , ("priv_queue_set_in_wait"
+                    , voidType
+                    , [privQueueTypeM]
+                    )
+                  , ("priv_queue_set_in_body"
+                    , voidType
+                    , [privQueueTypeM]
+                    )
                   , ("priv_queue_routine"
                     , voidType
                     , [privQueueTypeM, closureTypeM, procTypeM]
