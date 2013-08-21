@@ -100,7 +100,7 @@ task_set_func_and_run(task_t task, void (*f)(void*), void* data)
 }
 
 void
-yield_to(task_t from_task, task_t to_task)
+task_switch(task_t from_task, task_t to_task)
 {
   /* printf("task_yield\n"); */
   /* assert(from_task->state >= TASK_TRANSITION_TO_WAITING); */
