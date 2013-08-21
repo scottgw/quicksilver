@@ -9,7 +9,7 @@ libqs_la_SOURCES = executor.c task.c processor.c notifier.c \
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).
 HEADER_FILES = executor.h task.h processor.h notifier.h \
-	sync_ops.h task_mutex.h task_condition.h ctx.h bounded_queue.h \
+	sync_ops.h task_mutex.h task_condition.h bounded_queue.h \
 	closure.h private_queue.h queue_impl.h spsc_queue.h \
 	types.h debug_log.h mpsc_impl.h
 
