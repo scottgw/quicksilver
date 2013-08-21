@@ -19,7 +19,6 @@ typedef enum
 
 struct task
 {
-  user_stack_t base;
   ctx_t ctx;  
   volatile task_state state;
   sync_data_t sync_data;
