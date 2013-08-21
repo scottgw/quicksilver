@@ -43,9 +43,9 @@ void
 task_set_func(task_t task, void (*f)(void*), void* data);
 
 void
-task_run(task_t task);
+task_set_func_and_run(task_t task, void (*f)(void*), void* data);
 
 void
-yield_to(task_t from_task, task_t to_task);
+task_switch(task_t from_task, task_t to_task);
 
 #endif // _TASK_H
