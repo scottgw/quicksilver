@@ -10,6 +10,10 @@
 // user stacks
 typedef void* user_stack_t;
 
+//
+struct ctx;
+typedef struct ctx* ctx_t;
+
 // lists
 struct list;
 typedef struct list* list_t;

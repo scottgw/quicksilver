@@ -4,8 +4,9 @@
 #include <stdlib.h>
 
 #include "libqs/types.h"
-#include "libqs/ctx.h"
 #include "libqs/valgrind.h"
+
+#include "internal/ctx.h"
 
 struct ctx
 {

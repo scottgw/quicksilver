@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "libqs/task.h"
+#include "internal/ctx.h"
 
 task_t
 task_make(sync_data_t sync_data)
