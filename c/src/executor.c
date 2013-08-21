@@ -144,7 +144,7 @@ switch_to_next_processor(executor_t exec)
       proc->task->next = exec->task;
 
       exec->task->state = TASK_TRANSITION_TO_RUNNABLE;
-      yield_to(exec->task, proc->task);
+      task_switch(exec->task, proc->task);
       exec_step_previous (exec, NULL);
     }
   else
@@ -181,8 +181,8 @@ executor_run(void* data)
 
   pthread_barrier_wait(&barrier);
 
-  task_set_func(exec->task, executor_loop, exec);
-  task_run(exec->task);
+  task_set_func_and_run(exec->task, executor_loop, exec);
+
   assert (false && "executor_run: should never reach this point");  
   return NULL;
 }

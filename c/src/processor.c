@@ -71,7 +71,7 @@ proc_yield_to_proc(processor_t from, processor_t to)
 
   if (to == NULL)
     {
-      yield_to(from->task, exec->task);
+      task_switch(from->task, exec->task);
     }
   else
     {
@@ -93,7 +93,7 @@ proc_yield_to_proc(processor_t from, processor_t to)
 
       /* printf("%p directly yielding to %p\n", from, to); */
       // Switch to the task we found.
-      yield_to(from->task, to->task);
+      task_switch(from->task, to->task);
     }
 
   proc_step_previous(from);
@@ -307,7 +307,7 @@ void
 proc_sleep(processor_t proc, struct timespec duration)
 {
   sync_data_add_sleeper(proc->task->sync_data, proc, duration);
-  yield_to(proc->task, proc->executor->task);
+  task_switch(proc->task, proc->executor->task);
 }
 
 

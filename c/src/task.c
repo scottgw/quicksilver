@@ -41,6 +41,18 @@ typedef struct
   void* ptr;
 } wrapper_data;
 
+
+static
+void
+task_run(task_t task)
+{
+  /* printf("task_run\n"); */
+  task->state = TASK_RUNNING;
+  int result = ctx_set(task->ctx);
+  assert(result == 0);
+}
+
+
 static
 void
 task_wrapper(wrapper_data* data)
@@ -90,12 +102,10 @@ task_set_func(task_t task, void (*f)(void*), void* data)
 }
 
 void
-task_run(task_t task)
+task_set_func_and_run(task_t task, void (*f)(void*), void* data)
 {
-  /* printf("task_run\n"); */
-  task->state = TASK_RUNNING;
-  int result = ctx_set(task->ctx);
-  assert(result == 0);
+  task_set_func(task, f, data);
+  task_run(task);
 }
 
 void
