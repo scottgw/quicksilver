@@ -3,7 +3,6 @@
 #include <assert.h>
 
 #include "libqs/task.h"
-#include "libqs/valgrind.h"
 
 task_t
 task_make(sync_data_t sync_data)
@@ -11,17 +10,9 @@ task_make(sync_data_t sync_data)
   task_t task = (task_t) malloc(sizeof(struct task));
 
   task->next = NULL;
-
-  task->base = malloc(STACKSIZE);
-
-  (void) VALGRIND_STACK_REGISTER(task->base, task->base + STACKSIZE);
-
   task->state = TASK_UNINIT;
   task->sync_data = sync_data;
-
   task->ctx = ctx_new();
-  ctx_set_stack_ptr(task->ctx, task->base);
-  ctx_set_stack_size(task->ctx, STACKSIZE);
 
   return task;
 }
@@ -30,7 +21,6 @@ void
 task_free(task_t task)
 {
   ctx_free(task->ctx);
-  free(task->base);
   free(task);
 }
 
