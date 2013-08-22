@@ -20,13 +20,12 @@ struct task
 {
   ctx_t ctx;  
   volatile task_state state;
-  sync_data_t sync_data;
   struct task* next;
 };
 
 
 task_t
-task_make(sync_data_t sync_data);
+task_make();
 
 void
 task_free(task_t task);

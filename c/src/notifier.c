@@ -63,7 +63,7 @@ reschedule_awoken(notifier_t notifier)
   sleeper_t sleeper;
   while (queue_impl_dequeue(awakened, (void**)&sleeper))
     {
-      sync_data_enqueue_runnable(notifier->sync_data, sleeper->proc);
+      sync_data_enqueue_runnable(notifier->sync_data, sleeper->stask);
       free(sleeper);
     }
 

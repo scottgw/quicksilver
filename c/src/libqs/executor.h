@@ -3,16 +3,14 @@
 
 #include <pthread.h>
 
-#include "processor.h"
-
 #include "sync_ops.h"
 #include "types.h"
 
 struct executor
 {
-  task_t task;
+  sched_task_t stask;
   volatile bool done;
-  processor_t current_proc;
+  sched_task_t current_stask;
   pthread_t thread;
   int id;
 
@@ -27,19 +25,19 @@ executor_t
 make_executor(sync_data_t);
 
 bool
-exec_pop (executor_t exec, processor_t *proc);
+exec_pop (executor_t exec, sched_task_t *proc);
 
 void
-exec_push (executor_t exec, processor_t proc);
+exec_push (executor_t exec, sched_task_t proc);
 
 bool
-exec_steal (executor_t victim_exec, processor_t *proc);
+exec_steal (executor_t victim_exec, sched_task_t *proc);
 
-processor_t
+sched_task_t
 exec_get_work(executor_t exec, uint32_t attempts);
 
 void
-exec_step_previous(executor_t exec, processor_t ignore_proc);
+exec_step_previous(executor_t exec, sched_task_t ignore_proc);
 
 // Free the memory for the executor.
 void

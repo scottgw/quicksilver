@@ -30,7 +30,7 @@
 struct processor
 {
   /*! Underlying task */
-  task_t task;
+  sched_task_t stask;
 
   /*! The next processor to execute */
   processor_t next;

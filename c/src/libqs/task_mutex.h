@@ -12,13 +12,13 @@ task_mutex_new();
 void
 task_mutex_free();
 
-processor_t
+sched_task_t
 task_mutex_owner(task_mutex_t mutex);
 
 void
-task_mutex_lock(task_mutex_t mutex, processor_t proc);
+task_mutex_lock(task_mutex_t mutex, sched_task_t stask);
 
 void
-task_mutex_unlock(task_mutex_t mutex, processor_t proc);
+task_mutex_unlock(task_mutex_t mutex, sched_task_t stask);
 
 #endif // _TASK_MUTEX_H
