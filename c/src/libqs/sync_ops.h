@@ -11,7 +11,7 @@
 
 struct sleeper
 {
-  processor_t proc;
+  sched_task_t stask;
   struct timespec end_time;
 };
 
@@ -96,10 +96,10 @@ sync_data_num_processors(sync_data_t sync_data);
   Puts a runnable processor on the global run queue.
 
   \param sync_data global state
-  \param proc processor to enqueue
+  \param stask processor to enqueue
 */
 void
-sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc);
+sync_data_enqueue_runnable(sync_data_t sync_data, sched_task_t stask);
 
 /*!
   Try to dequeue a processor from the global run queue.
@@ -112,7 +112,7 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc);
 bool
 sync_data_try_dequeue_runnable(sync_data_t sync_data,
                                executor_t exec,
-                               processor_t *proc);
+                               sched_task_t *stask);
 
 /*!
   Dequeue a processor from the global run queue, waiting if there are none.
@@ -121,19 +121,19 @@ sync_data_try_dequeue_runnable(sync_data_t sync_data,
   \param exec the executor requesting the processor
   \return  processor that is dequeued, NULL if shutdown should occur
 */
-processor_t
+sched_task_t
 sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec);
 
 /*!
   Add a sleeping processor to the global state.
 
   \param sync_data global state
-  \param proc processor to sleep
+  \param stask processor to sleep
   \param duration duration of the sleep.
 */
 void
 sync_data_add_sleeper(sync_data_t sync_data,
-                      processor_t proc,
+                      sched_task_t stask,
                       struct timespec duration);
 
 /*!

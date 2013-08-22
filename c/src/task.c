@@ -6,13 +6,12 @@
 #include "internal/ctx.h"
 
 task_t
-task_make(sync_data_t sync_data)
+task_make()
 {
   task_t task = (task_t) malloc(sizeof(struct task));
 
   task->next = NULL;
   task->state = TASK_UNINIT;
-  task->sync_data = sync_data;
   task->ctx = ctx_new();
 
   return task;

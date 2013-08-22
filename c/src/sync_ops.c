@@ -5,7 +5,7 @@
 
 #include "libqs/debug_log.h"
 #include "libqs/sync_ops.h"
-#include "libqs/processor.h"
+#include "libqs/sched_task.h"
 #include "libqs/task.h"
 #include "libqs/queue_impl.h"
 
@@ -105,13 +105,13 @@ sync_data_wait_for_work(sync_data_t sync_data)
 /* -------------------- */
 
 void
-sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
+sync_data_enqueue_runnable(sync_data_t sync_data, sched_task_t stask)
 {
-  assert(proc != NULL);
-  assert(proc->task != NULL);
-  assert(proc->task->state == TASK_RUNNABLE);
+  assert(stask != NULL);
+  assert(stask->task != NULL);
+  assert(stask->task->state == TASK_RUNNABLE);
   
-  bool success = queue_impl_enqueue(sync_data->runnable_queue, proc);
+  bool success = queue_impl_enqueue(sync_data->runnable_queue, stask);
   assert(success);
 
   /* __sync_fetch_and_add(&sync_data->num_runnable, 1); */
@@ -121,25 +121,25 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   pthread_mutex_unlock(&sync_data->run_mutex);
 }
 
-processor_t
+sched_task_t
 sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec)
 {
-  volatile processor_t proc;
-  proc = NULL;
+  volatile sched_task_t stask;
+  stask = NULL;
 
   for (int i = 0; i < 1024; i++)
     {
-      if (queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
+      if (queue_impl_dequeue(sync_data->runnable_queue, (void**)&stask))
         {
-          return proc;
+          return stask;
         }
     }
 
-  if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
+  if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&stask))
     {
       DEBUG_LOG(1, "%p runnable dequeue start\n", exec);
       pthread_mutex_lock(&sync_data->run_mutex);
-      while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
+      while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&stask) && 
              sync_data->num_processors > 0)
         {
           pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
@@ -149,23 +149,23 @@ sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec)
     }
 
   if (sync_data->num_processors > 0 &&
-      proc != NULL)
+      stask != NULL)
     {
-      assert(proc->task->state == TASK_RUNNABLE);
+      assert(stask->task->state == TASK_RUNNABLE);
       /* __sync_fetch_and_sub(&sync_data->num_runnable, 1); */
     }
   else
     {
-      proc = NULL;
+      stask = NULL;
       pthread_cond_broadcast(&sync_data->not_empty);    
     }
-  return proc;
+  return stask;
 }
 
 bool
-sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, processor_t *proc)
+sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, sched_task_t *stask)
 {
-  return queue_impl_dequeue(sync_data->runnable_queue, (void**) proc);
+  return queue_impl_dequeue(sync_data->runnable_queue, (void**) stask);
 }
 
 
@@ -199,12 +199,12 @@ sync_data_num_processors(sync_data_t sync_data)
 
 void
 sync_data_add_sleeper(sync_data_t sync_data,
-                      processor_t proc,
+                      sched_task_t stask,
                       struct timespec duration)
 {
-  assert (proc != NULL);
-  assert (proc->task != NULL);
-  assert (proc->task->state == TASK_RUNNING);
+  assert (stask != NULL);
+  assert (stask->task != NULL);
+  assert (stask->task->state == TASK_RUNNING);
 
   queue_impl_t sleepers = sync_data->sleep_list;
   sleeper_t sleeper = (sleeper_t) malloc(sizeof(struct sleeper));
@@ -214,8 +214,8 @@ sync_data_add_sleeper(sync_data_t sync_data,
   struct timespec current_time;
   clock_gettime(CLOCK_REALTIME, &current_time);
 
-  proc->task->state = TASK_WAITING;
-  sleeper->proc = proc;
+  stask->task->state = TASK_WAITING;
+  sleeper->stask = stask;
   sleeper->end_time.tv_sec = current_time.tv_sec + duration.tv_sec;
   sleeper->end_time.tv_nsec = current_time.tv_nsec + duration.tv_nsec;
 

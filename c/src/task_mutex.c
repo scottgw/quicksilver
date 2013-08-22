@@ -5,6 +5,7 @@
 #include "libqs/processor.h"
 #include "libqs/mpsc_impl.h"
 #include "libqs/queue_impl.h"
+#include "libqs/sched_task.h"
 #include "libqs/sync_ops.h"
 #include "libqs/task.h"
 #include "libqs/task_mutex.h"
@@ -17,7 +18,7 @@
 struct task_mutex 
 {
   volatile uint32_t count;
-  volatile processor_t owner;
+  volatile sched_task_t owner;
   /* struct mpscq_node_t stub; */
 #ifdef MPSC
   mpscq_t wait_queue;
@@ -50,14 +51,14 @@ task_mutex_free(task_mutex_t mutex)
   free (mutex);
 }
 
-processor_t
+sched_task_t
 task_mutex_owner(task_mutex_t mutex)
 {
   return mutex->owner;
 }
 
 void
-task_mutex_lock(task_mutex_t mutex, volatile processor_t proc)
+task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
 {
   DEBUG_LOG(2, "%p requests mutex %p\n", proc, mutex);
 
@@ -72,55 +73,53 @@ task_mutex_lock(task_mutex_t mutex, volatile processor_t proc)
       /* node->state = proc; */
       /* proc->node.state = proc; */
 
-      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
+      task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
 
 #ifdef MPSC
-      mpscq_push(&mutex->wait_queue, proc);
+      mpscq_push(&mutex->wait_queue, stask);
 #else
-      queue_impl_enqueue(mutex->wait_queue, proc);
+      queue_impl_enqueue(mutex->wait_queue, stask);
 #endif
-
-
       proc_yield_to_executor(proc);
 
-      DEBUG_LOG(2, "%p retries mutex %p\n", proc, mutex);
+      DEBUG_LOG(2, "%p retries mutex %p\n", stask, mutex);
     }
 
-  mutex->owner = proc;
-  DEBUG_LOG(2, "%p attains mutex %p\n", proc, mutex);
+  mutex->owner = stask;
+  DEBUG_LOG(2, "%p attains mutex %p\n", stask, mutex);
 }
 
 void
-task_mutex_unlock(volatile task_mutex_t mutex, processor_t proc)
+task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
 {
-  assert(mutex->owner == proc);
+  assert(mutex->owner == stask);
   assert(mutex->count > 0);
 
-  DEBUG_LOG(2, "%p unlocks mutex %p\n", proc, mutex);
+  DEBUG_LOG(2, "%p unlocks mutex %p\n", stask, mutex);
 
   if (__atomic_fetch_sub(&mutex->count, 1, __ATOMIC_SEQ_CST) > 1)
     {
-      DEBUG_LOG(2, "%p found another waiting on mutex %p\n", proc, mutex);
+      DEBUG_LOG(2, "%p found another waiting on mutex %p\n", stask, mutex);
       
       /* mpscq_node_t* node; */
-      volatile processor_t other_proc;
+      volatile sched_task_t other_stask;
 
 #ifdef MPSC
       do
         {
-          other_proc = mpscq_pop(&mutex->wait_queue);
-        } while(other_proc == 0);
+          other_stask = mpscq_pop(&mutex->wait_queue);
+        } while(other_stask == 0);
 #else
-      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
+      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_stask));
 #endif
 
-      DEBUG_LOG(2, "%p is awoken out of mutex %p\n", other_proc, mutex);
+      DEBUG_LOG(2, "%p is awoken out of mutex %p\n", other_stask, mutex);
       // If there's someone in the loop, spin to dequeue them from the
       // wait-queue.
       //
       // Spinning is OK here because we only have to wait between when they
       // increased the counter and when the enqueue themselves which
       // is a finite amount of time.
-      proc_wake(other_proc, proc->executor);
+      stask_wake(other_stask, stask->executor);
     }
 }

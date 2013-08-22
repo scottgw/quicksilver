@@ -47,6 +47,10 @@ typedef struct executor* executor_t;
 struct task;
 typedef struct task* task_t;
 
+// sched task
+struct sched_task;
+typedef struct sched_task* sched_task_t;
+
 // notifier
 struct notifier;
 typedef struct notifier* notifier_t;

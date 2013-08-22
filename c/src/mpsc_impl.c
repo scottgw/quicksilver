@@ -17,7 +17,6 @@ void mpscq_push(mpscq_t* self, processor_t n)
   __atomic_exchange(&self->head, &n, &prev,  __ATOMIC_SEQ_CST);
   //(*)
   prev->next = n;
-
 }
 
 processor_t mpscq_pop(mpscq_t* self)

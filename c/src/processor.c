@@ -13,6 +13,7 @@
 #include "libqs/processor.h"
 #include "libqs/private_queue.h"
 #include "libqs/task.h"
+#include "libqs/sched_task.h"
 
 int global_id = 0;
 
@@ -20,7 +21,7 @@ static
 void
 reset_stack_to(void (*f)(void*), processor_t proc)
 {
-  task_set_func(proc->task, f, proc);
+  task_set_func(proc->stask->task, f, proc);
 }
 
 /*!
@@ -31,30 +32,31 @@ reset_stack_to(void (*f)(void*), processor_t proc)
   previous processor.
 */
 void
-proc_step_previous(processor_t proc)
+stask_step_previous(sched_task_t stask)
 {
-  executor_t exec = proc->executor;
-  exec_step_previous (exec, proc);
+  executor_t exec = stask->executor;
+  exec_step_previous (exec, stask);
 }
 
 void
-proc_step_state(processor_t proc, executor_t exec)
+stask_step_state(sched_task_t stask, executor_t exec)
 {
-  assert(proc->task->state >= TASK_TRANSITION_TO_WAITING);
+  assert(stask->task->state >= TASK_TRANSITION_TO_WAITING);
 
-  switch (proc->task->state)
+  switch (stask->task->state)
     {
     case TASK_TRANSITION_TO_RUNNABLE:
-      proc->task->state = TASK_RUNNABLE;
-      exec_push(exec, proc);
+      stask->task->state = TASK_RUNNABLE;
+      exec_push(exec, stask);
       break;
     case TASK_TRANSITION_TO_WAITING:
-      /* printf("%p set to waiting\n", proc); */
-      proc->task->state = TASK_WAITING;
+      /* printf("%p set to waiting\n", stask); */
+      stask->task->state = TASK_WAITING;
       break;
     case TASK_TRANSITION_TO_FINISHED:
-      proc->task->state = TASK_FINISHED;
-      proc_free(proc);
+      stask->task->state = TASK_FINISHED;
+      assert("How to free the processor? cast up?" && 0);
+      stask_free(stask);
       break;
     default:
       break;
@@ -63,15 +65,15 @@ proc_step_state(processor_t proc, executor_t exec)
 
 
 void
-proc_yield_to_proc(processor_t from, processor_t to)
+stask_switch(sched_task_t from, sched_task_t to)
 {
   assert (from != to);
   executor_t exec = from->executor;
-  exec->current_proc = from;
+  exec->current_stask = from;
 
   if (to == NULL)
     {
-      task_switch(from->task, exec->task);
+      task_switch(from->task, exec->stask->task);
     }
   else
     {
@@ -89,14 +91,14 @@ proc_yield_to_proc(processor_t from, processor_t to)
       /*     next_proc->task->next = exec->task; */
       /*   } */
 
-      to->task->next = exec->task;
+      to->task->next = exec->stask->task;
 
       /* printf("%p directly yielding to %p\n", from, to); */
       // Switch to the task we found.
       task_switch(from->task, to->task);
     }
 
-  proc_step_previous(from);
+  stask_step_previous(from);
 }
 
 
@@ -123,8 +125,8 @@ proc_maybe_yield(processor_t proc)
   if (time_is_up == 1)
     {
       time_is_up = 0;
-      task_set_state(proc->task, TASK_TRANSITION_TO_RUNNABLE);
-      proc_yield_to_executor(proc);
+      task_set_state(proc->stask->task, TASK_TRANSITION_TO_RUNNABLE);
+      stask_yield_to_executor(proc->stask);
     }
 }
 
@@ -132,24 +134,24 @@ static
 void
 notify_available(processor_t proc)
 {
-  task_mutex_lock(proc->mutex, proc);
+  task_mutex_lock(proc->mutex, proc->stask);
   proc->last_waiter = NULL;
   DEBUG_LOG(2, "%p signaling availability\n", proc);
   task_condition_signal(proc->cv, proc);
-  task_mutex_unlock(proc->mutex, proc);
+  task_mutex_unlock(proc->mutex, proc->stask);
 }
 
 void
 proc_wait_for_available(processor_t waitee, processor_t waiter)
 {
-  task_mutex_lock(waitee->mutex, waiter);
+  task_mutex_lock(waitee->mutex, waiter->stask);
   waitee->last_waiter = waiter;
   DEBUG_LOG(2, "%p waiting availablitity of %p\n", waiter, waitee);
   while (waitee->last_waiter == waiter)
     {
       task_condition_wait(waitee->cv, waitee->mutex, waiter);
     }
-  task_mutex_unlock(waitee->mutex, waiter);
+  task_mutex_unlock(waitee->mutex, waiter->stask);
 }
 
 static
@@ -218,10 +220,10 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
       else if (closure_is_sync(clos))
 	{
 	  processor_t client = (processor_t) clos->fn;
-	  while (client->task->state != TASK_WAITING);
-	  proc->task->state = TASK_TRANSITION_TO_WAITING;
+	  while (client->stask->task->state != TASK_WAITING);
+	  proc->stask->task->state = TASK_TRANSITION_TO_WAITING;
 
-	  proc_yield_to_proc(proc, client);
+	  stask_switch(proc->stask, client->stask);
 	  /* proc_wake(client, proc->executor); */
 	}
       else
@@ -236,7 +238,7 @@ static
 void
 proc_loop(processor_t proc)
 {
-  proc_step_previous(proc);
+  stask_step_previous(proc->stask);
   DEBUG_LOG(1, "%p starting\n", proc);
   while (proc->ref_count > 0)
     {
@@ -271,43 +273,43 @@ proc_loop(processor_t proc)
 
 
 void
-proc_wake(processor_t proc, executor_t exec)
+stask_wake(sched_task_t stask, executor_t exec)
 { 
-  while(task_get_state(proc->task) != TASK_WAITING);
-  task_set_state(proc->task, TASK_RUNNABLE);
-  exec_push(exec, proc);
+  while(task_get_state(stask->task) != TASK_WAITING);
+  task_set_state(stask->task, TASK_RUNNABLE);
+  exec_push(exec, stask);
   /* sync_data_enqueue_runnable(proc->task->sync_data, proc); */
 }
 
 void
-proc_yield_to_executor(processor_t proc)
+stask_yield_to_executor(sched_task_t stask)
 {
-  assert (proc->task->state >= TASK_TRANSITION_TO_WAITING);
-  executor_t exec = proc->executor;
-  processor_t next_proc;
+  assert (stask->task->state >= TASK_TRANSITION_TO_WAITING);
+  executor_t exec = stask->executor;
+  sched_task_t next_stask;
 
-  if (sync_data_try_dequeue_runnable (proc->task->sync_data, exec, &next_proc))
+  if (sync_data_try_dequeue_runnable (stask->sync_data, exec, &next_stask))
     {
       goto yield;
     }
 
-  if (exec_steal(exec, &next_proc))
+  if (exec_steal(exec, &next_stask))
     {
       goto yield;
       /* printf("%p stole %p\n", proc, next_proc); */
     }
 
-  next_proc = exec_get_work(exec, 8);
+  next_stask = exec_get_work(exec, 8);
 
  yield:
-  proc_yield_to_proc(proc, next_proc);
+  stask_switch(stask, next_stask);
 }
 
 void
 proc_sleep(processor_t proc, struct timespec duration)
 {
-  sync_data_add_sleeper(proc->task->sync_data, proc, duration);
-  task_switch(proc->task, proc->executor->task);
+  sync_data_add_sleeper(proc->stask->sync_data, proc->stask, duration);
+  task_switch(proc->stask->task, proc->executor->stask->task);
 }
 
 
@@ -317,7 +319,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
   proc->qoq = qo_q_new(2048);
-  proc->task = task_make(sync_data);
+  proc->stask = stask_new(sync_data);
   proc->id = global_id++;
 
   proc->available = true;
@@ -333,7 +335,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
   reset_stack_to((void (*)(void*))func, proc);
 
   sync_data_register_proc(sync_data);
-  sync_data_enqueue_runnable(sync_data, proc);
+  sync_data_enqueue_runnable(sync_data, proc->stask);
 
   return proc;
 }
@@ -348,7 +350,7 @@ proc_new(sync_data_t sync_data)
 processor_t
 proc_new_from_other(processor_t other_proc)
 {
-  return proc_new(other_proc->task->sync_data);
+  return proc_new(other_proc->stask->sync_data);
 }
 
 processor_t
@@ -370,9 +372,9 @@ proc_shutdown(processor_t proc, processor_t wait_proc)
 void
 proc_free(processor_t proc)
 {
-  sync_data_deregister_proc(proc->task->sync_data);
+  sync_data_deregister_proc(proc->stask->sync_data);
 
-  task_free(proc->task);
+  stask_free(proc->stask);
   task_condition_free(proc->cv);
   task_mutex_free(proc->mutex);
 
