@@ -6,19 +6,41 @@ libqs_la_SOURCES = \
 	processor.c \
 	notifier.c \
 	sched_task.c \
-	sync_ops.c task_mutex.c task_condition.c ctx.c bounded_queue.c \
-	closure.c private_queue.c queue_impl.cpp spsc_queue.c \
-	ws_deque.c mpsc_impl.c mpsc_blocking.c \
-	debug_log.cpp libqs/debug_log.h \
-	internal\ctx.h
+	sync_ops.c \
+	task_mutex.c \
+	task_condition.c \
+	ctx.c \
+	bounded_queue.c \
+	closure.c \
+	private_queue.c \
+	queue_impl.cpp \
+	spsc_queue.c \
+	ws_deque.c \
+	mpsc_impl.c \
+	qoq.c \
+	debug_log.cpp \
+	libqs/debug_log.h \
+	internal/ctx.h
 
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).
-HEADER_FILES = executor.h task.h processor.h notifier.h \
-	sync_ops.h task_mutex.h task_condition.h bounded_queue.h \
+HEADER_FILES = \
+	executor.h \
+	task.h \
+	processor.h \
+	notifier.h \
+	sync_ops.h \
+	task_mutex.h \
+	task_condition.h \
+	bounded_queue.h \
 	sched_task.h \
-	closure.h private_queue.h queue_impl.h spsc_queue.h \
-	types.h debug_log.h mpsc_impl.h
+	closure.h \
+	private_queue.h \
+	queue_impl.h \
+	spsc_queue.h \
+	types.h \
+	debug_log.h \
+	mpsc_impl.h
 
 pkginclude_HEADERS = $(addprefix libqs/, $(HEADER_FILES))
 
