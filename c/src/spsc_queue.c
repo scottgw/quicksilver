@@ -8,25 +8,20 @@
 #include "libqs/debug_log.h"
 #include "libqs/processor.h"
 #include "libqs/queue_impl.h"
+#include "libqs/sched_task.h"
 #include "libqs/task.h"
 #include "libqs/task_mutex.h"
 #include "libqs/task_condition.h"
-
-#define SPSC_CUSTOM
 
 struct spsc_queue
 {
   uint32_t max;
   volatile uint32_t count;
 
-  volatile processor_t waiter;
+  volatile sched_task_t waiter;
 
-#ifdef SPSC_CUSTOM
+
   ck_ring_t impl;
-#else
-  bounded_queue_t impl;
-#endif
-
 };
 
 spsc_queue_t
@@ -37,12 +32,9 @@ spsc_new(uint32_t size)
   q->count  = 0;
   q->max    = size;
   q->waiter = NULL;
-#ifdef SPSC_CUSTOM
+
   void **buffer = malloc(size * sizeof(void*));
   ck_ring_init (&q->impl, buffer, size);
-#else
-  q->impl   = bqueue_new(size);
-#endif
 
   return q;
 }
@@ -50,17 +42,12 @@ spsc_new(uint32_t size)
 void
 spsc_free(spsc_queue_t q)
 {
-#ifdef SPSC_CUSTOM
   free(q->impl.ring);
-#else
-  bqueue_free(q->impl);
-#endif
   free(q);
 }
 
-#ifdef SPSC_CUSTOM
 void
-spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
+spsc_enqueue_wait(spsc_queue_t q, void *data, sched_task_t stask)
 {
   int n = __sync_fetch_and_add(&q->count, 1);
 
@@ -70,15 +57,15 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
 
       while (q->waiter == NULL);
 
-      processor_t waiter = q->waiter;
+      sched_task_t waiter = q->waiter;
       q->waiter = NULL;
-      proc_wake(waiter, proc->executor);
+      stask_wake(waiter, stask->executor);
     }
   else if (n == q->max)
     {
-      q->waiter = proc;
-      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-      proc_yield_to_executor(proc);
+      q->waiter = stask;
+      task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
+      stask_yield_to_executor(stask);
 
       ck_ring_enqueue_spsc(&q->impl, data);
    }
@@ -86,15 +73,15 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
     {
       while(!ck_ring_enqueue_spsc(&q->impl, data))
         {
-          proc->task->state = TASK_TRANSITION_TO_RUNNABLE;
-          proc_yield_to_executor(proc);
+          stask->task->state = TASK_TRANSITION_TO_RUNNABLE;
+          stask_yield_to_executor(stask);
         }
     }
 }
 
 
 void
-spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
+spsc_dequeue_wait(spsc_queue_t q, void **data, sched_task_t stask)
 {
   int n = __sync_fetch_and_sub(&q->count, 1);
   if (n == q->max + 1)
@@ -104,16 +91,16 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
 
       while (q->waiter == NULL);
 
-      // At this point no other processors can be in the queue.
-      processor_t waiter = q->waiter;
+      // At this point no other staskessors can be in the queue.
+      sched_task_t waiter = q->waiter;
       q->waiter = NULL;
-      proc_wake(waiter, proc->executor);
+      stask_wake(waiter, stask->executor);
     }
   else if (n == 0)
     {
-      q->waiter = proc;
-      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-      proc_yield_to_executor(proc);
+      q->waiter = stask;
+      task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
+      stask_yield_to_executor(stask);
 
       bool success = ck_ring_dequeue_spsc(&q->impl, data);
       assert(success);
@@ -122,22 +109,9 @@ spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
     {
       while(!ck_ring_dequeue_spsc(&q->impl, data))
         {
-          proc->task->state = TASK_TRANSITION_TO_RUNNABLE;
-          proc_yield_to_executor(proc);
+          stask->task->state = TASK_TRANSITION_TO_RUNNABLE;
+          stask_yield_to_executor(stask);
         }
     }
   
 }
-#else
-void
-spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc)
-{
-  bqueue_enqueue_wait(q->impl, data, proc);
-}
-
-void
-spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc)
-{
-  bqueue_dequeue_wait(q->impl, data, proc);
-}
-#endif

@@ -55,7 +55,7 @@ closq_node_t* closq_pop(closq_t* self)
 struct qo_queue
 {
   volatile uint32_t count;
-  volatile processor_t waiter;
+  volatile sched_task_t waiter;
 
   mpscq_t producers;
 
@@ -83,7 +83,7 @@ qo_q_new(uint32_t size)
 }
 
 void
-qo_q_enqueue_wait(qo_queue_t q, void *data, processor_t proc)
+qo_q_enqueue_wait(qo_queue_t q, void *data, sched_task_t stask)
 {
   assert (data != NULL);
 
@@ -96,13 +96,13 @@ qo_q_enqueue_wait(qo_queue_t q, void *data, processor_t proc)
       closq_push(q->impl, node);
 
       while (q->waiter == NULL);
-      proc_wake (q->waiter, proc->executor);
+      stask_wake (q->waiter, stask->executor);
     }
   else if (n >= q->max)
     {
-      mpscq_push(&q->producers, proc);
-      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-      proc_yield_to_executor(proc);
+      mpscq_push(&q->producers, stask);
+      task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
+      stask_yield_to_executor(stask);
 
       closq_node_t *node = malloc (sizeof(*node));
       node->state = data;
@@ -117,7 +117,7 @@ qo_q_enqueue_wait(qo_queue_t q, void *data, processor_t proc)
 }
 
 void
-qo_q_dequeue_wait(qo_queue_t q, void **data, processor_t proc)
+qo_q_dequeue_wait(qo_queue_t q, void **data, sched_task_t stask)
 {
   int n = __sync_fetch_and_sub(&q->count, 1);
   closq_node_t *node;
@@ -127,15 +127,15 @@ qo_q_dequeue_wait(qo_queue_t q, void **data, processor_t proc)
       *data = node->state;
       assert (*data != NULL);
 
-      processor_t producer;
+      sched_task_t producer;
       while ((producer = mpscq_pop(&q->producers)) == NULL);
-      proc_wake (producer, proc->executor);
+      stask_wake (producer, stask->executor);
     }
   else if (n == 0)
     {
-      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-      q->waiter = proc;
-      proc_yield_to_executor(proc);
+      task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
+      q->waiter = stask;
+      stask_yield_to_executor(stask);
 
       node = closq_pop(q->impl);
       *data = node->state;

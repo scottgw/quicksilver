@@ -16,16 +16,16 @@ void
 bqueue_use(bounded_queue_t q);
 
 bool
-bqueue_enqueue(bounded_queue_t q, void *data, processor_t proc);
+bqueue_enqueue(bounded_queue_t q, void *data, sched_task_t stask);
 
 void
-bqueue_enqueue_wait(bounded_queue_t q, void *data, processor_t proc);
+bqueue_enqueue_wait(bounded_queue_t q, void *data, sched_task_t stask);
 
 bool
 bqueue_dequeue(bounded_queue_t q, void **data);
 
 void
-bqueue_dequeue_wait(bounded_queue_t q, void **data, processor_t proc);
+bqueue_dequeue_wait(bounded_queue_t q, void **data, sched_task_t stask);
 
 
 #endif // _BOUNDED_QUEUE_H

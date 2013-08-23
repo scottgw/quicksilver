@@ -13,18 +13,13 @@
 
 #define INIT_WAIT_QUEUE_SIZE 16000
 
-#define MPSC
-
 struct task_mutex 
 {
   volatile uint32_t count;
   volatile sched_task_t owner;
   /* struct mpscq_node_t stub; */
-#ifdef MPSC
+
   mpscq_t wait_queue;
-#else
-  queue_impl_t wait_queue;
-#endif
 };
 
 task_mutex_t
@@ -33,21 +28,15 @@ task_mutex_new()
   task_mutex_t mutex = (task_mutex_t)malloc(sizeof(struct task_mutex));
   mutex->count = 0;
   mutex->owner = NULL;
-#ifdef MPSC
+
   mpscq_create(&mutex->wait_queue, NULL); // mutex->stub);
-#else
-  mutex->wait_queue = queue_impl_new (INIT_WAIT_QUEUE_SIZE);
-#endif
+
   return mutex;
 }
 
 void
 task_mutex_free(task_mutex_t mutex)
 {
-#ifdef MPSC
-#else
-  queue_impl_free (mutex->wait_queue);
-#endif
   free (mutex);
 }
 
@@ -75,12 +64,9 @@ task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
 
       task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
 
-#ifdef MPSC
       mpscq_push(&mutex->wait_queue, stask);
-#else
-      queue_impl_enqueue(mutex->wait_queue, stask);
-#endif
-      proc_yield_to_executor(proc);
+
+      stask_yield_to_executor(stask);
 
       DEBUG_LOG(2, "%p retries mutex %p\n", stask, mutex);
     }
@@ -104,14 +90,10 @@ task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
       /* mpscq_node_t* node; */
       volatile sched_task_t other_stask;
 
-#ifdef MPSC
       do
         {
           other_stask = mpscq_pop(&mutex->wait_queue);
         } while(other_stask == 0);
-#else
-      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_stask));
-#endif
 
       DEBUG_LOG(2, "%p is awoken out of mutex %p\n", other_stask, mutex);
       // If there's someone in the loop, spin to dequeue them from the

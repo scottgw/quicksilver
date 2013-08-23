@@ -137,7 +137,7 @@ notify_available(processor_t proc)
   task_mutex_lock(proc->mutex, proc->stask);
   proc->last_waiter = NULL;
   DEBUG_LOG(2, "%p signaling availability\n", proc);
-  task_condition_signal(proc->cv, proc);
+  task_condition_signal(proc->cv, proc->stask);
   task_mutex_unlock(proc->mutex, proc->stask);
 }
 
@@ -149,7 +149,7 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
   DEBUG_LOG(2, "%p waiting availablitity of %p\n", waiter, waitee);
   while (waitee->last_waiter == waiter)
     {
-      task_condition_wait(waitee->cv, waitee->mutex, waiter);
+      task_condition_wait(waitee->cv, waitee->mutex, waiter->stask);
     }
   task_mutex_unlock(waitee->mutex, waiter->stask);
 }
@@ -246,7 +246,7 @@ proc_loop(processor_t proc)
 
       // Dequeue a private queue from the queue of queues.
       priv_queue_t priv_queue;
-      qo_q_dequeue_wait(proc->qoq, (void**)&priv_queue, proc);
+      qo_q_dequeue_wait(proc->qoq, (void**)&priv_queue, proc->stask);
 
       closure_t clos = NULL;
 
@@ -271,15 +271,6 @@ proc_loop(processor_t proc)
     }
 }
 
-
-void
-stask_wake(sched_task_t stask, executor_t exec)
-{ 
-  while(task_get_state(stask->task) != TASK_WAITING);
-  task_set_state(stask->task, TASK_RUNNABLE);
-  exec_push(exec, stask);
-  /* sync_data_enqueue_runnable(proc->task->sync_data, proc); */
-}
 
 void
 stask_yield_to_executor(sched_task_t stask)
@@ -366,7 +357,7 @@ proc_shutdown(processor_t proc, processor_t wait_proc)
   priv_queue_t shutdown_q = priv_queue_new(wait_proc);
   shutdown_q->shutdown = true;
 
-  qo_q_enqueue_wait(proc->qoq, shutdown_q, wait_proc);
+  qo_q_enqueue_wait(proc->qoq, shutdown_q, wait_proc->stask);
 }
 
 void
