@@ -3,7 +3,7 @@
 #include <ucontext.h>
 #include <assert.h>
 
-#include "libqs/mpsc_blocking.h"
+#include "libqs/qoq.h"
 #include "libqs/bounded_queue.h"
 #include "libqs/closure.h"
 #include "libqs/debug_log.h"
@@ -246,7 +246,7 @@ proc_loop(processor_t proc)
 
       // Dequeue a private queue from the queue of queues.
       priv_queue_t priv_queue;
-      qo_q_dequeue_wait(proc->qoq, (void**)&priv_queue, proc->stask);
+      qoq_dequeue_wait(proc->qoq, (void**)&priv_queue, proc->stask);
 
       closure_t clos = NULL;
 
@@ -309,7 +309,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
-  proc->qoq = qo_q_new(2048);
+  proc->qoq = qoq_new(2048);
   proc->stask = stask_new(sync_data);
   proc->id = global_id++;
 
@@ -357,7 +357,7 @@ proc_shutdown(processor_t proc, processor_t wait_proc)
   priv_queue_t shutdown_q = priv_queue_new(wait_proc);
   shutdown_q->shutdown = true;
 
-  qo_q_enqueue_wait(proc->qoq, shutdown_q, wait_proc->stask);
+  qoq_enqueue_wait(proc->qoq, shutdown_q, wait_proc->stask);
 }
 
 void
@@ -369,7 +369,7 @@ proc_free(processor_t proc)
   task_condition_free(proc->cv);
   task_mutex_free(proc->mutex);
 
-  qo_q_free(proc->qoq);
+  qoq_free(proc->qoq);
 
 
   // Since *this* processor won't push any more work into its

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include "libqs/bounded_queue.h"
-#include "libqs/mpsc_blocking.h"
+#include "libqs/qoq.h"
 #include "libqs/closure.h"
 #include "libqs/debug_log.h"
 #include "libqs/private_queue.h"
@@ -77,7 +77,7 @@ void
 priv_queue_lock(priv_queue_t pq, processor_t client)
 {
   pq->last_was_func = false;
-  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client->stask);
+  qoq_enqueue_wait(pq->supplier_proc->qoq, pq, client->stask);
 }
 
 void
@@ -121,7 +121,7 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
 
   spsc_enqueue_wait(pq->q, sync_clos, client->stask);
   assert (client->stask->task->state == TASK_RUNNING);
-  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client->stask);
+  qoq_enqueue_wait(pq->supplier_proc->qoq, pq, client->stask);
 
   task_set_state(client->stask->task, TASK_TRANSITION_TO_WAITING);
   stask_yield_to_executor(client->stask);
