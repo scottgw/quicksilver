@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "libqs/qoq.h"
+#include "internal/qoq.h"
 #include "libqs/mpscq.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"

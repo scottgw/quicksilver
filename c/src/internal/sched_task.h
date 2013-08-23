@@ -1,7 +1,7 @@
 #ifndef __SCHED_TASK_H_
 #define __SCHED_TASK_H_
 
-#include "types.h"
+#include "../libqs/types.h"
 
 struct sched_task
 {

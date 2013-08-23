@@ -1,48 +1,46 @@
 lib_LTLIBRARIES = libqs.la
 
 libqs_la_SOURCES = \
-	executor.c \
-	task.c \
-	processor.c \
-	notifier.c \
-	sched_task.c \
-	sync_ops.c \
-	task_mutex.c \
-	task_condition.c \
-	ctx.c \
 	bounded_queue.c \
 	closure.c \
-	private_queue.c \
-	queue_impl.cpp \
-	spsc_queue.c \
-	ws_deque.c \
-	mpscq.c \
-	qoq.c \
+	ctx.c \
 	debug_log.cpp \
-	libqs/debug_log.h \
-	internal/ctx.h
+	executor.c \
+	internal/bounded_queue.h \
+	internal/closure.h \
+	internal/ctx.h \
+	internal/debug_log.h \
+	internal/debug_log.h \
+	internal/executor.h \
+	internal/mpscq.h \
+	internal/notifier.h \
+	internal/queue_impl.h \
+	internal/sched_task.h \
+	internal/spsc_queue.h \
+	internal/task.h \
+	internal/task_condition.h \
+	internal/task_mutex.h \
+	mpscq.c \
+	notifier.c \
+	private_queue.c \
+	processor.c \
+	qoq.c \
+	queue_impl.cpp \
+	sched_task.c \
+	spsc_queue.c \
+	sync_ops.c \
+	task.c \
+	task_condition.c \
+	task_mutex.c \
+	ws_deque.c
 
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).
-HEADER_FILES = \
-	executor.h \
-	task.h \
-	processor.h \
-	notifier.h \
-	sync_ops.h \
-	task_mutex.h \
-	task_condition.h \
-	bounded_queue.h \
-	sched_task.h \
-	closure.h \
-	private_queue.h \
-	queue_impl.h \
-	spsc_queue.h \
-	types.h \
-	debug_log.h \
-	mpscq.h
-
-pkginclude_HEADERS = $(addprefix libqs/, $(HEADER_FILES))
+pkginclude_HEADERS = \
+	libqs/types.h \
+	libqs/processor.h \
+	libqs/private_queue.h \
+	libqs/sync_ops.h
 
 FLAGS = -pthread -U_FORTIFY_SOURCE -DENABLE_LOG\
 	-Wall -Wno-unused-value -Wno-unused-variable -Werror

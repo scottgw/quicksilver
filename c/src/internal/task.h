@@ -1,7 +1,7 @@
 #ifndef _TASK_H
 #define _TASK_H
 
-#include "types.h"
+#include "../libqs/types.h"
 
 #ifdef __cplusplus
 extern "C" {

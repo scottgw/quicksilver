@@ -6,7 +6,6 @@
 #include <stdint.h>
 #include <glib.h>
 
-#include "queue_impl.h"
 #include "types.h"
 
 struct sleeper

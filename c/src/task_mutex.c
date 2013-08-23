@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "libqs/debug_log.h"
+#include "internal/debug_log.h"
 #include "libqs/processor.h"
 #include "libqs/mpscq.h"
 #include "libqs/queue_impl.h"

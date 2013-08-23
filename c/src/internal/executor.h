@@ -4,7 +4,7 @@
 #include <pthread.h>
 
 #include "sync_ops.h"
-#include "types.h"
+#include "../libqs/types.h"
 
 struct executor
 {

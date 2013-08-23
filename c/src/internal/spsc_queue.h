@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "types.h"
+#include "../libqs/types.h"
 
 spsc_queue_t
 spsc_new(uint32_t size);

@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "libqs/types.h"
+#include "libqs/../libqs/types.h"
 
 ws_deque_t
 ws_deque_new();

@@ -3,11 +3,12 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "libqs/debug_log.h"
 #include "libqs/sync_ops.h"
-#include "libqs/sched_task.h"
-#include "libqs/task.h"
-#include "libqs/queue_impl.h"
+#include "internal/sched_task.h"
+#include "internal/task.h"
+#include "internal/queue_impl.h"
+#include "internal/debug_log.h"
+
 
 // global sync data
 struct sync_data

@@ -2,7 +2,7 @@
 #define __MPSC_IMPL_H
 
 
-#include "types.h"
+#include "../libqs/types.h"
 #include "sched_task.h"
 
 /* struct mpscq_node */

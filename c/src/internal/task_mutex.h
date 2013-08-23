@@ -1,10 +1,7 @@
 #ifndef _TASK_MUTEX_H
 #define _TASK_MUTEX_H
 
-#include "types.h"
-
-struct task_mutex;
-typedef struct task_mutex* task_mutex_t;
+#include "../libqs/types.h"
 
 task_mutex_t
 task_mutex_new();

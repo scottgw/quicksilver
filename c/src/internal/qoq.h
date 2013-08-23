@@ -1,7 +1,7 @@
 #ifndef __MPSC_BLOCKING_H
 #define __MPSC_BLOCKING_H
 
-#include "types.h"
+#include "../libqs/types.h"
 
 qoq_t
 qoq_new(uint32_t size);

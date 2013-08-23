@@ -1,7 +1,7 @@
 #ifndef _NOTIFIER_H
 #define _NOTIFIER_H
 
-#include "types.h"
+#include "../libqs/types.h"
 // Creates the notifier thread and returns the thread_t.
 // The caller can then join it when desired.
 notifier_t
