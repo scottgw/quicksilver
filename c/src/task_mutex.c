@@ -2,14 +2,12 @@
 #include <stdlib.h>
 
 #include "internal/debug_log.h"
-#include "libqs/processor.h"
-#include "libqs/mpscq.h"
-#include "libqs/queue_impl.h"
-#include "libqs/sched_task.h"
-#include "libqs/sync_ops.h"
-#include "libqs/task.h"
-#include "libqs/task_mutex.h"
-#include "libqs/types.h"
+#include "internal/mpscq.h"
+#include "internal/queue_impl.h"
+#include "internal/sched_task.h"
+#include "internal/task.h"
+#include "internal/task_mutex.h"
+
 
 #define INIT_WAIT_QUEUE_SIZE 16000
 

@@ -1,8 +1,8 @@
 #include <stdlib.h>
 
-#include "libqs/executor.h"
-#include "libqs/sched_task.h"
-#include "libqs/task.h"
+#include "internal/executor.h"
+#include "internal/sched_task.h"
+#include "internal/task.h"
 
 sched_task_t
 stask_new(sync_data_t sync_data)

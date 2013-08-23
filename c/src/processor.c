@@ -4,15 +4,16 @@
 #include <assert.h>
 
 #include "libqs/types.h"
-#include "libqs/executor.h"
 #include "libqs/processor.h"
 #include "libqs/closure.h"
 #include "libqs/private_queue.h"
+#include "libqs/sync_ops.h"
 
 #include "internal/qoq.h"
 #include "internal/bounded_queue.h"
 #include "internal/debug_log.h"
 #include "internal/notifier.h"
+#include "internal/executor.h"
 #include "internal/task.h"
 #include "internal/task_mutex.h"
 #include "internal/task_condition.h"

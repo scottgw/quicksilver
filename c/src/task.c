@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include "libqs/task.h"
+#include "internal/task.h"
 #include "internal/ctx.h"
 
 task_t

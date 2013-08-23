@@ -1,15 +1,18 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <glib.h>
 #include <sys/time.h>
 #include <pthread.h>
 
+#include "libqs/sync_ops.h"
+
 #include "internal/ws_deque.h"
 #include "internal/debug_log.h"
-#include "libqs/executor.h"
-#include "libqs/sched_task.h"
-#include "libqs/notifier.h"
-#include "libqs/task.h"
+#include "internal/executor.h"
+#include "internal/sched_task.h"
+#include "internal/notifier.h"
+#include "internal/task.h"
 
 #define MAX_ATTEMPTS 64
 #define MIN_ATTEMPTS 4

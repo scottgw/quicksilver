@@ -3,7 +3,6 @@
 
 #include <pthread.h>
 
-#include "sync_ops.h"
 #include "../libqs/types.h"
 
 struct executor

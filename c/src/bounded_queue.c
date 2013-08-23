@@ -1,10 +1,10 @@
 #include <stdlib.h>
 
-#include "libqs/bounded_queue.h"
+#include "internal/bounded_queue.h"
 #include "internal/debug_log.h"
-#include "libqs/queue_impl.h"
-#include "libqs/task_mutex.h"
-#include "libqs/task_condition.h"
+#include "internal/queue_impl.h"
+#include "internal/task_mutex.h"
+#include "internal/task_condition.h"
 
 struct bounded_queue
 {
