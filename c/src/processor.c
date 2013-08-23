@@ -5,6 +5,7 @@
 
 #include "libqs/types.h"
 #include "libqs/processor.h"
+#include "libqs/notifier.h"
 #include "libqs/closure.h"
 #include "libqs/private_queue.h"
 #include "libqs/sync_ops.h"
@@ -12,7 +13,7 @@
 #include "internal/qoq.h"
 #include "internal/bounded_queue.h"
 #include "internal/debug_log.h"
-#include "internal/notifier.h"
+
 #include "internal/executor.h"
 #include "internal/task.h"
 #include "internal/task_mutex.h"

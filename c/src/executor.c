@@ -6,12 +6,12 @@
 #include <pthread.h>
 
 #include "libqs/sync_ops.h"
+#include "libqs/notifier.h"
 
 #include "internal/ws_deque.h"
 #include "internal/debug_log.h"
 #include "internal/executor.h"
 #include "internal/sched_task.h"
-#include "internal/notifier.h"
 #include "internal/task.h"
 
 #define MAX_ATTEMPTS 64

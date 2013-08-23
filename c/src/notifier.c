@@ -6,9 +6,9 @@
 #include <unistd.h>
 
 #include "libqs/sync_ops.h"
+#include "libqs/notifier.h"
 
 #include "internal/executor.h"
-#include "internal/notifier.h"
 #include "internal/queue_impl.h"
 
 //

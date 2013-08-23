@@ -7,13 +7,11 @@ libqs_la_SOURCES = \
 	debug_log.cpp \
 	executor.c \
 	internal/bounded_queue.h \
-	internal/closure.h \
 	internal/ctx.h \
 	internal/debug_log.h \
 	internal/debug_log.h \
 	internal/executor.h \
 	internal/mpscq.h \
-	internal/notifier.h \
 	internal/queue_impl.h \
 	internal/sched_task.h \
 	internal/spsc_queue.h \
@@ -37,10 +35,12 @@ libqs_la_SOURCES = \
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).
 pkginclude_HEADERS = \
-	libqs/types.h \
-	libqs/processor.h \
+	libqs/closure.h \
+	libqs/notifier.h \
 	libqs/private_queue.h \
-	libqs/sync_ops.h
+	libqs/processor.h \
+	libqs/sync_ops.h \
+	libqs/types.h
 
 FLAGS = -pthread -U_FORTIFY_SOURCE -DENABLE_LOG\
 	-Wall -Wno-unused-value -Wno-unused-variable -Werror
