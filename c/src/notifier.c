@@ -5,9 +5,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "libqs/executor.h"
-#include "libqs/notifier.h"
 #include "libqs/sync_ops.h"
+
+#include "internal/executor.h"
+#include "internal/notifier.h"
+#include "internal/queue_impl.h"
 
 //
 // Notifier implementation 

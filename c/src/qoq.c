@@ -1,12 +1,14 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "internal/qoq.h"
-#include "libqs/mpscq.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
-#include "libqs/task.h"
 #include "libqs/types.h"
+
+#include "internal/qoq.h"
+#include "internal/mpscq.h"
+#include "internal/task.h"
+
 
 struct mpsc_node
 {
