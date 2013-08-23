@@ -16,7 +16,7 @@ libqs_la_SOURCES = \
 	queue_impl.cpp \
 	spsc_queue.c \
 	ws_deque.c \
-	mpsc_impl.c \
+	mpscq.c \
 	qoq.c \
 	debug_log.cpp \
 	libqs/debug_log.h \
@@ -40,7 +40,7 @@ HEADER_FILES = \
 	spsc_queue.h \
 	types.h \
 	debug_log.h \
-	mpsc_impl.h
+	mpscq.h
 
 pkginclude_HEADERS = $(addprefix libqs/, $(HEADER_FILES))
 

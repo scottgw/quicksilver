@@ -21,7 +21,7 @@
 #include <stdbool.h>
 #include <glib.h>
 
-/* #include "mpsc_impl.h" */
+/* #include "mpscq.h" */
 #include "closure.h"
 #include "task_mutex.h"
 #include "task_condition.h"

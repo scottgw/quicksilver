@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "libqs/qoq.h"
-#include "libqs/mpsc_impl.h"
+#include "libqs/mpscq.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
 #include "libqs/task.h"

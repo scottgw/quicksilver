@@ -3,7 +3,7 @@
 
 #include "libqs/debug_log.h"
 #include "libqs/processor.h"
-#include "libqs/mpsc_impl.h"
+#include "libqs/mpscq.h"
 #include "libqs/queue_impl.h"
 #include "libqs/sched_task.h"
 #include "libqs/sync_ops.h"
