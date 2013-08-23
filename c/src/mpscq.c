@@ -1,4 +1,4 @@
-#include "libqs/mpsc_impl.h"
+#include "libqs/mpscq.h"
 
 void mpscq_create(mpscq_t* self, mpscq_node_t* stub) 
 { 
