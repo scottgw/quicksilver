@@ -21,7 +21,7 @@ struct executor
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t
-make_executor(sync_data_t);
+exec_make(sync_data_t);
 
 bool
 exec_pop (executor_t exec, sched_task_t *proc);
@@ -42,9 +42,8 @@ exec_step_previous(executor_t exec, sched_task_t ignore_proc);
 void
 executor_free(executor_t);
 
-// Join all the executors in 'executors'.
-void
-join_executors();
+void*
+executor_run(executor_t exec);
 
 // Reschedule the currently executing processor.
 void
