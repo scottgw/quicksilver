@@ -176,13 +176,10 @@ executor_loop(void* data)
   pthread_exit(NULL);
 }
 
-static 
 void*
-executor_run(void* data)
+executor_run(executor_t exec)
 {
-  executor_t exec = data;
-
-  pthread_barrier_wait(&barrier);
+  sync_data_barrier_wait(exec->stask->sync_data);
 
   task_set_func_and_run(exec->stask->task, executor_loop, exec);
 
@@ -190,20 +187,12 @@ executor_run(void* data)
   return NULL;
 }
 
-static
-void
-join_executor(executor_t exec)
-{
-  pthread_join(exec->thread, NULL);
-  executor_free(exec);
-}
-
 int exec_count = 0;
 
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t
-make_executor(sync_data_t sync_data)
+exec_make(sync_data_t sync_data)
 {
   executor_t exec = malloc(sizeof(struct executor));
 
@@ -214,29 +203,4 @@ make_executor(sync_data_t sync_data)
   exec->backoff_us = 500;
   exec->local_deque = ws_deque_new ();
   return exec;
-}
-
-// Joins the list of executors.
-void
-join_executors(sync_data_t sync_data)
-{
-  GArray *executors = sync_data_executors(sync_data);
-  for (int i = 0; i < executors->len; i++)
-    {
-      join_executor (g_array_index (executors, executor_t, i));
-    }
-}
-
-void
-create_executors(sync_data_t sync_data, int n)
-{
-  GArray *executors = sync_data_executors(sync_data);
-  pthread_barrier_init(&barrier, NULL, n);
-  for(int i = 0; i < n; i++)
-    {
-      executor_t exec = make_executor(sync_data);
-      
-      g_array_append_val (executors, exec);
-      pthread_create(&exec->thread, NULL, executor_run, exec);
-    }
 }

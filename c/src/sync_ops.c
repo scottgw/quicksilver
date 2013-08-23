@@ -1,10 +1,13 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "libqs/sync_ops.h"
+
 #include "internal/sched_task.h"
+#include "internal/executor.h"
 #include "internal/task.h"
 #include "internal/queue_impl.h"
 #include "internal/debug_log.h"
@@ -27,6 +30,8 @@ struct sync_data
 
   // List of executors
   GArray *executors;
+  // Barrier for executors
+  pthread_barrier_t barrier;
 };
 
 sync_data_t
@@ -59,6 +64,52 @@ sync_data_new(uint32_t max_tasks)
 
   return sync_data;
 }
+
+static
+void*
+run_executor(void* data)
+{
+  return executor_run((executor_t)data);
+}
+
+static
+void
+join_executor(executor_t exec)
+{
+  pthread_join(exec->thread, NULL);
+  executor_free(exec);
+}
+
+void
+sync_data_barrier_wait(sync_data_t sync_data)
+{
+  pthread_barrier_wait(&sync_data->barrier);
+}
+
+void
+sync_data_create_executors(sync_data_t sync_data, uint32_t n)
+{
+  GArray *executors = sync_data->executors;
+  pthread_barrier_init(&sync_data->barrier, NULL, n);
+  for(int i = 0; i < n; i++)
+    {
+      executor_t exec = exec_make(sync_data);
+      
+      g_array_append_val (executors, exec);
+      pthread_create(&exec->thread, NULL, run_executor, exec);
+    }
+}
+
+void
+sync_data_join_executors(sync_data_t sync_data)
+{
+  GArray *executors = sync_data->executors;
+  for (int i = 0; i < executors->len; i++)
+    {
+      join_executor (g_array_index (executors, executor_t, i));
+    }
+}
+
 
 void
 sync_data_free(sync_data_t sync_data)

@@ -35,6 +35,32 @@ void
 sync_data_free(sync_data_t sync_data);
 
 /*!
+  Create the given number of executors.
+
+  \param sync_data where to store the executors
+  \param n the number of executors to create
+*/
+void
+sync_data_create_executors(sync_data_t sync_data, uint32_t n);
+
+/*!
+  Barrier that will wait for all executors to start
+
+  \param sync_data global data where the barrier is
+*/
+void
+sync_data_barrier_wait(sync_data_t sync_data);
+
+/*!
+  Wait for all the executors in the global data to finish executing.
+
+  \param sync_data global data that holds the executors
+*/
+void
+sync_data_join_executors(sync_data_t sync_data);
+
+
+/*!
   Get the global list of executors.
 
   \param sync_data the global state
