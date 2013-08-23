@@ -3,6 +3,10 @@
 
 #include "types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum 
   {
     TASK_UNINIT,
@@ -44,5 +48,10 @@ task_set_func_and_run(task_t task, void (*f)(void*), void* data);
 
 void
 task_switch(task_t from_task, task_t to_task);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif // _TASK_H

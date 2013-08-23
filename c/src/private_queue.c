@@ -8,6 +8,7 @@
 #include "libqs/debug_log.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
+#include "libqs/sched_task.h"
 #include "libqs/spsc_queue.h"
 #include "libqs/task.h"
 
@@ -60,7 +61,7 @@ priv_queue_resume_supplier(priv_queue_t pq, processor_t client)
 {
   if (pq->last_was_func)
     {
-      proc_wake(pq->supplier_proc, client->executor);
+      stask_wake(pq->supplier_proc->stask, client->executor);
     }
 }
 
@@ -68,7 +69,7 @@ void
 priv_queue_shutdown(priv_queue_t pq, processor_t client)
 {
   priv_queue_lock(pq, client);
-  spsc_enqueue_wait(pq->q, closure_new_end(), client);
+  spsc_enqueue_wait(pq->q, closure_new_end(), client->stask);
   priv_queue_unlock(pq, client);
 }
 
@@ -76,7 +77,7 @@ void
 priv_queue_lock(priv_queue_t pq, processor_t client)
 {
   pq->last_was_func = false;
-  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client);
+  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client->stask);
 }
 
 void
@@ -84,7 +85,7 @@ priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
   priv_queue_resume_supplier(pq, client);
   pq->last_was_func = false;
-  spsc_enqueue_wait(pq->q, NULL, client);
+  spsc_enqueue_wait(pq->q, NULL, client->stask);
 }
 
 
@@ -92,7 +93,7 @@ closure_t
 priv_dequeue(priv_queue_t pq, processor_t proc)
 {
   closure_t clos;
-  spsc_dequeue_wait(pq->q, (void**)&clos, proc);
+  spsc_dequeue_wait(pq->q, (void**)&clos, proc->stask);
   return clos;
 }
 
@@ -105,7 +106,7 @@ priv_queue_last_was_func(priv_queue_t pq)
 void
 priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
-  spsc_enqueue_wait(pq->q, clos, wait_proc);
+  spsc_enqueue_wait(pq->q, clos, wait_proc->stask);
   priv_queue_resume_supplier(pq, wait_proc);
   pq->last_was_func = false;
 }
@@ -118,12 +119,12 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
   closure_new_sync(sync_clos, client);
   pq->last = NULL;
 
-  spsc_enqueue_wait(pq->q, sync_clos, client);
-  assert (client->task->state == TASK_RUNNING);
-  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client);
+  spsc_enqueue_wait(pq->q, sync_clos, client->stask);
+  assert (client->stask->task->state == TASK_RUNNING);
+  qo_q_enqueue_wait(pq->supplier_proc->qoq, pq, client->stask);
 
-  task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
-  proc_yield_to_executor(client);
+  task_set_state(client->stask->task, TASK_TRANSITION_TO_WAITING);
+  stask_yield_to_executor(client->stask);
 
   pq->last_was_func = true;
 }
@@ -139,10 +140,10 @@ priv_queue_sync(priv_queue_t pq, processor_t client)
       closure_new_sync(&sync_clos, client);
       pq->last = NULL;
 
-      spsc_enqueue_wait(pq->q, &sync_clos, client);
+      spsc_enqueue_wait(pq->q, &sync_clos, client->stask);
 
-      task_set_state(client->task, TASK_TRANSITION_TO_WAITING);
-      proc_yield_to_executor(client);
+      task_set_state(client->stask->task, TASK_TRANSITION_TO_WAITING);
+      stask_yield_to_executor(client->stask);
     }
   pq->last_was_func = true;
 }

@@ -5,6 +5,7 @@
 
 struct sched_task
 {
+  struct sched_task * next; // For intrusive allocation in queues.
   task_t task;
   sync_data_t sync_data;
   executor_t executor;
@@ -29,5 +30,8 @@ stask_yield_to_executor(sched_task_t);
 
 void
 stask_switch(sched_task_t from, sched_task_t to);
+
+void
+stask_wake(sched_task_t stask, executor_t exec);
 
 #endif // __SCHED_TASK_H_

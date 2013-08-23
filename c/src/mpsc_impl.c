@@ -10,19 +10,19 @@ void mpscq_create(mpscq_t* self, mpscq_node_t* stub)
   self->stub.next = 0;
 } 
 
-void mpscq_push(mpscq_t* self, processor_t n)
+void mpscq_push(mpscq_t* self, sched_task_t n)
 {
   n->next = 0;
-  processor_t prev;
+  sched_task_t prev;
   __atomic_exchange(&self->head, &n, &prev,  __ATOMIC_SEQ_CST);
   //(*)
   prev->next = n;
 }
 
-processor_t mpscq_pop(mpscq_t* self)
+sched_task_t mpscq_pop(mpscq_t* self)
 {
-    processor_t tail = self->tail;
-    processor_t next = tail->next;
+    sched_task_t tail = self->tail;
+    sched_task_t next = tail->next;
     if (tail == &self->stub)
     {
         if (0 == next)
@@ -36,7 +36,7 @@ processor_t mpscq_pop(mpscq_t* self)
         self->tail = next;
         return tail;
     }
-    processor_t head = self->head;
+    sched_task_t head = self->head;
     if (tail != head)
         return 0;
     mpscq_push(self, &self->stub);

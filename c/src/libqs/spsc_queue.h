@@ -13,10 +13,10 @@ void
 spsc_free(spsc_queue_t q);
 
 void
-spsc_enqueue_wait(spsc_queue_t q, void *data, processor_t proc);
+spsc_enqueue_wait(spsc_queue_t q, void *data, sched_task_t stask);
 
 void
-spsc_dequeue_wait(spsc_queue_t q, void **data, processor_t proc);
+spsc_dequeue_wait(spsc_queue_t q, void **data, sched_task_t stask);
 
 
 #endif // _SPSC_QUEUE_H

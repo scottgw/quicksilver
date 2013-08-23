@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "libqs/debug_log.h"
-#include "libqs/processor.h"
+#include "libqs/sched_task.h"
 #include "libqs/queue_impl.h"
 #include "libqs/task_mutex.h"
 #include "libqs/task_condition.h"
@@ -34,44 +34,44 @@ task_condition_free(task_condition_t cv)
 }
 
 void
-task_condition_signal(task_condition_t cv, processor_t curr_proc)
+task_condition_signal(task_condition_t cv, sched_task_t curr_stask)
 {
-  processor_t proc;
+  sched_task_t stask;
 
-  if(queue_impl_dequeue(cv->wait_queue, (void**)&proc))
+  if(queue_impl_dequeue(cv->wait_queue, (void**)&stask))
     {
-      proc_wake(proc, curr_proc->executor);
+      stask_wake(stask, curr_stask->executor);
     }
 }
 
 
 void
-task_condition_signal_all(task_condition_t cv, processor_t curr_proc)
+task_condition_signal_all(task_condition_t cv, sched_task_t curr_stask)
 {
-  processor_t proc;
+  sched_task_t stask;
 
-  while (queue_impl_dequeue(cv->wait_queue, (void**)&proc))
+  while (queue_impl_dequeue(cv->wait_queue, (void**)&stask))
     {
-      proc_wake(proc, curr_proc->executor);
+      stask_wake(stask, curr_stask->executor);
     }
 }
 
 
 void
-task_condition_wait(task_condition_t cv, task_mutex_t mutex, processor_t proc)
+task_condition_wait(task_condition_t cv, task_mutex_t mutex, sched_task_t stask)
 {
-  volatile processor_t vproc = proc;
-  assert(task_mutex_owner(mutex) == vproc);
+  volatile sched_task_t vstask = stask;
+  assert(task_mutex_owner(mutex) == vstask);
 
-  DEBUG_LOG(2, "%p waiting in cv %p\n", proc, cv);
+  DEBUG_LOG(2, "%p waiting in cv %p\n", stask, cv);
 
-  task_set_state(vproc->task, TASK_TRANSITION_TO_WAITING);
-  bool success = queue_impl_enqueue(cv->wait_queue, vproc);
+  task_set_state(vstask->task, TASK_TRANSITION_TO_WAITING);
+  bool success = queue_impl_enqueue(cv->wait_queue, vstask);
   assert(success);
 
-  task_mutex_unlock(mutex, vproc);
-  DEBUG_LOG(2, "%p moving to executor in cv %p\n", proc, cv);
-  proc_yield_to_executor(vproc);
-  DEBUG_LOG(2, "%p resumed in cv %p\n", proc, cv);
-  task_mutex_lock(mutex, vproc);
+  task_mutex_unlock(mutex, vstask);
+  DEBUG_LOG(2, "%p moving to executor in cv %p\n", stask, cv);
+  stask_yield_to_executor(vstask);
+  DEBUG_LOG(2, "%p resumed in cv %p\n", stask, cv);
+  task_mutex_lock(mutex, vstask);
 }
