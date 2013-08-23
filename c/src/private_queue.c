@@ -2,15 +2,17 @@
 #include <ffi.h>
 #include <stdlib.h>
 
-#include "libqs/bounded_queue.h"
-#include "libqs/qoq.h"
+#include "internal/bounded_queue.h"
+#include "internal/qoq.h"
 #include "libqs/closure.h"
-#include "libqs/debug_log.h"
+#include "internal/debug_log.h"
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
-#include "libqs/sched_task.h"
-#include "libqs/spsc_queue.h"
-#include "libqs/task.h"
+#include "internal/sched_task.h"
+#include "internal/spsc_queue.h"
+#include "internal/task.h"
+#include "internal/task_mutex.h"
+#include "internal/task_condition.h"
 
 priv_queue_t
 priv_queue_new(processor_t proc)

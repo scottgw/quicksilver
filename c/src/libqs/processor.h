@@ -21,10 +21,6 @@
 #include <stdbool.h>
 #include <glib.h>
 
-/* #include "mpscq.h" */
-#include "closure.h"
-#include "task_mutex.h"
-#include "task_condition.h"
 #include "types.h"
 
 struct processor

@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "libqs/debug_log.h"
+#include "internal/debug_log.h"
 #include "libqs/sched_task.h"
 #include "libqs/queue_impl.h"
 #include "libqs/task_mutex.h"

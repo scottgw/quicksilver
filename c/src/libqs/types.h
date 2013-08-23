@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <pthread.h>
 
 #define STACKSIZE 4*1024*sizeof(int)
 
@@ -55,6 +54,14 @@ typedef struct sched_task* sched_task_t;
 struct notifier;
 typedef struct notifier* notifier_t;
 
+// task mutex
+struct task_mutex;
+typedef struct task_mutex* task_mutex_t;
+
+// task condition
+struct task_condition;
+typedef struct task_condition* task_condition_t;
+
 
 // closure types
 struct closure;
@@ -62,6 +69,10 @@ typedef struct closure* closure_t;
 
 struct clos_type;
 typedef struct clos_type* clos_type_t;
+
+// general queue
+struct queue_impl;
+typedef struct queue_impl* queue_impl_t;
 
 // work stealing
 struct ws_deque;

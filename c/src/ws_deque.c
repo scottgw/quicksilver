@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "libqs/ws_deque.h"
+#include "internal/ws_deque.h"
 
 struct circ_array
 {
