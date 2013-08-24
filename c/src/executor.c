@@ -200,8 +200,14 @@ exec_make(sync_data_t sync_data)
   exec->stask = stask_new(sync_data);
   exec->current_stask = NULL;
   exec->done = false;
-  exec->id = exec_count++;
+  exec->id = 0;
   exec->backoff_us = 500;
   exec->local_deque = ws_deque_new ();
+
+  // We deregister this task (the registration was implicit in the stask
+  // creation) because executors shouldn't count towards the count of
+  // active tasks in the system.
+  sync_data_deregister_task(sync_data);
+
   return exec;
 }

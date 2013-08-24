@@ -1,37 +1,63 @@
 #include <gtest/gtest.h>
-
 #include <libqs/sync_ops.h>
-
 #include <internal/sched_task.h>
+#include <internal/task.h>
 
 TEST(SchedTask, SyncMakeFree)
 {
   sync_data_t sync_data = sync_data_new(1);
+
   sync_data_free(sync_data);
+
   ASSERT_TRUE(true);
 }
-
 
 TEST(SchedTask, SchedTaskMakeFree)
 {
   sync_data_t sync_data = sync_data_new(1);
   sched_task_t stask = stask_new(sync_data);
+
   stask_free(stask);
   sync_data_free(sync_data);
+
   ASSERT_TRUE(true);
 }
-
 
 TEST(SchedTask, ExecutorsMakeFree)
 {
   sync_data_t sync_data = sync_data_new(1);
   sync_data_create_executors (sync_data, 1);
+
   sync_data_join_executors(sync_data);
   sync_data_free(sync_data);
+
   ASSERT_TRUE(true);
 }
 
+int x;
 
+void
+schedule_single(void* data)
+{
+  sched_task_t stask = (sched_task_t) stask;
+  x = 1;
+}
+
+TEST(SchedTask, ScheduleSingle)
+{
+  x = 0;
+  sync_data_t sync_data = sync_data_new(1);
+  sync_data_create_executors (sync_data, 1);
+  sched_task_t stask = stask_new(sync_data);
+  task_set_func(stask->task, schedule_single, stask);
+
+  sync_data_enqueue_runnable(sync_data, stask);
+
+  // Tasks that finish are cleaned up by another task or the executor.
+  sync_data_join_executors(sync_data);
+  sync_data_free(sync_data);
+  ASSERT_EQ(x, 1);
+}
 
 int
 main(int argc, char** argv)

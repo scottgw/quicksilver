@@ -102,7 +102,7 @@ sync_data_wait_for_work(sync_data_t sync_data);
   \param sync_data global state
 */
 void
-sync_data_register_proc(sync_data_t sync_data);
+sync_data_register_task(sync_data_t sync_data);
 
 /*!
   Deregister a single processor in the global state.
@@ -110,7 +110,7 @@ sync_data_register_proc(sync_data_t sync_data);
   \param sync_data global state
 */
 void
-sync_data_deregister_proc(sync_data_t sync_data);
+sync_data_deregister_task(sync_data_t sync_data);
 
 /*!
   Count the number of registered processors.
