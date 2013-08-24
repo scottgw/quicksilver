@@ -17,12 +17,15 @@ stask_new(sync_data_t sync_data)
   stask->executor = NULL;
   stask->next = NULL;
 
+  sync_data_register_task(sync_data);
+
   return stask;
 }
 
 void
 stask_free(sched_task_t stask)
 {
+  sync_data_deregister_task(stask->sync_data);
   task_free(stask->task);
   free(stask);
 }
@@ -59,7 +62,7 @@ stask_step_state(sched_task_t stask, executor_t exec)
       break;
     case TASK_TRANSITION_TO_FINISHED:
       stask->task->state = TASK_FINISHED;
-      assert("How to free the processor? cast up?" && 0);
+      // assert("How to free the processor? cast up?" && 0);
       stask_free(stask);
       break;
     default:

@@ -224,7 +224,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 
   reset_stack_to((void (*)(void*))func, proc);
 
-  sync_data_register_proc(sync_data);
+  sync_data_register_task(sync_data);
   sync_data_enqueue_runnable(sync_data, proc->stask);
 
   return proc;
@@ -262,7 +262,7 @@ proc_shutdown(processor_t proc, processor_t wait_proc)
 void
 proc_free(processor_t proc)
 {
-  sync_data_deregister_proc(proc->stask->sync_data);
+  sync_data_deregister_task(proc->stask->sync_data);
 
   stask_free(proc->stask);
   task_condition_free(proc->cv);

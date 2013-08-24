@@ -231,13 +231,13 @@ sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, sched_tas
 /* Processor registration */
 /* ---------------------- */
 void
-sync_data_register_proc(sync_data_t sync_data)
+sync_data_register_task(sync_data_t sync_data)
 {
   __sync_fetch_and_add(&sync_data->num_processors, 1);
 }
 
 void
-sync_data_deregister_proc(sync_data_t sync_data)
+sync_data_deregister_task(sync_data_t sync_data)
 {
   if (__sync_sub_and_fetch(&sync_data->num_processors, 1) == 0)
     {
