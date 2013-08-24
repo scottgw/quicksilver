@@ -86,6 +86,7 @@ notifier_run(void* ptr)
       time_is_up = 1;
     }
 
+  pthread_exit(NULL);
   return NULL;
 }
 
