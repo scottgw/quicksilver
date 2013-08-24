@@ -28,6 +28,14 @@ circ_array_new(int64_t log_size)
 }
 
 static
+void
+circ_array_free(circ_array_t c_array)
+{
+  free(c_array->array);
+  free(c_array);
+}
+
+static
 int64_t
 circ_array_size(circ_array_t c_array)
 {
@@ -79,6 +87,13 @@ ws_deque_new()
   wsd->c_array = circ_array_new(10);
 
   return wsd;
+}
+
+void
+ws_deque_free(ws_deque_t wsd)
+{
+  circ_array_free (wsd->c_array);
+  free(wsd);
 }
 
 int64_t

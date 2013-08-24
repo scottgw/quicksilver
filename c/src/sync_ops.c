@@ -65,6 +65,24 @@ sync_data_new(uint32_t max_tasks)
   return sync_data;
 }
 
+
+void
+sync_data_free(sync_data_t sync_data)
+{
+  pthread_cond_destroy(&sync_data->not_empty);
+  pthread_mutex_destroy(&sync_data->run_mutex);
+
+  queue_impl_free(sync_data->runnable_queue);
+  queue_impl_free(sync_data->sleep_list);
+
+  g_array_free(sync_data->executors, true);
+
+  free(sync_data);
+
+  binary_write();
+}
+
+
 static
 void*
 run_executor(void* data)
@@ -108,18 +126,6 @@ sync_data_join_executors(sync_data_t sync_data)
     {
       join_executor (g_array_index (executors, executor_t, i));
     }
-}
-
-
-void
-sync_data_free(sync_data_t sync_data)
-{
-  pthread_cond_destroy(&sync_data->not_empty);
-  pthread_mutex_destroy(&sync_data->run_mutex);
-  queue_impl_free(sync_data->runnable_queue);
-  queue_impl_free(sync_data->sleep_list);
-  free(sync_data);
-  binary_write();
 }
 
 GArray*

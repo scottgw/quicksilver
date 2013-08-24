@@ -9,6 +9,9 @@
 ws_deque_t
 ws_deque_new();
 
+void
+ws_deque_free(ws_deque_t wsd);
+
 int64_t
 ws_deque_size(ws_deque_t wsd);
 
