@@ -3,6 +3,10 @@
 
 #include "../libqs/types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct sched_task
 {
   struct sched_task * next; // For intrusive allocation in queues.
@@ -55,5 +59,11 @@ stask_switch(sched_task_t from, sched_task_t to);
 */
 void
 stask_wake(sched_task_t stask, executor_t exec);
+
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif // __SCHED_TASK_H_
