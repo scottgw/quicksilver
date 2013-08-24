@@ -8,6 +8,10 @@
 
 #include "types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct sleeper
 {
   sched_task_t stask;
@@ -169,6 +173,11 @@ sync_data_add_sleeper(sync_data_t sync_data,
 */
 queue_impl_t
 sync_data_get_sleepers(sync_data_t sync_data);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif // _SYNC_OPS_H

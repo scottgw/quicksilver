@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <libqs/task.h>
+#include <internal/task.h>
 
 TEST(Task, MakeFree)
 {
