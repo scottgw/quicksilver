@@ -160,6 +160,7 @@ void
 executor_free(executor_t exec)
 {
   stask_free(exec->stask);
+  ws_deque_free(exec->local_deque);
   free(exec);
 }
 

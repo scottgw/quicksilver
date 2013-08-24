@@ -57,6 +57,7 @@ ctx_new()
 void
 ctx_free(ctx_t ctx)
 {
+  free(ctx->base);
   free(ctx);
 }
 
