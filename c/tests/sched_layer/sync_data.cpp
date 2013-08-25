@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
-#include <internal/task.h>
+#include <libqs/sync_ops.h>
 
-TEST(Task, MakeFree)
+TEST(SchedTask, SyncMakeFree)
 {
-  task_t task = task_make();
-  task_free(task);
+  sync_data_t sync_data = sync_data_new(1);
+
+  sync_data_free(sync_data);
+
   ASSERT_TRUE(true);
 }
 
