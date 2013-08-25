@@ -1,100 +1,94 @@
 #include <gtest/gtest.h>
 #include <libqs/sync_ops.h>
 #include <internal/sched_task.h>
+#include <internal/executor.h>
 #include <internal/task.h>
 
-TEST(SchedTask, SyncMakeFree)
-{
-  sync_data_t sync_data = sync_data_new(1);
-
-  sync_data_free(sync_data);
-
-  ASSERT_TRUE(true);
-}
-
-TEST(SchedTask, SchedTaskMakeFree)
-{
-  sync_data_t sync_data = sync_data_new(1);
-  sched_task_t stask = stask_new(sync_data);
-
-  stask_free(stask);
-  sync_data_free(sync_data);
-
-  ASSERT_TRUE(true);
-}
-
-TEST(SchedTask, ExecutorsMakeFree)
-{
-  sync_data_t sync_data = sync_data_new(1);
-  sync_data_create_executors (sync_data, 1);
-
-  sync_data_join_executors(sync_data);
-  sync_data_free(sync_data);
-
-  ASSERT_TRUE(true);
-}
-
-int schedSingleRan;
+#define SCHEDULE_MULTIPLE_NUM 100
+int32_t finished;
 
 void
-schedule_single(void* data)
+exec_tester(int num_tasks, int num_execs, void (*f)(void*))
 {
-  sched_task_t stask = (sched_task_t) stask;
-  schedSingleRan = true;
-}
+  sync_data_t sync_data = sync_data_new(num_tasks); 
+  sched_task_t *task_array = 
+    (sched_task_t*) malloc(num_tasks * sizeof(sched_task_t));
 
-TEST(SchedTask, ScheduleSingle)
-{
-  schedSingleRan = false;
-  sync_data_t sync_data = sync_data_new(1);
-  sync_data_create_executors (sync_data, 1);
-  sched_task_t stask = stask_new(sync_data);
-  task_set_func(stask->task, schedule_single, stask);
+  finished = 0;
 
-  sync_data_enqueue_runnable(sync_data, stask);
+  for (int i = 0; i < num_tasks; i++)
+    {
+      sched_task_t stask = stask_new(sync_data);
+      task_array[i] = stask;
+      task_set_func(stask->task, f, stask);
+    }
 
-  // We do not free the stask because it is cleaned up as it finishes
-  // execution.
+  sync_data_create_executors (sync_data, num_execs);
+
+  ASSERT_EQ(sync_data_num_processors(sync_data), num_tasks);
+
+  for (int i = 0; i < num_tasks; i++)
+    {
+      sync_data_enqueue_runnable(sync_data, task_array[i]);
+    }
+
   sync_data_join_executors(sync_data);
+  ASSERT_EQ(finished, num_tasks);
+  ASSERT_EQ(sync_data_num_processors(sync_data), 0);
   sync_data_free(sync_data);
-  ASSERT_EQ(schedSingleRan, true);
+
+  free(task_array);
 }
-
-
-#define SCHEDULE_MULTIPLE_NUM 20
-
-bool sched_multi_array[SCHEDULE_MULTIPLE_NUM];
 
 void
 schedule_multiple(void* data)
 {
-  bool* flag = (bool*) data;
-  *flag = true;
+  __sync_add_and_fetch(&finished, 1);
 }
 
-TEST(SchedTask, ScheduleMultiple)
+TEST(SchedTask, ScheduleSingleTask)
 {
-  schedSingleRan = false;
-  sync_data_t sync_data = sync_data_new(SCHEDULE_MULTIPLE_NUM);
-  sync_data_create_executors (sync_data, 1);
+  exec_tester(1, 1, schedule_multiple);
+}
 
-  for (int i = 0; i < SCHEDULE_MULTIPLE_NUM; i++)
-    {
-      sched_task_t stask = stask_new(sync_data);
-      sched_multi_array[i] = false;
-      task_set_func(stask->task, schedule_multiple, &sched_multi_array[i]);
-      
-      sync_data_enqueue_runnable(sync_data, stask);
-    }
+TEST(SchedTask, ScheduleMultipleTasksSingleExecutor)
+{
+  exec_tester(SCHEDULE_MULTIPLE_NUM, 1, schedule_multiple);
+}
+
+TEST(SchedTask, ScheduleMultipleTasksMultipleExecutors)
+{
+  exec_tester(SCHEDULE_MULTIPLE_NUM, 8, schedule_multiple);
+}
+
+void
+preempt_task(void* data)
+{
+  sched_task_t stask = (sched_task_t) data;
+  printf("Before first yield %p %p %p\n", stask, stask->executor, stask->executor->stask->task);
+  task_set_state(stask->task, TASK_TRANSITION_TO_RUNNABLE);
+  stask_yield_to_executor(stask);
+  schedule_multiple(NULL);
+  printf("Before second yield %p %p\n", stask, stask->executor->stask->task);
+  task_set_state(stask->task, TASK_TRANSITION_TO_RUNNABLE);
+  stask_yield_to_executor(stask);
+  printf("After second yield %p %p\n", stask, stask->task->next);
+}
 
 
-  sync_data_join_executors(sync_data);
-  sync_data_free(sync_data);
+TEST(SchedTask, SchedulePreempt1SingleExecutor)
+{
+  exec_tester(1, 1, preempt_task);
+}
 
-  for (int i = 0; i < SCHEDULE_MULTIPLE_NUM; i++)
-    {
-      ASSERT_EQ(sched_multi_array[i], true);
-    }
+// TEST(SchedTask, SchedulePreemptSingleExecutor)
+// {
+//   exec_tester(SCHEDULE_MULTIPLE_NUM, 1, preempt_task);
+// }
+
+TEST(SchedTask, SchedulePreemptMultipleExecutors)
+{
+  exec_tester(SCHEDULE_MULTIPLE_NUM, 8, preempt_task);
 }
 
 
