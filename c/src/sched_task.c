@@ -107,8 +107,8 @@ stask_switch(sched_task_t from, sched_task_t to)
       to->executor = exec;
 
       /* // If this task is to finish, it should come back to this processor. */
-      /* // This decision may be dubious, perhaps it should switch the the */
-      /* // executor proper? */
+      /* // This decision may be dubious, perhaps it should switch to the */
+      /* // executor? */
       /* if (proc->task->state == TASK_TRANSITION_TO_RUNNABLE) */
       /*   { */
       /*     next_proc->task->next = proc->task; */
