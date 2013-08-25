@@ -66,7 +66,7 @@ exec_get_work(executor_t exec, uint32_t attempts)
 
       if (exec_steal(victim, &stask))
         {
-	  assert (stask->task->state == TASK_RUNNABLE);
+          assert (stask->task->state == TASK_RUNNABLE);
           return stask;
         }
     }
@@ -88,8 +88,9 @@ sched_task_t
 get_work (executor_t exec)
 {
   sched_task_t stask;
+  sync_data_t sync_data = exec->stask->sync_data;
 
-  if (sync_data_try_dequeue_runnable(exec->stask->sync_data, exec, &stask))
+  if (sync_data_try_dequeue_runnable(sync_data, exec, &stask))
     {
       return stask;
     }
@@ -104,14 +105,17 @@ get_work (executor_t exec)
       stask = exec_get_work(exec, MAX_ATTEMPTS);
 
       if (stask != NULL)
-	{
-	  return stask;
-            }
+        {
+          return stask;
+        }
 
-      if (!sync_data_wait_for_work (exec->stask->sync_data))
-	{
-	  return NULL;
-	}
+      sync_data_wait_for_work (sync_data);
+
+      if (sync_data_num_processors(sync_data) == 0)
+        {
+          assert (sync_data_num_processors(sync_data) == 0);
+          return NULL;
+        }
     }
 }
 
@@ -121,7 +125,7 @@ exec_step_previous(executor_t exec, sched_task_t ignore_stask)
   sched_task_t null_stask = NULL;
   sched_task_t last_stask;
   __atomic_exchange (&exec->current_stask, &null_stask, &last_stask,
-		     __ATOMIC_SEQ_CST);
+                     __ATOMIC_SEQ_CST);
 
   if (last_stask != ignore_stask && last_stask != NULL)
     {
@@ -184,7 +188,7 @@ executor_run(executor_t exec)
 
   task_set_func_and_run(exec->stask->task, executor_loop, exec);
 
-  assert (false && "executor_run: should never reach this point");  
+  assert (false && "executor_run: should never reach this point");
   return NULL;
 }
 
