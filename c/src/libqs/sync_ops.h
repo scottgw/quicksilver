@@ -118,7 +118,7 @@ sync_data_deregister_task(sync_data_t sync_data);
   \param sync_data global state
   \return the number of registered processors
 */
-uint64_t
+int32_t
 sync_data_num_processors(sync_data_t sync_data);
 
 /*!

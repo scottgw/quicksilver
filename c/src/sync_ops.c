@@ -18,7 +18,7 @@ struct sync_data
 {
   uint32_t max_tasks;
 
-  volatile uint64_t num_processors;
+  volatile int32_t num_processors;
 
   queue_impl_t sleep_list;
   volatile uint64_t num_sleepers;
@@ -245,7 +245,7 @@ sync_data_deregister_task(sync_data_t sync_data)
     }
 }
 
-uint64_t
+int32_t
 sync_data_num_processors(sync_data_t sync_data)
 {
   return sync_data->num_processors;
