@@ -197,17 +197,14 @@ exec_make(sync_data_t sync_data)
 {
   executor_t exec = malloc(sizeof(struct executor));
 
-  exec->stask = stask_new(sync_data);
+  // We don't register this task as it doesn't count towards the global
+  // count of tasks.
+  exec->stask = stask_new_no_register(sync_data);
   exec->current_stask = NULL;
   exec->done = false;
   exec->id = 0;
   exec->backoff_us = 500;
   exec->local_deque = ws_deque_new ();
-
-  // We deregister this task (the registration was implicit in the stask
-  // creation) because executors shouldn't count towards the count of
-  // active tasks in the system.
-  sync_data_deregister_task(sync_data);
 
   return exec;
 }

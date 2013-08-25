@@ -11,6 +11,7 @@ struct sched_task
 {
   struct sched_task * next; // For intrusive allocation in queues.
   task_t task;
+  bool registr;
   sync_data_t sync_data;
   executor_t executor;
 };
@@ -19,6 +20,9 @@ typedef struct sched_task* sched_task_t;
 
 sched_task_t
 stask_new(sync_data_t);
+
+sched_task_t
+stask_new_no_register(sync_data_t sync_data);
 
 void
 stask_free(sched_task_t);

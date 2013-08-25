@@ -7,25 +7,45 @@
 #include "internal/sched_task.h"
 #include "internal/task.h"
 
+static
 sched_task_t
-stask_new(sync_data_t sync_data)
+stask_new_register(sync_data_t sync_data, bool register_task)
 {
   sched_task_t stask = malloc(sizeof(struct sched_task));
   
   stask->task = task_make();
+  stask->registr = register_task;
   stask->sync_data = sync_data;
   stask->executor = NULL;
   stask->next = NULL;
 
-  sync_data_register_task(sync_data);
+  if (register_task)
+    {
+      sync_data_register_task(sync_data);
+    }
 
   return stask;
+}
+
+sched_task_t
+stask_new(sync_data_t sync_data)
+{
+  return stask_new_register(sync_data, true);
+}
+
+sched_task_t
+stask_new_no_register(sync_data_t sync_data)
+{
+  return stask_new_register(sync_data, false);
 }
 
 void
 stask_free(sched_task_t stask)
 {
-  sync_data_deregister_task(stask->sync_data);
+  if (stask->registr)
+    {
+      sync_data_deregister_task(stask->sync_data);
+    }
   task_free(stask->task);
   free(stask);
 }
