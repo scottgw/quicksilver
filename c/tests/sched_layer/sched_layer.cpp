@@ -81,10 +81,10 @@ TEST(SchedTask, SchedulePreempt1SingleExecutor)
   exec_tester(1, 1, preempt_task);
 }
 
-// TEST(SchedTask, SchedulePreemptSingleExecutor)
-// {
-//   exec_tester(SCHEDULE_MULTIPLE_NUM, 1, preempt_task);
-// }
+TEST(SchedTask, SchedulePreemptSingleExecutor)
+{
+  exec_tester(SCHEDULE_MULTIPLE_NUM, 1, preempt_task);
+}
 
 TEST(SchedTask, SchedulePreemptMultipleExecutors)
 {
