@@ -124,7 +124,7 @@ exec_step_previous(executor_t exec, sched_task_t ignore_stask)
 {
   sched_task_t null_stask = NULL;
   sched_task_t last_stask;
-  __atomic_exchange (&exec->current_stask, &null_stask, &last_stask,
+  __atomic_exchange (&exec->prev_stask, &null_stask, &last_stask,
                      __ATOMIC_SEQ_CST);
 
   if (last_stask != ignore_stask && last_stask != NULL)
@@ -145,7 +145,7 @@ switch_to_next_task(executor_t exec)
     {
       DEBUG_LOG(2, "%p is dequeued by executor %p\n", stask, exec);
       stask->executor = exec;
-      exec->current_stask = NULL;
+      exec->prev_stask = NULL;
 
       // If this task is to finish, it should restore this executors context.
       stask->task->next = exec->stask->task;
@@ -204,7 +204,7 @@ exec_make(sync_data_t sync_data)
   // We don't register this task as it doesn't count towards the global
   // count of tasks.
   exec->stask = stask_new_no_register(sync_data);
-  exec->current_stask = NULL;
+  exec->prev_stask = NULL;
   exec->done = false;
   exec->id = 0;
   exec->backoff_us = 500;

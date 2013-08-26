@@ -68,7 +68,7 @@ stask_wrapper(void* data)
 
   stask_step_previous(stask);
   func(real_data);
-  stask->executor->current_stask = stask;
+  stask->executor->prev_stask = stask;
 
   free(sdata);
 }
@@ -131,7 +131,7 @@ stask_switch(sched_task_t from, sched_task_t to)
 {
   assert (from != to);
   executor_t exec = from->executor;
-  exec->current_stask = from;
+  exec->prev_stask = from;
 
   if (to == NULL)
     {

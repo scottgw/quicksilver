@@ -9,7 +9,7 @@ struct executor
 {
   sched_task_t stask;
   volatile bool done;
-  sched_task_t current_stask;
+  sched_task_t prev_stask;
   pthread_t thread;
   int id;
 
