@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "libqs/sync_ops.h"
@@ -50,6 +51,40 @@ stask_free(sched_task_t stask)
   free(stask);
 }
 
+typedef struct {
+  void (*func)(void*);
+  void *data;
+  sched_task_t stask;
+} stask_data;
+
+
+void
+stask_wrapper(void* data)
+{
+  stask_data *sdata = (stask_data*)data;
+  void (*func)(void*) = sdata->func;
+  void *real_data = sdata->data;
+  sched_task_t stask = sdata->stask;
+
+  stask_step_previous(stask);
+  func(real_data);
+  stask->executor->current_stask = stask;
+
+  free(sdata);
+}
+
+/*!
+  Set the sched_task to run a particular function.
+*/
+void
+stask_set_func(sched_task_t stask, void (*f)(void*), void* data)
+{
+  stask_data* sdata = malloc(sizeof(stask_data));
+  sdata->func = f;
+  sdata->data = data;
+  sdata->stask = stask;
+  task_set_func(stask->task, stask_wrapper, sdata);
+}
 
 /*!
   Look at the previous processor and runs proc_step_state on it

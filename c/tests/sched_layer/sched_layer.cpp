@@ -20,7 +20,7 @@ exec_tester(int num_tasks, int num_execs, void (*f)(void*))
     {
       sched_task_t stask = stask_new(sync_data);
       task_array[i] = stask;
-      task_set_func(stask->task, f, stask);
+      stask_set_func(stask, f, stask);
     }
 
   sync_data_create_executors (sync_data, num_execs);

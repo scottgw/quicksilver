@@ -28,6 +28,12 @@ void
 stask_free(sched_task_t);
 
 /*!
+  Set the sched_task to run a particular function.
+*/
+void
+stask_set_func(sched_task_t stask, void (*f)(void*), void* data);
+
+/*!
   Step the state of the task.
   This is used when the task is in a transitional state
   and must be moved to its final state.
