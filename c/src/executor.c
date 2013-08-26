@@ -145,7 +145,7 @@ switch_to_next_task(executor_t exec)
     {
       DEBUG_LOG(2, "%p is dequeued by executor %p\n", stask, exec);
       stask->executor = exec;
-      exec->current_stask = stask;
+      exec->current_stask = NULL;
 
       // If this task is to finish, it should restore this executors context.
       stask->task->next = exec->stask->task;
