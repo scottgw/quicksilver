@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -188,5 +189,6 @@ ws_deque_steal(ws_deque_t wsd, void** data)
     }
 
   /* printf("<<< %p (stolen)\n", *data); */
+  assert (*data != NULL);
   return true;
 }

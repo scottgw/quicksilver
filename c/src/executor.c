@@ -92,11 +92,13 @@ get_work (executor_t exec)
 
   if (sync_data_try_dequeue_runnable(sync_data, exec, &stask))
     {
+      assert (stask != NULL);
       return stask;
     }
 
   if (exec_steal(exec, &stask))
     {
+      assert (stask != NULL);
       return stask;
     }
 

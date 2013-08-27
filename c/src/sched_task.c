@@ -103,6 +103,7 @@ stask_step_previous(sched_task_t stask)
 void
 stask_step_state(sched_task_t stask, executor_t exec)
 {
+  assert(stask != NULL);
   assert(stask->task->state >= TASK_TRANSITION_TO_WAITING);
 
   switch (stask->task->state)
@@ -190,6 +191,7 @@ stask_yield_to_executor(sched_task_t stask)
 void
 stask_wake(sched_task_t stask, executor_t exec)
 { 
+  assert (stask != NULL);
   while(task_get_state(stask->task) != TASK_WAITING);
   task_set_state(stask->task, TASK_RUNNABLE);
   exec_push(exec, stask);
