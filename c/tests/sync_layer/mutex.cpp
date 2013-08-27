@@ -1,11 +1,14 @@
 #include <gtest/gtest.h>
+
 #include <libqs/sync_ops.h>
 #include <internal/sched_task.h>
-#include <internal/executor.h>
-#include <internal/task.h>
+#include <internal/task_mutex.h>
 
-#define SCHEDULE_MULTIPLE_NUM 100
+#define SCHEDULE_MULTIPLE_NUM 32
+#define NUM_ITERS 20000
+
 int32_t finished;
+task_mutex_t mutex;
 
 void
 exec_tester(int num_tasks, int num_execs, void (*f)(void*))
@@ -13,6 +16,8 @@ exec_tester(int num_tasks, int num_execs, void (*f)(void*))
   sync_data_t sync_data = sync_data_new(num_tasks); 
   sched_task_t *task_array = 
     (sched_task_t*) malloc(num_tasks * sizeof(sched_task_t));
+
+  mutex = task_mutex_new();
 
   finished = 0;
 
@@ -33,7 +38,7 @@ exec_tester(int num_tasks, int num_execs, void (*f)(void*))
     }
 
   sync_data_join_executors(sync_data);
-  ASSERT_EQ(finished, num_tasks);
+  ASSERT_EQ(finished, num_tasks * NUM_ITERS);
   ASSERT_EQ(sync_data_num_processors(sync_data), 0);
   sync_data_free(sync_data);
 
@@ -41,54 +46,32 @@ exec_tester(int num_tasks, int num_execs, void (*f)(void*))
 }
 
 void
-schedule_multiple(void* data)
-{
-  __sync_add_and_fetch(&finished, 1);
-}
-
-TEST(SchedTask, ScheduleSingleTask)
-{
-  exec_tester(1, 1, schedule_multiple);
-}
-
-TEST(SchedTask, ScheduleMultipleTasksSingleExecutor)
-{
-  exec_tester(SCHEDULE_MULTIPLE_NUM, 1, schedule_multiple);
-}
-
-TEST(SchedTask, ScheduleMultipleTasksMultipleExecutors)
-{
-  exec_tester(SCHEDULE_MULTIPLE_NUM, 8, schedule_multiple);
-}
-
-void
-preempt_task(void* data)
+mutex_task(void* data)
 {
   sched_task_t stask = (sched_task_t) data;
-  printf("Before first yield %p %p %p\n", stask, stask->executor, stask->executor->stask->task);
-  task_set_state(stask->task, TASK_TRANSITION_TO_RUNNABLE);
-  stask_yield_to_executor(stask);
-  schedule_multiple(NULL);
-  printf("Before second yield %p %p\n", stask, stask->executor->stask->task);
-  task_set_state(stask->task, TASK_TRANSITION_TO_RUNNABLE);
-  stask_yield_to_executor(stask);
-  printf("After second yield %p %p\n", stask, stask->task->next);
+
+  for (int i = 0; i < NUM_ITERS; i++)
+    {
+      task_mutex_lock(mutex, stask);
+      finished++;
+      task_mutex_unlock(mutex, stask);
+    }
 }
 
 
-TEST(SchedTask, SchedulePreempt1SingleExecutor)
+TEST(Mutex, Task1SingleExecutor)
 {
-  exec_tester(1, 1, preempt_task);
+  exec_tester(1, 1, mutex_task);
 }
 
-TEST(SchedTask, SchedulePreemptSingleExecutor)
+TEST(Mutex, TaskSingleExecutor)
 {
-  exec_tester(SCHEDULE_MULTIPLE_NUM, 1, preempt_task);
+  exec_tester(SCHEDULE_MULTIPLE_NUM, 1, mutex_task);
 }
 
-TEST(SchedTask, SchedulePreemptMultipleExecutors)
+TEST(Mutex, TaskMultipleExecutors)
 {
-  exec_tester(SCHEDULE_MULTIPLE_NUM, 8, preempt_task);
+  exec_tester(SCHEDULE_MULTIPLE_NUM, 4, mutex_task);
 }
 
 
