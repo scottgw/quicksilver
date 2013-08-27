@@ -43,7 +43,14 @@ exec_push (executor_t exec, sched_task_t stask)
 bool
 exec_pop (executor_t exec, sched_task_t *stask)
 {
-  return ws_deque_pop_bottom(exec->local_deque, (void**)stask);
+  if (ws_deque_size(exec->local_deque) > 0)
+    {
+      return ws_deque_pop_bottom(exec->local_deque, (void**)stask);
+    }
+  else
+    {
+      return false;
+    }
 }
 
 sched_task_t
@@ -84,31 +91,30 @@ exec_get_work(executor_t exec, uint32_t attempts)
 
 
 static
-sched_task_t
-get_work (executor_t exec)
+bool
+get_work (executor_t exec, sched_task_t *result)
 {
-  sched_task_t stask;
   sync_data_t sync_data = exec->stask->sync_data;
 
-  if (sync_data_try_dequeue_runnable(sync_data, exec, &stask))
+  if (sync_data_try_dequeue_runnable(sync_data, exec, result))
     {
-      assert (stask != NULL);
-      return stask;
+      assert (*result != NULL);
+      return true;
     }
 
-  if (exec_steal(exec, &stask))
+  if (exec_pop(exec, result))
     {
-      assert (stask != NULL);
-      return stask;
+      assert (*result != NULL);
+      return true;
     }
 
   while (true)
     {
-      stask = exec_get_work(exec, MAX_ATTEMPTS);
+      *result = exec_get_work(exec, MAX_ATTEMPTS);
 
-      if (stask != NULL)
+      if (*result != NULL)
         {
-          return stask;
+          return true;
         }
 
       sync_data_wait_for_work (sync_data);
@@ -116,7 +122,7 @@ get_work (executor_t exec)
       if (sync_data_num_processors(sync_data) == 0)
         {
           assert (sync_data_num_processors(sync_data) == 0);
-          return NULL;
+          return false;
         }
     }
 }
@@ -141,9 +147,9 @@ switch_to_next_task(executor_t exec)
 {
   // take a new piece of work.
   BINARY_LOG(2, SYNCOPS_DEQUEUE_START, exec, NULL);
-  sched_task_t stask = get_work (exec);
+  sched_task_t stask = NULL;
   BINARY_LOG(2, SYNCOPS_DEQUEUE_END, exec, NULL);
-  if (stask != NULL)
+  if (get_work (exec, &stask))
     {
       DEBUG_LOG(2, "%p is dequeued by executor %p\n", stask, exec);
       stask->executor = exec;
