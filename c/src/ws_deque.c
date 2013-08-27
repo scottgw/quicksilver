@@ -43,7 +43,7 @@ circ_array_size(circ_array_t c_array)
   return c_array->size;
 }
 
-
+static
 void*
 circ_array_get(circ_array_t c_array, int64_t i)
 {
