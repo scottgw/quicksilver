@@ -16,7 +16,7 @@ ws_pusher(void* data)
 
   for (int i = 0; i < POPS * POPPERS; i++)
     {
-      ws_deque_push_bottom(wsd, (void*)i);
+      ws_deque_push_bottom(wsd, data);
     }
 }
 
@@ -26,16 +26,14 @@ ws_pushpopper(void* data)
   ws_deque_t wsd = (ws_deque_t) data;
   pthread_barrier_wait(&barrier);
 
-  int64_t tmp = 0;
-
   for (int i = 0; i < POPS * (POPPERS + 1); i++)
     {
-      ws_deque_push_bottom(wsd, (void*)i);
+      ws_deque_push_bottom(wsd, &data);
     }
 
   for (int i = 0; i < POPS; i++)
     {
-      while (!ws_deque_steal(wsd, (void**) &tmp));
+      while (!ws_deque_steal(wsd, &data));
     }
 }
 
@@ -43,16 +41,16 @@ void*
 ws_stealer(void* data)
 {
   ws_deque_t wsd = (ws_deque_t) data;
-  int64_t result;
+
   pthread_barrier_wait(&barrier);
 
   for (int i = 0; i < POPS; i++)
     {
-      while (!ws_deque_steal(wsd, (void**) &result));
+      while (!ws_deque_steal(wsd, &data));
     }
 }
 
-TEST(Data, WorkStealingPushPopSteal)
+TEST(Data, WorkStealingPushSteal)
 {
   pthread_t threads[POPPERS + 1];
   volatile ws_deque_t wsd;
@@ -60,7 +58,7 @@ TEST(Data, WorkStealingPushPopSteal)
   pthread_barrier_init(&barrier, NULL, POPPERS + 1);
   
   {
-    pthread_create(&threads[POPPERS], NULL, ws_pushpopper, wsd);
+    pthread_create(&threads[POPPERS], NULL, ws_pusher, wsd);
   }
 
   for (int i = 0; i < POPPERS; i++)
@@ -77,7 +75,7 @@ TEST(Data, WorkStealingPushPopSteal)
 }
 
 
-TEST(Data, WorkStealingPushSteal)
+TEST(Data, WorkStealingPushPopSteal)
 {
   pthread_t threads[POPPERS + 1];
   volatile ws_deque_t wsd;
@@ -85,7 +83,7 @@ TEST(Data, WorkStealingPushSteal)
   pthread_barrier_init(&barrier, NULL, POPPERS + 1);
   
   {
-    pthread_create(&threads[POPPERS], NULL, ws_pusher, wsd);
+    pthread_create(&threads[POPPERS], NULL, ws_pushpopper, wsd);
   }
 
   for (int i = 0; i < POPPERS; i++)
