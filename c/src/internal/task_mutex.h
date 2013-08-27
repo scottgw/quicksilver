@@ -3,6 +3,10 @@
 
 #include "../libqs/types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 task_mutex_t
 task_mutex_new();
 
@@ -17,5 +21,9 @@ task_mutex_lock(task_mutex_t mutex, sched_task_t stask);
 
 void
 task_mutex_unlock(task_mutex_t mutex, sched_task_t stask);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _TASK_MUTEX_H
