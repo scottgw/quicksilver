@@ -4,13 +4,14 @@
 #include <internal/executor.h>
 #include <internal/task.h>
 
-#define SCHEDULE_MULTIPLE_NUM 100
+#define SCHEDULE_MULTIPLE_NUM 30000
 int32_t finished;
 
 void
 exec_tester(int num_tasks, int num_execs, void (*f)(void*))
 {
-  sync_data_t sync_data = sync_data_new(num_tasks); 
+  // volatile means we can ask gdb about it later
+  volatile sync_data_t sync_data = sync_data_new(num_tasks);
   sched_task_t *task_array = 
     (sched_task_t*) malloc(num_tasks * sizeof(sched_task_t));
 
@@ -29,7 +30,8 @@ exec_tester(int num_tasks, int num_execs, void (*f)(void*))
 
   for (int i = 0; i < num_tasks; i++)
     {
-      sync_data_enqueue_runnable(sync_data, task_array[i]);
+      sched_task_t stask = task_array[i];
+      sync_data_enqueue_runnable(sync_data, stask);
     }
 
   sync_data_join_executors(sync_data);
@@ -65,14 +67,11 @@ void
 preempt_task(void* data)
 {
   sched_task_t stask = (sched_task_t) data;
-  printf("Before first yield %p %p %p\n", stask, stask->executor, stask->executor->stask->task);
   task_set_state(stask->task, TASK_TRANSITION_TO_RUNNABLE);
   stask_yield_to_executor(stask);
   schedule_multiple(NULL);
-  printf("Before second yield %p %p\n", stask, stask->executor->stask->task);
   task_set_state(stask->task, TASK_TRANSITION_TO_RUNNABLE);
   stask_yield_to_executor(stask);
-  printf("After second yield %p %p\n", stask, stask->task->next);
 }
 
 
