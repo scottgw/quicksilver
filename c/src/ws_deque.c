@@ -69,7 +69,7 @@ circ_array_grow(circ_array_t c_array, int64_t bottom, int64_t top)
 {
   circ_array_t new_c_array = circ_array_new(c_array->log_size + 1);
   
-  for(int64_t i = bottom; i < top; i++)
+  for(int64_t i = top; i < bottom; i++)
     {
       circ_array_put(new_c_array, i, circ_array_get(c_array, i));
     }
@@ -112,6 +112,8 @@ ws_deque_size(ws_deque_t wsd)
 void
 ws_deque_push_bottom(ws_deque_t wsd, void* data)
 {
+  assert(data != NULL);
+
   size_t b;
   size_t t;
   circ_array_t c_array;
@@ -120,7 +122,7 @@ ws_deque_push_bottom(ws_deque_t wsd, void* data)
   __atomic_load(&wsd->top, &t, __ATOMIC_ACQUIRE);
   __atomic_load(&wsd->c_array, &c_array, __ATOMIC_RELAXED);
 
-  if (b - t >= circ_array_size(c_array) - 1)
+  if (b - t > circ_array_size(c_array) - 1)
     {
       c_array = circ_array_grow(c_array, b, t);
       wsd->c_array = c_array;
@@ -163,13 +165,17 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
             }
           else
             {
+              assert(temp_data != NULL);
               *data = temp_data;
               ret = true;
             }
+
           __atomic_store_8(&wsd->bottom, b + 1, __ATOMIC_RELAXED);
         }
       else
         {
+          assert(temp_data != NULL);
+          *data = temp_data;
           ret = true;
         }
     }
@@ -189,11 +195,11 @@ ws_deque_steal(ws_deque_t wsd, void** data)
   size_t b;
   size_t t;
 
-  __atomic_load(&wsd->bottom, &b, __ATOMIC_ACQUIRE);
-  __atomic_thread_fence(__ATOMIC_SEQ_CST);
   __atomic_load(&wsd->top, &t, __ATOMIC_ACQUIRE);
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+  __atomic_load(&wsd->bottom, &b, __ATOMIC_ACQUIRE);
 
-  bool ret = false;
+  bool ret = false;     
 
   if (t < b)
     {
@@ -210,6 +216,7 @@ ws_deque_steal(ws_deque_t wsd, void** data)
         }
       else
         {
+          assert(temp_data != NULL);
           ret = true;
           *data = temp_data;
         }
