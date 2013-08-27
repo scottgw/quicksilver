@@ -4,7 +4,11 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "libqs/../libqs/types.h"
+#include "libqs/types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 ws_deque_t
 ws_deque_new();
@@ -23,5 +27,9 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data);
 
 bool
 ws_deque_steal(ws_deque_t wsd, void** data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _WS_DEQUE_H
