@@ -3,7 +3,6 @@
 
 #include "internal/debug_log.h"
 #include "internal/mpscq.h"
-#include "internal/queue_impl.h"
 #include "internal/sched_task.h"
 #include "internal/task.h"
 #include "internal/task_mutex.h"
