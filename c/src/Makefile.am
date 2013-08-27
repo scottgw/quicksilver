@@ -42,9 +42,9 @@ pkginclude_HEADERS = \
 	libqs/sync_ops.h \
 	libqs/types.h
 
-FLAGS = -pthread -U_FORTIFY_SOURCE -DENABLE_LOG\
+FLAGS = -pthread -U_FORTIFY_SOURCE -DENABLE_LOG \
 	-Wall -Wno-unused-value -Wno-unused-variable -Werror
-libqs_la_CFLAGS = -std=c11 $(FLAGS) $(DEPS_CFLAGS)
+libqs_la_CFLAGS = -std=gnu99 $(FLAGS) $(DEPS_CFLAGS)
 libqs_la_CXXFLAGS = -std=c++11 $(FLAGS) $(DEPS_CFLAGS)
 
 # TODO: add dependencies for (?) LIBS=rt qs lfds :libffi.so.6 tbb
