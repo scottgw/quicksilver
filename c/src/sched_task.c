@@ -176,7 +176,7 @@ stask_yield_to_executor(sched_task_t stask)
       goto yield;
     }
 
-  if (exec_steal(exec, &next_stask))
+  if (exec_pop(exec, &next_stask))
     {
       goto yield;
       /* printf("%p stole %p\n", proc, next_proc); */
