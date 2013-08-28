@@ -7,9 +7,6 @@
 #include "internal/task.h"
 #include "internal/task_mutex.h"
 
-
-#define INIT_WAIT_QUEUE_SIZE 16000
-
 struct task_mutex 
 {
   uint32_t count;
@@ -40,7 +37,7 @@ task_mutex_free(task_mutex_t mutex)
 sched_task_t
 task_mutex_owner(task_mutex_t mutex)
 {
-  return NULL; //  mutex->owner;
+  return mutex->owner;
 }
 
 void
