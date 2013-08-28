@@ -9,7 +9,7 @@ extern "C" {
 
 struct sched_task
 {
-  struct sched_task * next; // For intrusive allocation in queues.
+  struct sched_task * volatile next; // For intrusive allocation in queues.
   task_t task;
   bool registr;
   sync_data_t sync_data;
