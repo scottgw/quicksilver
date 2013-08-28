@@ -1,7 +1,15 @@
-TESTS = task_layer_test data_layer_test sched_layer_test sync_data_test stask_test executor_test mutex_test
+TESTS = task_layer_test\
+	mpscq_test\
+	work_stealing_q_test\
+	sched_layer_test\
+	sync_data_test\
+	stask_test\
+	executor_test\
+	mutex_test
 
 task_layer_test_SOURCES = task_layer/task_layer.cpp
-data_layer_test_SOURCES = data_layer/work_stealing.cpp
+mpscq_test_SOURCES = data_layer/mpscq.cpp
+work_stealing_q_test_SOURCES = data_layer/work_stealing.cpp
 sched_layer_test_SOURCES = sched_layer/sched_layer.cpp
 sync_data_test_SOURCES = sched_layer/sync_data.cpp
 stask_test_SOURCES = sched_layer/stask.cpp
