@@ -44,6 +44,7 @@ task_mutex_new()
 
   mutex->count = 0;
   mutex->owner = NULL;
+
   mutex->inner = 0; // (mutex_inner*) malloc(sizeof(mutex_inner));
   /* mutex->inner->u = 0; */
 
