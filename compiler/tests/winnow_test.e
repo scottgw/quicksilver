@@ -176,19 +176,19 @@ module Winnow_Test
         separate worker
           do
             sep_val_points := worker.val_points
-            separate sep_val_points
-              do
-                from jj := 0
-                until jj >= sep_val_points.count
-                loop
-                  create val_pt.make (sep_val_points.item (jj).value,
-                                      sep_val_points.item (jj).x,
-                                      sep_val_points.item (jj).y)
-                  val_points.put (j, val_pt)
-                  j := j + 1
-                  jj := jj + 1
-                end
-              end
+          end
+        separate sep_val_points
+          do
+            from jj := 0
+            until jj >= sep_val_points.count
+            loop
+              create val_pt.make (sep_val_points.item (jj).value,
+                                  sep_val_points.item (jj).x,
+                                  sep_val_points.item (jj).y)
+              val_points.put (j, val_pt)
+              j := j + 1
+              jj := jj + 1
+            end
           end
         i := i + 1
         shutdown worker  

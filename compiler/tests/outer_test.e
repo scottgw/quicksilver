@@ -85,16 +85,16 @@ module Outer_Test
       separate worker
         do
           from i := worker.start
-          until i >= worker.final
+          until True -- i >= worker.final
           loop
-            from j := 0
-            until j >= nelts
-            loop
-              result_matrix.put (j, i, worker.matrix.item (j, i))
-              j := j + 1
-            end
-            result_vector.put (i, worker.vector.item (i))
-            i := i + 1
+--            from j := 0
+--            until j >= nelts
+--            loop
+--              result_matrix.put (j, i, worker.matrix.item (j, i))
+--              j := j + 1
+--            end
+--            result_vector.put (i, worker.vector.item (i))
+--            i := i + 1
           end
         end
 --      shutdown worker
