@@ -4,6 +4,7 @@
 
 #include "internal/debug_log.h"
 #include "internal/mpscq.h"
+#include "internal/queue_impl.h"
 #include "internal/sched_task.h"
 #include "internal/task.h"
 #include "internal/task_mutex.h"
@@ -31,10 +32,12 @@ struct task_mutex
   sched_task_t owner;
   /* struct mpscq_node_t stub; */
 
-  /* volatile mutex_inner *inner; */
-  int inner;
+  volatile mutex_inner *inner;
+  /* int inner; */
 
-  mpscq_t wait_queue;
+
+  queue_impl_t wait_queue;
+  /* mpscq_t wait_queue; */
 };
 
 task_mutex_t
@@ -45,10 +48,12 @@ task_mutex_new()
   mutex->count = 0;
   mutex->owner = NULL;
 
-  mutex->inner = 0; // (mutex_inner*) malloc(sizeof(mutex_inner));
-  /* mutex->inner->u = 0; */
+  /* mutex->inner = 0; // (mutex_inner*) malloc(sizeof(mutex_inner)); */
+  mutex->inner = (mutex_inner*) malloc(sizeof(mutex_inner));
+  mutex->inner->u = 0;
 
-  mpscq_create(&mutex->wait_queue, NULL); // mutex->stub);
+  /* mpscq_create(&mutex->wait_queue, NULL); // mutex->stub); */
+  mutex->wait_queue = queue_impl_new(20000);
 
   return mutex;
 }
@@ -56,7 +61,7 @@ task_mutex_new()
 void
 task_mutex_free(task_mutex_t mutex)
 {
-  /* free ((void*)mutex->inner); */
+  free ((void*)mutex->inner);
   free (mutex);
 }
 
@@ -67,96 +72,19 @@ task_mutex_owner(task_mutex_t mutex)
 }
 
 
-void
-task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
-{
-  int c;
-
-  for (int i = 0; i < 100; i++)
-    {
-      c = 0;
-      __atomic_compare_exchange_4(&mutex->inner, &c, 1,
-                                  false, __ATOMIC_SEQ_CST,
-                                  __ATOMIC_SEQ_CST);
-
-      if(!c)
-        {
-          return;
-        }
-
-      cpu_relax();
-    }
-
-  if (c == 1)
-    {
-      c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST);
-    }
-
-  while (c)
-    {
-      // set the state to locked and contended, and sleep if it WAS locked
-      // before the exchange.
-      if(__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2)
-        {
-          task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
-          mpscq_push(&mutex->wait_queue, stask);
-          stask_yield_to_executor(stask);
-        }
-      c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST);
-    }
-
-  /* mutex->owner = stask; */
-}
-
-void
-task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
-{
-  if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2)
-    {
-      __atomic_store_4(&mutex->inner, 0, __ATOMIC_SEQ_CST);
-    }
-  else if (__atomic_exchange_4(&mutex->inner, 0, __ATOMIC_SEQ_CST) == 1)
-    {
-      return;
-    }
-
-
-  for (int i = 0; i < 200; i++)
-    {
-      if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST)) 
-        {
-          int old = 1;
-          __atomic_compare_exchange_4(&mutex->inner, &old, 2,
-                                      false, __ATOMIC_SEQ_CST,
-                                      __ATOMIC_SEQ_CST);
-          if (old)
-            {
-              return;
-            }
-          cpu_relax();
-        }
-    }
-
-  {
-    // pop a task if it exists, and resume it.
-    sched_task_t other_stask;
-    other_stask = mpscq_pop(&mutex->wait_queue);
-    if (other_stask != 0)
-      {
-        stask_wake(other_stask, stask->executor);
-      }
-  }
-
-  return;
-}
-
-
 /* void */
 /* task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask) */
 /* { */
+/*   int c; */
+
 /*   for (int i = 0; i < 100; i++) */
 /*     { */
-/*       if (__atomic_exchange_1(&mutex->inner->b.locked, 1, __ATOMIC_SEQ_CST) == 0) */
+/*       c = 0; */
+/*       __atomic_compare_exchange_4(&mutex->inner, &c, 1, */
+/*                                   false, __ATOMIC_SEQ_CST, */
+/*                                   __ATOMIC_SEQ_CST); */
+
+/*       if(!c) */
 /*         { */
 /*           return; */
 /*         } */
@@ -164,16 +92,23 @@ task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
 /*       cpu_relax(); */
 /*     } */
 
-/*   while (__atomic_exchange_4(&mutex->inner->u, 257, __ATOMIC_SEQ_CST) & 1) */
+/*   if (c == 1) */
+/*     { */
+/*       c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST); */
+/*     } */
+
+/*   while (c) */
 /*     { */
 /*       // set the state to locked and contended, and sleep if it WAS locked */
 /*       // before the exchange. */
-/*       if(mutex->inner->u == 257) */
+/*       if(__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2) */
 /*         { */
 /*           task_set_state(stask->task, TASK_TRANSITION_TO_WAITING); */
-/*           mpscq_push(&mutex->wait_queue, stask); */
+/*           /\* mpscq_push(&mutex->wait_queue, stask); *\/ */
+/*           queue_impl_enqueue(mutex->wait_queue, stask); */
 /*           stask_yield_to_executor(stask); */
 /*         } */
+/*       c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST); */
 /*     } */
 
 /*   /\* mutex->owner = stask; *\/ */
@@ -182,43 +117,38 @@ task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
 /* void */
 /* task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask) */
 /* { */
-/*   /\* assert(mutex->owner == stask); *\/ */
-/*   /\* assert(mutex->count > 0); *\/ */
-
-/*   unsigned expected = 1; */
-
-/*   if ((mutex->inner->u == 1) && */
-/*       (__atomic_compare_exchange_4(&mutex->inner->u, &expected, 0, */
-/*                                    false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))) */
+/*   if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2) */
 /*     { */
-/*       // if it was locked (but not contended), then try to switch it to unlocked. */
-/*       // If it worked, then return. */
+/*       __atomic_store_4(&mutex->inner, 0, __ATOMIC_SEQ_CST); */
+/*     } */
+/*   else if (__atomic_exchange_4(&mutex->inner, 0, __ATOMIC_SEQ_CST) == 1) */
+/*     { */
 /*       return; */
 /*     } */
 
-/*   // Set it to unlocked, leaving the contention flag alone. */
-/*   __atomic_store_1(&mutex->inner->b.locked, 0, __ATOMIC_SEQ_CST); */
 
-/*   __atomic_thread_fence(__ATOMIC_SEQ_CST); */
-
-/*   for (int i = 0; i < 100; i++) */
+/*   for (int i = 0; i < 200; i++) */
 /*     { */
-/*       // if another thread locked it, we're done. */
-/*       if (__atomic_load_1(&mutex->inner->b.locked, __ATOMIC_SEQ_CST)) */
+/*       if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST)) */
 /*         { */
-/*           return; */
+/*           int old = 1; */
+/*           __atomic_compare_exchange_4(&mutex->inner, &old, 2, */
+/*                                       false, __ATOMIC_SEQ_CST, */
+/*                                       __ATOMIC_SEQ_CST); */
+/*           if (old) */
+/*             { */
+/*               return; */
+/*             } */
+/*           cpu_relax(); */
 /*         } */
-/*       cpu_relax(); */
 /*     } */
 
-/*   // If no other thread tried, then its uncontended. */
-/*   __atomic_store_1(&mutex->inner->b.contended, 0, __ATOMIC_SEQ_CST); */
-  
 /*   { */
 /*     // pop a task if it exists, and resume it. */
 /*     sched_task_t other_stask; */
-/*     other_stask = mpscq_pop(&mutex->wait_queue); */
-/*     if (other_stask != 0) */
+/*     /\* other_stask = mpscq_pop(&mutex->wait_queue); *\/ */
+/*     /\* if (other_stask != 0) *\/ */
+/*     if (queue_impl_dequeue(mutex->wait_queue, (void**)&other_stask)) */
 /*       { */
 /*         stask_wake(other_stask, stask->executor); */
 /*       } */
@@ -226,3 +156,81 @@ task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
 
 /*   return; */
 /* } */
+
+
+void
+task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
+{
+  for (int i = 0; i < 100; i++)
+    {
+      if (__atomic_exchange_1(&mutex->inner->b.locked, 1, __ATOMIC_SEQ_CST) == 0)
+        {
+          return;
+        }
+
+      cpu_relax();
+    }
+
+  while (__atomic_exchange_4(&mutex->inner->u, 257, __ATOMIC_SEQ_CST) & 1)
+    {
+      // set the state to locked and contended, and sleep if it WAS locked
+      // before the exchange.
+      if(mutex->inner->u == 257)
+        {
+          task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
+          queue_impl_enqueue(mutex->wait_queue, stask);
+          stask_yield_to_executor(stask);
+        }
+    }
+
+  /* mutex->owner = stask; */
+}
+
+void
+task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
+{
+  /* assert(mutex->owner == stask); */
+  /* assert(mutex->count > 0); */
+
+  unsigned expected = 1;
+
+  if ((mutex->inner->u == 1) &&
+      (__atomic_compare_exchange_4(&mutex->inner->u, &expected, 0,
+                                   false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)))
+    {
+      // if it was locked (but not contended), then try to switch it to unlocked.
+      // If it worked, then return.
+      return;
+    }
+
+  // Set it to unlocked, leaving the contention flag alone.
+  __atomic_store_1(&mutex->inner->b.locked, 0, __ATOMIC_SEQ_CST);
+
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+
+  for (int i = 0; i < 100; i++)
+    {
+      // if another thread locked it, we're done.
+      if (__atomic_load_1(&mutex->inner->b.locked, __ATOMIC_SEQ_CST))
+        {
+          return;
+        }
+      cpu_relax();
+    }
+
+  // If no other thread tried, then its uncontended.
+  __atomic_store_1(&mutex->inner->b.contended, 0, __ATOMIC_SEQ_CST);
+  
+  {
+    // pop a task if it exists, and resume it.
+    sched_task_t other_stask;
+    /* other_stask = mpscq_pop(&mutex->wait_queue); */
+    /* if (other_stask != 0) */
+    if (queue_impl_dequeue(mutex->wait_queue, (void**)&other_stask))
+      {
+        stask_wake(other_stask, stask->executor);
+      }
+  }
+
+  return;
+}
