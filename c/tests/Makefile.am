@@ -1,6 +1,7 @@
 TESTS = task_layer_test\
 	mpscq_test\
 	work_stealing_q_test\
+	wake_test\
 	sched_layer_test\
 	sync_data_test\
 	stask_test\
@@ -9,6 +10,7 @@ TESTS = task_layer_test\
 
 task_layer_test_SOURCES = task_layer/task_layer.cpp
 mpscq_test_SOURCES = data_layer/mpscq.cpp
+wake_test_SOURCES = sched_layer/wake.cpp
 work_stealing_q_test_SOURCES = data_layer/work_stealing.cpp
 sched_layer_test_SOURCES = sched_layer/sched_layer.cpp
 sync_data_test_SOURCES = sched_layer/sync_data.cpp
