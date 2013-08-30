@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/sdt.h>
 
 #include "internal/ws_deque.h"
 
@@ -125,7 +126,7 @@ ws_deque_push_bottom(ws_deque_t wsd, void* data)
   if (b - t > circ_array_size(c_array) - 1)
     {
       c_array = circ_array_grow(c_array, b, t);
-      wsd->c_array = c_array;
+      __atomic_store(&wsd->c_array, &c_array, __ATOMIC_SEQ_CST);
     }
   circ_array_put(c_array, b, data);
 
@@ -192,6 +193,7 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
 bool
 ws_deque_steal(ws_deque_t wsd, void** data)
 {
+  DTRACE_PROBE(qs, ws_deque_steal_start);
   size_t b;
   size_t t;
 
@@ -222,5 +224,6 @@ ws_deque_steal(ws_deque_t wsd, void** data)
         }
     }
 
+  DTRACE_PROBE(qs, ws_deque_steal_return);
   return ret;
 }
