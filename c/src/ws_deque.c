@@ -225,6 +225,11 @@ ws_deque_steal(ws_deque_t wsd, void** data)
         }
     }
 
+  if (!ret)
+    {
+      QS_WS_DEQUE_STEAL_FAIL();
+    }
+
   QS_WS_DEQUE_STEAL_END();
   return ret;
 }
