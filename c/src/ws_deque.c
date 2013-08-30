@@ -1,8 +1,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <sys/sdt.h>
 
+#include "trace.h"
 #include "internal/ws_deque.h"
 
 struct circ_array
@@ -193,6 +193,7 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
 bool
 ws_deque_steal(ws_deque_t wsd, void** data)
 {
+  QS_WS_DEQUE_STEAL_START();
   DTRACE_PROBE(qs, ws_deque_steal_start);
   size_t b;
   size_t t;
@@ -224,6 +225,6 @@ ws_deque_steal(ws_deque_t wsd, void** data)
         }
     }
 
-  DTRACE_PROBE(qs, ws_deque_steal_return);
+  QS_WS_DEQUE_STEAL_END();
   return ret;
 }
