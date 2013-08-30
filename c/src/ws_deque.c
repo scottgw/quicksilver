@@ -126,7 +126,7 @@ ws_deque_push_bottom(ws_deque_t wsd, void* data)
   if (b - t > circ_array_size(c_array) - 1)
     {
       c_array = circ_array_grow(c_array, b, t);
-      wsd->c_array = c_array;
+      __atomic_store(&wsd->c_array, &c_array, __ATOMIC_SEQ_CST);
     }
   circ_array_put(c_array, b, data);
 
