@@ -12,7 +12,7 @@ struct task_mutex
   uint32_t count;
   sched_task_t owner;
 
-  volatile int inner;
+  volatile int32_t inner;
 
   queue_impl_t wait_queue;
 };
@@ -40,7 +40,6 @@ task_mutex_owner(task_mutex_t mutex)
 {
   return mutex->owner;
 }
-
 
 void
 task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
@@ -78,7 +77,7 @@ task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
       c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST);
     }
 
-  /* mutex->owner = stask; */
+  mutex->owner = stask;
 }
 
 void
@@ -109,15 +108,24 @@ task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
         }
     }
 
+
   {
     // pop a task if it exists, and resume it.
     sched_task_t other_stask;
-
-    if (queue_impl_dequeue(mutex->wait_queue, (void**)&other_stask))
+    // FIXME: this is a terrible hack that greatly reduces a
+    // datarace, but doesn't completely solve it.
+    // 
+    // Once in a while there will be a straggler left in the wait queue.
+    for (int i = 0; i < 1024; i++)
       {
-        stask_wake(other_stask, stask->executor);
+        if (queue_impl_dequeue(mutex->wait_queue, (void**)&other_stask))
+          {
+            stask_wake(other_stask, stask->executor);
+            return;
+          }
       }
   }
 
   return;
 }
+
