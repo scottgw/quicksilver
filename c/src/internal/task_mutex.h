@@ -11,7 +11,7 @@ task_mutex_t
 task_mutex_new();
 
 void
-task_mutex_free();
+task_mutex_free(task_mutex_t);
 
 sched_task_t
 task_mutex_owner(task_mutex_t mutex);
