@@ -90,14 +90,6 @@ run_executor(void* data)
   return executor_run((executor_t)data);
 }
 
-static
-void
-join_executor(executor_t exec)
-{
-  pthread_join(exec->thread, NULL);
-  executor_free(exec);
-}
-
 void
 sync_data_barrier_wait(sync_data_t sync_data)
 {
@@ -124,8 +116,16 @@ sync_data_join_executors(sync_data_t sync_data)
   GArray *executors = sync_data->executors;
   for (int i = 0; i < executors->len; i++)
     {
-      join_executor (g_array_index (executors, executor_t, i));
+      executor_t exec = g_array_index (executors, executor_t, i);
+      pthread_join(exec->thread, NULL);
     }
+
+  for (int i = 0; i < executors->len; i++)
+    {
+      executor_t exec = g_array_index (executors, executor_t, i);
+      executor_free(exec);
+    }
+
 }
 
 GArray*
