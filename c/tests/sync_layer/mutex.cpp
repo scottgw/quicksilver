@@ -42,6 +42,7 @@ exec_tester(int num_tasks, int num_execs, void (*f)(void*))
   ASSERT_EQ(sync_data_num_processors(sync_data), 0);
   sync_data_free(sync_data);
 
+  task_mutex_free(mutex);
   free(task_array);
 }
 
