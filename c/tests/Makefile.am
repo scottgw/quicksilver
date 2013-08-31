@@ -7,6 +7,7 @@ TESTS = task_layer_test\
 	stask_test\
 	executor_test\
 	mutex_test \
+	process_test \
 	condvar_test
 
 task_layer_test_SOURCES = task_layer/task_layer.cpp
@@ -19,6 +20,7 @@ stask_test_SOURCES = sched_layer/stask.cpp
 executor_test_SOURCES = sched_layer/executor.cpp
 mutex_test_SOURCES = sync_layer/mutex.cpp
 condvar_test_SOURCES = sync_layer/condvar.cpp
+process_test_SOURCES = process_layer/process.cpp
 
 LDADD=$(top_builddir)/src/libqs.la
 AM_CXXFLAGS = `pkg-config glib-2.0 --libs --cflags` \
