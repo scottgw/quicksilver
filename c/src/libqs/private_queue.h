@@ -4,6 +4,10 @@
 #include "closure.h"
 #include "types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct priv_queue
 {
   spsc_queue_t q;
@@ -51,8 +55,11 @@ priv_queue_routine(priv_queue_t q, closure_t clos, processor_t wait_proc);
 void
 priv_queue_lock_sync(priv_queue_t pq, processor_t client);
 
-
 void
 priv_queue_sync(priv_queue_t pq, processor_t client);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // _PRIVATE_QUEUE_H
