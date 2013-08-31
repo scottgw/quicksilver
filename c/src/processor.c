@@ -24,7 +24,7 @@ static
 void
 reset_stack_to(void (*f)(void*), processor_t proc)
 {
-  task_set_func(proc->stask->task, f, proc);
+  stask_set_func(proc->stask, f, proc);
 }
 
 static
@@ -224,12 +224,10 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 
   reset_stack_to((void (*)(void*))func, proc);
 
-  sync_data_register_task(sync_data);
   sync_data_enqueue_runnable(sync_data, proc->stask);
 
   return proc;
 }
-
 
 processor_t
 proc_new(sync_data_t sync_data)
@@ -248,7 +246,6 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 {
   return proc_new_with_func (sync_data, root);
 }
-
 
 void
 proc_shutdown(processor_t proc, processor_t wait_proc)
