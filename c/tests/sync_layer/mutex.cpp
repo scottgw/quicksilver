@@ -75,7 +75,6 @@ TEST(Mutex, TaskMultipleExecutors)
   exec_tester(SCHEDULE_MULTIPLE_NUM, 4, mutex_task);
 }
 
-
 int
 main(int argc, char** argv)
 {

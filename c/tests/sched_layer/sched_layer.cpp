@@ -4,7 +4,7 @@
 #include <internal/executor.h>
 #include <internal/task.h>
 
-#define SCHEDULE_MULTIPLE_NUM 10000
+#define SCHEDULE_MULTIPLE_NUM 1000
 int32_t finished;
 
 void

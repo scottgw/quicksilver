@@ -6,7 +6,7 @@
 #include <internal/task.h>
 
 #define WORKERS 32
-#define N 20000
+#define N 2000
 int32_t finished;
 
 queue_impl_t q;
