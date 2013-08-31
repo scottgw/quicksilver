@@ -23,6 +23,10 @@
 
 #include "types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct processor
 {
   /*! Underlying task */
@@ -161,4 +165,7 @@ void
 proc_deref_priv_queues(processor_t proc);
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif // __PROCESSOR_H_
