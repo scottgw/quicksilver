@@ -55,6 +55,7 @@ task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
 
       if(!c)
         {
+	  mutex->owner = stask;
           return;
         }
     }
