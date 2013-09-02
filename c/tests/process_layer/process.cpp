@@ -191,7 +191,7 @@ wait_worker(processor_t proc, processor_t shared, uint64_t flag)
 
   priv_queue_shutdown(q, proc);
 
-  if( __sync_add_and_fetch(&num_finished, 1) == 2*num_each)
+  if( __sync_add_and_fetch(&num_finished, 1) == num_each)
     {
       proc_shutdown(shared, proc);
     }  
