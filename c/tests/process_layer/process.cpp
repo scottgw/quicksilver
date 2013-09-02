@@ -39,7 +39,7 @@ worker(processor_t proc, processor_t shared)
   void ***args;
   clos_type_t *arg_types;
   priv_queue_t q = NULL;
-  assert(proc->executor != NULL);
+  assert(proc->stask.executor != NULL);
   for (int i = 0; i < num_iters; i++)
     { 
       q = proc_get_queue(proc, shared);
@@ -79,7 +79,7 @@ root_create(processor_t proc)
       processor_t worker_proc = proc_new_from_other(proc);
       processors[i] = worker_proc;
       priv_queue_t q = proc_get_queue(proc, worker_proc);
-      
+      assert(worker_proc->stask.executor != NULL);
       void ***args;
       clos_type_t *arg_types;
  
@@ -143,17 +143,17 @@ wait_worker(processor_t proc, processor_t shared, uint64_t flag)
   void ***args;
   clos_type_t *arg_types;
   priv_queue_t q = NULL;
-  assert(proc->executor != NULL);
+  assert(proc->stask.executor != NULL);
   for (int i = 0; i < num_iters; i++)
     {
       int val;
       closure_t clos;
       q = proc_get_queue (proc, shared);
-      assert(proc->executor != NULL);
+      assert(proc->stask.executor != NULL);
       priv_queue_lock(q, proc);
-      assert(proc->executor != NULL);
+      assert(proc->stask.executor != NULL);
       priv_queue_sync(q, proc);
-      assert(proc->executor != NULL);
+      assert(proc->stask.executor != NULL);
 
       priv_queue_set_in_wait(q);
       val = x;

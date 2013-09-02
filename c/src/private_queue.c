@@ -63,7 +63,7 @@ priv_queue_resume_supplier(priv_queue_t pq, processor_t client)
 {
   if (pq->last_was_func)
     {
-      stask_wake(&pq->supplier_proc->stask, client->executor);
+      stask_wake(&pq->supplier_proc->stask, client->stask.executor);
     }
 }
 

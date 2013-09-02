@@ -36,9 +36,6 @@ struct processor
   /*! The next processor to execute */
   processor_t next;
 
-  /*! The executor that is running this processor */
-  executor_t executor;
-
   /*! Queue of queues which the processor will take requests from. */
   qoq_t qoq; 
 
