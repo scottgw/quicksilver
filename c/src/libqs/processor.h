@@ -22,6 +22,7 @@
 #include <glib.h>
 
 #include "types.h"
+#include "sched_task.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,7 +31,7 @@ extern "C" {
 struct processor
 {
   /*! Underlying task */
-  sched_task_t stask;
+  struct sched_task stask;
 
   /*! The next processor to execute */
   processor_t next;

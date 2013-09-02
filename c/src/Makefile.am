@@ -13,9 +13,8 @@ libqs_la_SOURCES = \
 	internal/executor.h \
 	internal/mpscq.h \
 	internal/queue_impl.h \
-	internal/sched_task.h \
-	internal/spsc_queue.h \
 	internal/task.h \
+	internal/spsc_queue.h \
 	internal/task_condition.h \
 	internal/task_mutex.h \
 	mpscq.c \
@@ -43,6 +42,7 @@ pkginclude_HEADERS = \
 	libqs/notifier.h \
 	libqs/private_queue.h \
 	libqs/processor.h \
+	libqs/sched_task.h \
 	libqs/sync_ops.h \
 	libqs/types.h
 

@@ -39,6 +39,7 @@ worker(processor_t proc, processor_t shared)
   void ***args;
   clos_type_t *arg_types;
   priv_queue_t q = NULL;
+  assert(proc->executor != NULL);
   for (int i = 0; i < num_iters; i++)
     { 
       q = proc_get_queue(proc, shared);
@@ -70,7 +71,7 @@ worker(processor_t proc, processor_t shared)
 void
 root_create(processor_t proc)
 {
-  processors = (processor_t*) malloc(sizeof(processor_t));
+  processors = (processor_t*) malloc((num_each + 1) * sizeof(processor_t));
   processor_t shared = proc_new_from_other(proc);
   processors[num_each] = shared;
   for (int i = 0; i < num_each; i++)
@@ -136,20 +137,23 @@ TEST(Process, BasicLogging2Exec)
 }
 
 void
-wait_worker(processor_t proc, processor_t shared, int flag)
+wait_worker(processor_t proc, processor_t shared, uint64_t flag)
 {
+
   void ***args;
   clos_type_t *arg_types;
   priv_queue_t q = NULL;
-
+  assert(proc->executor != NULL);
   for (int i = 0; i < num_iters; i++)
     {
       int val;
       closure_t clos;
       q = proc_get_queue (proc, shared);
-
+      assert(proc->executor != NULL);
       priv_queue_lock(q, proc);
+      assert(proc->executor != NULL);
       priv_queue_sync(q, proc);
+      assert(proc->executor != NULL);
 
       priv_queue_set_in_wait(q);
       val = x;
@@ -168,6 +172,7 @@ wait_worker(processor_t proc, processor_t shared, int flag)
 	  priv_queue_set_in_wait(q);
           val = x;
         }
+
       priv_queue_set_in_body(q);
 
       clos =
@@ -195,10 +200,13 @@ wait_worker(processor_t proc, processor_t shared, int flag)
 void
 root_wait(processor_t proc)
 {
+  processors = (processor_t*) malloc((num_each + 1) * sizeof(processor_t));
   processor_t shared = proc_new_from_other(proc);
+  processors[num_each] = shared;
   for (int i = 0; i < num_each; i++)
     {
       processor_t worker_proc = proc_new_from_other(proc);
+      processors[i] = worker_proc;
       priv_queue_t q = proc_get_queue(proc, worker_proc);
       int64_t flag = i % 2 == 0;
       

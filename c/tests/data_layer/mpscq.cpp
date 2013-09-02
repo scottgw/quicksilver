@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <pthread.h>
 
-#include <internal/sched_task.h>
+#include <libqs/sched_task.h>
 #include <internal/mpscq.h>
 
 #define PUSHERS 32

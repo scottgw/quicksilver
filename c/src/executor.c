@@ -11,7 +11,7 @@
 #include "internal/ws_deque.h"
 #include "internal/debug_log.h"
 #include "internal/executor.h"
-#include "internal/sched_task.h"
+#include "libqs/sched_task.h"
 #include "internal/task.h"
 
 #define MAX_ATTEMPTS 64
@@ -145,13 +145,11 @@ exec_step_previous(executor_t exec, sched_task_t ignore_stask)
 void
 switch_to_next_task(executor_t exec)
 {
-  // take a new piece of work.
-  BINARY_LOG(2, SYNCOPS_DEQUEUE_START, exec, NULL);
   sched_task_t stask = NULL;
-  BINARY_LOG(2, SYNCOPS_DEQUEUE_END, exec, NULL);
+
   if (get_work (exec, &stask))
     {
-      DEBUG_LOG(2, "%p is dequeued by executor %p\n", stask, exec);
+      assert (exec != NULL);
       stask->executor = exec;
       exec->prev_stask = NULL;
 
@@ -166,8 +164,8 @@ switch_to_next_task(executor_t exec)
     {
       exec->done = true;
     }
-
 }
+
 void
 executor_free(executor_t exec)
 {

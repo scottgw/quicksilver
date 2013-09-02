@@ -9,16 +9,16 @@
 #include "libqs/closure.h"
 #include "libqs/private_queue.h"
 #include "libqs/sync_ops.h"
+#include "libqs/sched_task.h"
 
 #include "internal/qoq.h"
 #include "internal/bounded_queue.h"
 #include "internal/debug_log.h"
-
 #include "internal/executor.h"
 #include "internal/task.h"
 #include "internal/task_mutex.h"
 #include "internal/task_condition.h"
-#include "internal/sched_task.h"
+
 
 static
 void
@@ -36,10 +36,10 @@ notify_available(processor_t proc)
   // wait conditions.
   if (!proc->processing_wait)
     {
-      task_mutex_lock(proc->mutex, proc->stask);
+      task_mutex_lock(proc->mutex, &proc->stask);
       proc->last_waiter = NULL;
-      task_condition_signal(proc->cv, proc->stask);
-      task_mutex_unlock(proc->mutex, proc->stask);
+      task_condition_signal(proc->cv, &proc->stask);
+      task_mutex_unlock(proc->mutex, &proc->stask);
     }
 
   proc->processing_wait = false;
@@ -79,10 +79,10 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
       else if (closure_is_sync(clos))
 	{
 	  processor_t client = (processor_t) clos->fn;
-	  while (client->stask->task->state != TASK_WAITING);
-	  proc->stask->task->state = TASK_TRANSITION_TO_WAITING;
+	  while (client->stask.task->state != TASK_WAITING);
+	  proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
 
-	  stask_switch(proc->stask, client->stask);
+	  stask_switch(&proc->stask, &client->stask);
 	  /* proc_wake(client, proc->executor); */
 	}
       else
@@ -97,7 +97,7 @@ static
 void
 proc_loop(processor_t proc)
 {
-  stask_step_previous(proc->stask);
+  stask_step_previous(&proc->stask);
 
   while (proc->ref_count > 0)
     {
@@ -106,7 +106,7 @@ proc_loop(processor_t proc)
       proc_maybe_yield(proc);
 
       // Dequeue a private queue from the queue of queues.
-      qoq_dequeue_wait(proc->qoq, (void**)&priv_queue, proc->stask);
+      qoq_dequeue_wait(proc->qoq, (void**)&priv_queue, &proc->stask);
       if (priv_queue == NULL)
         {
           dec_ref(proc);
@@ -168,22 +168,22 @@ proc_maybe_yield(processor_t proc)
   if (time_is_up == 1)
     {
       time_is_up = 0;
-      task_set_state(proc->stask->task, TASK_TRANSITION_TO_RUNNABLE);
-      stask_yield_to_executor(proc->stask);
+      task_set_state(proc->stask.task, TASK_TRANSITION_TO_RUNNABLE);
+      stask_yield_to_executor(&proc->stask);
     }
 }
 
 void
 proc_wait_for_available(processor_t waitee, processor_t waiter)
 {
-  task_mutex_lock(waitee->mutex, waiter->stask);
+  task_mutex_lock(waitee->mutex, &waiter->stask);
   waitee->last_waiter = waiter;
 
   while (waitee->last_waiter == waiter)
     {
-      task_condition_wait(waitee->cv, waitee->mutex, waiter->stask);
+      task_condition_wait(waitee->cv, waitee->mutex, &waiter->stask);
     }
-  task_mutex_unlock(waitee->mutex, waiter->stask);
+  task_mutex_unlock(waitee->mutex, &waiter->stask);
 }
 
 void
@@ -195,8 +195,8 @@ proc_deref_priv_queues(processor_t proc)
 void
 proc_sleep(processor_t proc, struct timespec duration)
 {
-  sync_data_add_sleeper(proc->stask->sync_data, proc->stask, duration);
-  task_switch(proc->stask->task, proc->executor->stask->task);
+  sync_data_add_sleeper(proc->stask.sync_data, &proc->stask, duration);
+  /* task_switch(proc->stask.task, proc->executor->stask.task); */
 }
 
 
@@ -206,7 +206,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
   proc->qoq = qoq_new(2048);
-  proc->stask = stask_new(sync_data);
+  stask_init(&proc->stask, sync_data, true);
 
   proc->available = true;
   proc->mutex = task_mutex_new();
@@ -218,9 +218,9 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 
   proc->ref_count = 1;
 
-  stask_set_func(proc->stask, (void (*)(void*))func, proc);
+  stask_set_func(&proc->stask, (void (*)(void*))func, proc);
 
-  sync_data_enqueue_runnable(sync_data, proc->stask);
+  sync_data_enqueue_runnable(sync_data, &proc->stask);
 
   return proc;
 }
@@ -234,7 +234,7 @@ proc_new(sync_data_t sync_data)
 processor_t
 proc_new_from_other(processor_t other_proc)
 {
-  return proc_new(other_proc->stask->sync_data);
+  return proc_new(other_proc->stask.sync_data);
 }
 
 processor_t
@@ -249,7 +249,7 @@ proc_shutdown(processor_t proc, processor_t wait_proc)
   /* priv_queue_t shutdown_q = priv_queue_new(wait_proc); */
   /* shutdown_q->shutdown = true; */
 
-  qoq_enqueue_wait(proc->qoq, NULL, wait_proc->stask);
+  qoq_enqueue_wait(proc->qoq, NULL, &wait_proc->stask);
 }
 
 void

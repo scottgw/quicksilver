@@ -1,11 +1,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "libqs/sync_ops.h"
-
+#include "libqs/sched_task.h"
 #include "internal/executor.h"
-#include "internal/sched_task.h"
 #include "internal/task.h"
 
 static
@@ -13,19 +11,23 @@ sched_task_t
 stask_new_register(sync_data_t sync_data, bool register_task)
 {
   sched_task_t stask = malloc(sizeof(struct sched_task));
-  
+  stask_init(stask, sync_data, register_task);
+  return stask;
+}
+
+void
+stask_init(sched_task_t stask, sync_data_t sync_data, bool register_task)
+{
   stask->task = task_make();
   stask->registr = register_task;
   stask->sync_data = sync_data;
-  stask->executor = NULL;
+  stask->executor = (void*)0xDEADBEEF;
   stask->next = NULL;
 
   if (register_task)
     {
       sync_data_register_task(sync_data);
-    }
-
-  return stask;
+    }  
 }
 
 sched_task_t
@@ -140,6 +142,7 @@ stask_switch(sched_task_t from, sched_task_t to)
     }
   else
     {
+      assert (exec != NULL);
       to->executor = exec;
 
       /* // If this task is to finish, it should come back to this processor. */
@@ -191,7 +194,8 @@ stask_yield_to_executor(sched_task_t stask)
 void
 stask_wake(sched_task_t stask, executor_t exec)
 { 
-  assert (stask != NULL);
+  assert(exec != NULL);
+  assert(stask != NULL);
   while(task_get_state(stask->task) != TASK_WAITING);
   task_set_state(stask->task, TASK_RUNNABLE);
   exec_push(exec, stask);

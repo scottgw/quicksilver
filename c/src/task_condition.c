@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "internal/debug_log.h"
-#include "internal/sched_task.h"
+#include "libqs/sched_task.h"
 #include "internal/queue_impl.h"
 #include "internal/task_mutex.h"
 #include "internal/task_condition.h"

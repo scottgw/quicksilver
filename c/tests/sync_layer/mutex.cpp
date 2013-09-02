@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <libqs/sync_ops.h>
-#include <internal/sched_task.h>
+#include <libqs/sched_task.h>
 #include <internal/task_mutex.h>
 
 #define SCHEDULE_MULTIPLE_NUM 32

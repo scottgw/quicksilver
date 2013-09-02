@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <libqs/sync_ops.h>
-#include <internal/sched_task.h>
+#include <libqs/sched_task.h>
 #include <internal/task_mutex.h>
 #include <internal/task_condition.h>
 

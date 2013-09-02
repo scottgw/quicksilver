@@ -25,6 +25,9 @@ sched_task_t
 stask_new_no_register(sync_data_t sync_data);
 
 void
+stask_init(sched_task_t stask, sync_data_t sync_data, bool register_task);
+
+void
 stask_free(sched_task_t);
 
 /*!

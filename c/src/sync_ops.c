@@ -6,7 +6,7 @@
 
 #include "libqs/sync_ops.h"
 
-#include "internal/sched_task.h"
+#include "libqs/sched_task.h"
 #include "internal/executor.h"
 #include "internal/task.h"
 #include "internal/queue_impl.h"

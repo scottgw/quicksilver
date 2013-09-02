@@ -3,7 +3,7 @@
 
 
 #include "../libqs/types.h"
-#include "sched_task.h"
+#include "../libqs/sched_task.h"
 
 #ifdef __cplusplus
 extern "C" {
