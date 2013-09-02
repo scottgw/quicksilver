@@ -13,7 +13,7 @@
 struct mpsc_node
 {
   struct mpsc_node* volatile next;
-  void*                       state;
+  void*                      state;
 };
 
 typedef struct mpsc_node mpsc_node_t;
@@ -93,7 +93,7 @@ qoq_new(uint32_t size)
 void
 qoq_enqueue_wait(qoq_t q, void *data, sched_task_t stask)
 {
-  assert (data != NULL);
+  /* assert (data != NULL); */
 
   int n = __sync_fetch_and_add(&q->count, 1);
 
@@ -133,7 +133,7 @@ qoq_dequeue_wait(qoq_t q, void **data, sched_task_t stask)
     {
       while ((node = mpsc_pop(q->impl)) == NULL);
       *data = node->state;
-      assert (*data != NULL);
+      /* assert (*data != NULL); */
 
       sched_task_t producer;
       while ((producer = mpscq_pop(&q->producers)) == NULL);
@@ -147,13 +147,13 @@ qoq_dequeue_wait(qoq_t q, void **data, sched_task_t stask)
 
       node = mpsc_pop(q->impl);
       *data = node->state;
-      assert (*data != NULL);
+      /* assert (*data != NULL); */
     }
   else
     {
       while ((node = mpsc_pop(q->impl)) == NULL);
       *data = node->state;
-      assert (*data != NULL);
+      /* assert (*data != NULL); */
     }
 
   free(node);

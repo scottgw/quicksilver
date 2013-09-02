@@ -22,65 +22,58 @@
 
 static
 void
-reset_stack_to(void (*f)(void*), processor_t proc)
+notify_available(processor_t proc)
 {
-  stask_set_func(proc->stask, f, proc);
+
+  // If we're processing a wait condition, then we don't want to
+  // notify any other threads that this processor is available,
+  // because here availability means:
+  //
+  //   This processor might have undergone a state change so
+  //   check your wait-condition again.
+  //
+  // This is designed to prevent wait conditions from waking up other
+  // wait conditions.
+  if (!proc->processing_wait)
+    {
+      task_mutex_lock(proc->mutex, proc->stask);
+      proc->last_waiter = NULL;
+      task_condition_signal(proc->cv, proc->stask);
+      task_mutex_unlock(proc->mutex, proc->stask);
+    }
+
+  proc->processing_wait = false;
 }
 
 static
 void
-notify_available(processor_t proc)
+dec_ref(processor_t proc)
 {
-  task_mutex_lock(proc->mutex, proc->stask);
-  proc->last_waiter = NULL;
-  DEBUG_LOG(2, "%p signaling availability\n", proc);
-  task_condition_signal(proc->cv, proc->stask);
-  task_mutex_unlock(proc->mutex, proc->stask);
+  int n = __sync_sub_and_fetch(&proc->ref_count, 1);
 }
-
 
 static
 void
 proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
 {
-  while (!priv_queue->shutdown)
+  while (true)
     {
       closure_t clos = priv_dequeue(priv_queue, proc);
 
-      // If its empty we set the processor to 'available' and notify
-      // any processors performing wait-conditions to wake up and
-      // retry their conditions.
       if (clos == NULL)
 	{
-	  notify_available(proc);
+          notify_available(proc);
 	  break;
 	}
       else if (closure_is_end(clos))
 	{
-	  free(clos);
+          /* printf("closure shutdown\n"); */
 	  // The end of a private queue decrements the ref_count again.
 	  // This should have been incremented initially when the private
 	  // queue was bound to this processor.
-	  int n = __sync_sub_and_fetch(&proc->ref_count, 1);
-	  priv_queue_free(priv_queue);
-
-	  // If we're processing a wait condition, then we don't want to
-	  // notify any other threads that this processor is available,
-	  // because here availability means:
-	  //
-	  //   This processor might have undergone a state change so
-	  //   check your wait-condition again.
-	  //
-	  // This is designed to prevent wait conditions from waking up other
-	  // wait conditions.
-	  if (!proc->processing_wait)
-	    {
-	      notify_available(proc);
-	    }
-
-	  // We set the processing wait to false so the next processor
-	  // starts out with the default.
-	  proc->processing_wait = false;
+          dec_ref(proc);
+          notify_available(proc);
+	  free(clos);
 	  break;
 	}
       else if (closure_is_sync(clos))
@@ -105,35 +98,38 @@ void
 proc_loop(processor_t proc)
 {
   stask_step_previous(proc->stask);
-  DEBUG_LOG(1, "%p starting\n", proc);
+
   while (proc->ref_count > 0)
     {
+      priv_queue_t priv_queue;
+
       proc_maybe_yield(proc);
 
       // Dequeue a private queue from the queue of queues.
-      priv_queue_t priv_queue;
       qoq_dequeue_wait(proc->qoq, (void**)&priv_queue, proc->stask);
-
-      closure_t clos = NULL;
-
-      proc_duty_loop(proc, priv_queue);
-
-
-      if (priv_queue->shutdown)
+      if (priv_queue == NULL)
         {
-          // This decrement corresponds to shutting down the processor.
-          // If the refcount is still above 0 then there may still be
-          // outstanding private queues that want to log their work.
-          int ref_count = __sync_sub_and_fetch(&proc->ref_count, 1);
-          priv_queue_free(priv_queue);
-          proc_deref_priv_queues(proc);
-          assert (ref_count >= 0);
-          if (ref_count == 0)
-            {
-              break;
-            }
+          dec_ref(proc);
+        }
+      else
+        {
+          proc_duty_loop(proc, priv_queue);
         }
 
+      /* if (priv_queue->shutdown) */
+      /*   { */
+      /*     // This decrement corresponds to shutting down the processor. */
+      /*     // If the refcount is still above 0 then there may still be */
+      /*     // outstanding private queues that want to log their work. */
+      /*     int ref_count = __sync_sub_and_fetch(&proc->ref_count, 1); */
+      /*     priv_queue_free(priv_queue); */
+      /*     proc_deref_priv_queues(proc); */
+      /*     assert (ref_count >= 0); */
+      /*     if (ref_count == 0) */
+      /*       { */
+      /*         break; */
+      /*       } */
+      /*   } */
     }
 }
 
@@ -182,7 +178,7 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
 {
   task_mutex_lock(waitee->mutex, waiter->stask);
   waitee->last_waiter = waiter;
-  DEBUG_LOG(2, "%p waiting availablitity of %p\n", waiter, waitee);
+
   while (waitee->last_waiter == waiter)
     {
       task_condition_wait(waitee->cv, waitee->mutex, waiter->stask);
@@ -222,7 +218,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 
   proc->ref_count = 1;
 
-  reset_stack_to((void (*)(void*))func, proc);
+  stask_set_func(proc->stask, (void (*)(void*))func, proc);
 
   sync_data_enqueue_runnable(sync_data, proc->stask);
 
@@ -250,27 +246,18 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 void
 proc_shutdown(processor_t proc, processor_t wait_proc)
 {
-  priv_queue_t shutdown_q = priv_queue_new(wait_proc);
-  shutdown_q->shutdown = true;
+  /* priv_queue_t shutdown_q = priv_queue_new(wait_proc); */
+  /* shutdown_q->shutdown = true; */
 
-  qoq_enqueue_wait(proc->qoq, shutdown_q, wait_proc->stask);
+  qoq_enqueue_wait(proc->qoq, NULL, wait_proc->stask);
 }
 
 void
 proc_free(processor_t proc)
 {
-  sync_data_deregister_task(proc->stask->sync_data);
-
-  stask_free(proc->stask);
   task_condition_free(proc->cv);
   task_mutex_free(proc->mutex);
-
   qoq_free(proc->qoq);
-
-
-  // Since *this* processor won't push any more work into its
-  // private queues, we shut them down.
-
   g_hash_table_destroy(proc->privq_cache);
 
   free (proc);
