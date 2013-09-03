@@ -53,12 +53,12 @@ genMain clas = do
 
   syncData <- "sync_data_new" <#> [maxProcs]
   "proc_new_root" <#> [syncData, mainFunc]
-  "create_executors" <#> [syncData, numExecs]
+  "sync_data_create_executors" <#> [syncData, numExecs]
 
   notifier <- "notifier_spawn" <#> [syncData]
   "notifier_join" <#> [notifier]
 
-  "join_executors" <#> []
+  "sync_data_join_executors" <#> [syncData]
   "sync_data_free" <#> [syncData]
 
   zero <- int 0
