@@ -1,4 +1,4 @@
-SUBDIRS = mutex condition prodcons threadring
+SUBDIRS = mutex condition prodcons threadring chameneos
 
 .PHONY: subdirs $(SUBDIRS)
 
