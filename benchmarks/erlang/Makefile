@@ -1,4 +1,4 @@
-SUBDIRS = mutex condition prodcons
+SUBDIRS = mutex condition prodcons threadring
 
 .PHONY: subdirs $(SUBDIRS)
 
