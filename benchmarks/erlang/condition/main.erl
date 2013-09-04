@@ -9,7 +9,7 @@ shared(Parent, Odds, Evens, Status, I) ->
         receive
             {odd, Requester} -> {[Requester|Odds], Evens, Status, I};
             {even, Requester} -> {Odds, [Requester|Evens], Status, I};
-            finished -> {Odds, Evens, free, I-1};
+            finished -> {Odds, Evens, free, I-1}
         end,
 
     if
