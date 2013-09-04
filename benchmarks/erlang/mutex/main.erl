@@ -30,4 +30,4 @@ main([ItersStr, WorkersStr]) ->
 
     {Time, _Val} = timer:tc( fun() -> main(Iters, Workers) end),
 
-    io:format("~p~n",[Time / 1000000]).
+    io:format(standard_error, "~p~n",[Time / 1000000]).
