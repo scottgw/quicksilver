@@ -5,10 +5,9 @@ set -e
 
 BCFILE=${1%.*}.bc
 OBJFILE=${1%.*}.o
-QS_LIB_PATH=`pwd`/lib
 
 qs $1 -m
-llvm-link lib/stdlib.bc ${BCFILE} ${@:2} |\
+llvm-link ${QS_LIB_PATH}/stdlib.bc ${BCFILE} ${@:2} |\
   opt -O3 -std-compile-opts |\
   llc -filetype=obj -o  ${OBJFILE}
 gcc ${OBJFILE} `pkg-config libqs --libs` -lstdc++ -lm -o ${1%.*}
