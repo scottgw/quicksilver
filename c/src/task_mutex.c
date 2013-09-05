@@ -1,126 +1,132 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#include "libqs/debug_log.h"
-#include "libqs/processor.h"
-#include "libqs/mpsc_impl.h"
-#include "libqs/queue_impl.h"
-#include "libqs/sync_ops.h"
-#include "libqs/task.h"
-#include "libqs/task_mutex.h"
-#include "libqs/types.h"
+#include "internal/queue_impl.h"
+#include "libqs/sched_task.h"
+#include "internal/task.h"
+#include "internal/task_mutex.h"
 
-#define INIT_WAIT_QUEUE_SIZE 16000
-
-#define MPSC
 
 struct task_mutex 
 {
-  volatile uint32_t count;
-  volatile processor_t owner;
-  /* struct mpscq_node_t stub; */
-#ifdef MPSC
-  mpscq_t wait_queue;
-#else
+  uint32_t count;
+  sched_task_t owner;
+
+  volatile int32_t inner;
+
   queue_impl_t wait_queue;
-#endif
 };
 
 task_mutex_t
 task_mutex_new()
 {
   task_mutex_t mutex = (task_mutex_t)malloc(sizeof(struct task_mutex));
-  mutex->count = 0;
-  mutex->owner = NULL;
-#ifdef MPSC
-  mpscq_create(&mutex->wait_queue, NULL); // mutex->stub);
-#else
-  mutex->wait_queue = queue_impl_new (INIT_WAIT_QUEUE_SIZE);
-#endif
+
+  mutex->inner = 0;
+  mutex->wait_queue = queue_impl_new(20000);
+
   return mutex;
 }
 
 void
 task_mutex_free(task_mutex_t mutex)
 {
-#ifdef MPSC
-#else
-  queue_impl_free (mutex->wait_queue);
-#endif
+  queue_impl_free(mutex->wait_queue);
   free (mutex);
 }
 
-processor_t
+sched_task_t
 task_mutex_owner(task_mutex_t mutex)
 {
   return mutex->owner;
 }
 
 void
-task_mutex_lock(task_mutex_t mutex, volatile processor_t proc)
+task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
 {
-  DEBUG_LOG(2, "%p requests mutex %p\n", proc, mutex);
+  int c;
 
-  if (__atomic_fetch_add(&mutex->count, 1, __ATOMIC_SEQ_CST) > 0)
+  for (int i = 0; i < 100; i++)
     {
-      // if the owner is already set then we add to the wait list
-      // and yield to the executor.
-      DEBUG_LOG(2, "%p fails to attain %p\n", proc, mutex);
+      c = 0;
+      __atomic_compare_exchange_4(&mutex->inner, &c, 1,
+                                  false, __ATOMIC_SEQ_CST,
+                                  __ATOMIC_SEQ_CST);
 
-      /* mpscq_node_t* node = malloc (sizeof(*node)); */
-      /* node->state = proc; */
-      /* node->state = proc; */
-      /* proc->node.state = proc; */
-
-      task_set_state(proc->task, TASK_TRANSITION_TO_WAITING);
-
-#ifdef MPSC
-      mpscq_push(&mutex->wait_queue, proc);
-#else
-      queue_impl_enqueue(mutex->wait_queue, proc);
-#endif
-
-
-      proc_yield_to_executor(proc);
-
-      DEBUG_LOG(2, "%p retries mutex %p\n", proc, mutex);
+      if(!c)
+        {
+	  mutex->owner = stask;
+          return;
+        }
     }
 
-  mutex->owner = proc;
-  DEBUG_LOG(2, "%p attains mutex %p\n", proc, mutex);
+  if (c == 1)
+    {
+      c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST);
+    }
+
+  while (c)
+    {
+      // set the state to locked and contended, and sleep if it WAS locked
+      // before the exchange.
+      if(__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2)
+        {
+          task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
+          queue_impl_enqueue(mutex->wait_queue, stask);
+          stask_yield_to_executor(stask);
+        }
+      c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST);
+    }
+
+  mutex->owner = stask;
 }
 
 void
-task_mutex_unlock(volatile task_mutex_t mutex, processor_t proc)
+task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
 {
-  assert(mutex->owner == proc);
-  assert(mutex->count > 0);
-
-  DEBUG_LOG(2, "%p unlocks mutex %p\n", proc, mutex);
-
-  if (__atomic_fetch_sub(&mutex->count, 1, __ATOMIC_SEQ_CST) > 1)
+  if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2)
     {
-      DEBUG_LOG(2, "%p found another waiting on mutex %p\n", proc, mutex);
-      
-      /* mpscq_node_t* node; */
-      volatile processor_t other_proc;
-
-#ifdef MPSC
-      do
-        {
-          other_proc = mpscq_pop(&mutex->wait_queue);
-        } while(other_proc == 0);
-#else
-      while(!queue_impl_dequeue(mutex->wait_queue, (void**)&other_proc));
-#endif
-
-      DEBUG_LOG(2, "%p is awoken out of mutex %p\n", other_proc, mutex);
-      // If there's someone in the loop, spin to dequeue them from the
-      // wait-queue.
-      //
-      // Spinning is OK here because we only have to wait between when they
-      // increased the counter and when the enqueue themselves which
-      // is a finite amount of time.
-      proc_wake(other_proc, proc->executor);
+      __atomic_store_4(&mutex->inner, 0, __ATOMIC_SEQ_CST);
     }
+  else if (__atomic_exchange_4(&mutex->inner, 0, __ATOMIC_SEQ_CST) == 1)
+    {
+      return;
+    }
+
+
+  for (int i = 0; i < 200; i++)
+    {
+      if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST))
+        {
+          int old = 1;
+          __atomic_compare_exchange_4(&mutex->inner, &old, 2,
+                                      false, __ATOMIC_SEQ_CST,
+                                      __ATOMIC_SEQ_CST);
+          if (old)
+            {
+              return;
+            }
+        }
+    }
+
+
+  {
+    // pop a task if it exists, and resume it.
+    sched_task_t other_stask;
+    // FIXME: this is a terrible hack that greatly reduces a
+    // datarace, but doesn't completely solve it.
+    // 
+    // Once in a while there will be a straggler left in the wait queue.
+    for (int i = 0; i < 1024; i++)
+      {
+        if (queue_impl_dequeue(mutex->wait_queue, (void**)&other_stask))
+          {
+            stask_wake(other_stask, stask->executor);
+            return;
+          }
+      }
+  }
+
+  return;
 }
+

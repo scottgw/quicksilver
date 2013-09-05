@@ -3,13 +3,16 @@
 #include <setjmp.h>
 #include <stdlib.h>
 
+#include "libqs/types.h"
 
-#include "libqs/ctx.h"
+#include "internal/valgrind.h"
+#include "internal/ctx.h"
 
 struct ctx
 {
   jmp_buf jbuf;
   ucontext_t uctx;
+  void* base;
 };
 
 
@@ -20,18 +23,41 @@ ctx_get(ctx_t ctx)
   return getcontext(&ctx->uctx);
 }
 
+static
+void
+ctx_set_stack_ptr(ctx_t ctx, void* ptr)
+{
+  ctx->uctx.uc_stack.ss_sp = ptr;
+}
+
+static
+void
+ctx_set_stack_size(ctx_t ctx, size_t sz)
+{
+  ctx->uctx.uc_stack.ss_size = sz;
+}
 
 ctx_t
 ctx_new()
 {
   ctx_t ctx = (ctx_t)malloc(sizeof(struct ctx));
+
+  ctx->base = malloc(STACKSIZE);
+
+  (void) VALGRIND_STACK_REGISTER(ctx->base, ctx->base + STACKSIZE);
+
   ctx_get(ctx);
+
+  ctx_set_stack_ptr(ctx, ctx->base);
+  ctx_set_stack_size(ctx, STACKSIZE);
+
   return ctx;
 }
 
 void
 ctx_free(ctx_t ctx)
 {
+  free(ctx->base);
   free(ctx);
 }
 
@@ -102,16 +128,4 @@ ctx_set(ctx_t ctx)
   siglongjmp(ctx->jbuf, 1);
   assert (false && "ctx_set: should not reach this point after longjmp");
   return 0;
-}
-
-void
-ctx_set_stack_ptr(ctx_t ctx, void* ptr)
-{
-  ctx->uctx.uc_stack.ss_sp = ptr;
-}
-
-void
-ctx_set_stack_size(ctx_t ctx, size_t sz)
-{
-  ctx->uctx.uc_stack.ss_size = sz;
 }

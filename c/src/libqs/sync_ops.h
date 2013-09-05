@@ -6,12 +6,15 @@
 #include <stdint.h>
 #include <glib.h>
 
-#include "queue_impl.h"
 #include "types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct sleeper
 {
-  processor_t proc;
+  sched_task_t stask;
   struct timespec end_time;
 };
 
@@ -34,6 +37,32 @@ sync_data_new(uint32_t max_tasks);
 */
 void
 sync_data_free(sync_data_t sync_data);
+
+/*!
+  Create the given number of executors.
+
+  \param sync_data where to store the executors
+  \param n the number of executors to create
+*/
+void
+sync_data_create_executors(sync_data_t sync_data, uint32_t n);
+
+/*!
+  Barrier that will wait for all executors to start
+
+  \param sync_data global data where the barrier is
+*/
+void
+sync_data_barrier_wait(sync_data_t sync_data);
+
+/*!
+  Wait for all the executors in the global data to finish executing.
+
+  \param sync_data global data that holds the executors
+*/
+void
+sync_data_join_executors(sync_data_t sync_data);
+
 
 /*!
   Get the global list of executors.
@@ -73,7 +102,7 @@ sync_data_wait_for_work(sync_data_t sync_data);
   \param sync_data global state
 */
 void
-sync_data_register_proc(sync_data_t sync_data);
+sync_data_register_task(sync_data_t sync_data);
 
 /*!
   Deregister a single processor in the global state.
@@ -81,7 +110,7 @@ sync_data_register_proc(sync_data_t sync_data);
   \param sync_data global state
 */
 void
-sync_data_deregister_proc(sync_data_t sync_data);
+sync_data_deregister_task(sync_data_t sync_data);
 
 /*!
   Count the number of registered processors.
@@ -89,17 +118,17 @@ sync_data_deregister_proc(sync_data_t sync_data);
   \param sync_data global state
   \return the number of registered processors
 */
-uint64_t
+int32_t
 sync_data_num_processors(sync_data_t sync_data);
 
 /*!
   Puts a runnable processor on the global run queue.
 
   \param sync_data global state
-  \param proc processor to enqueue
+  \param stask processor to enqueue
 */
 void
-sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc);
+sync_data_enqueue_runnable(sync_data_t sync_data, sched_task_t stask);
 
 /*!
   Try to dequeue a processor from the global run queue.
@@ -112,7 +141,7 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc);
 bool
 sync_data_try_dequeue_runnable(sync_data_t sync_data,
                                executor_t exec,
-                               processor_t *proc);
+                               sched_task_t *stask);
 
 /*!
   Dequeue a processor from the global run queue, waiting if there are none.
@@ -121,19 +150,19 @@ sync_data_try_dequeue_runnable(sync_data_t sync_data,
   \param exec the executor requesting the processor
   \return  processor that is dequeued, NULL if shutdown should occur
 */
-processor_t
+sched_task_t
 sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec);
 
 /*!
   Add a sleeping processor to the global state.
 
   \param sync_data global state
-  \param proc processor to sleep
+  \param stask processor to sleep
   \param duration duration of the sleep.
 */
 void
 sync_data_add_sleeper(sync_data_t sync_data,
-                      processor_t proc,
+                      sched_task_t stask,
                       struct timespec duration);
 
 /*!
@@ -144,6 +173,11 @@ sync_data_add_sleeper(sync_data_t sync_data,
 */
 queue_impl_t
 sync_data_get_sleepers(sync_data_t sync_data);
+
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif // _SYNC_OPS_H

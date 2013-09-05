@@ -21,25 +21,23 @@
 #include <stdbool.h>
 #include <glib.h>
 
-/* #include "mpsc_impl.h" */
-#include "closure.h"
-#include "task_mutex.h"
-#include "task_condition.h"
 #include "types.h"
+#include "sched_task.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 struct processor
 {
   /*! Underlying task */
-  task_t task;
+  struct sched_task stask;
 
   /*! The next processor to execute */
   processor_t next;
 
-  /*! The executor that is running this processor */
-  executor_t executor;
-
   /*! Queue of queues which the processor will take requests from. */
-  qo_queue_t qoq; 
+  qoq_t qoq; 
 
   /*! Processor availability flag */
   bool available;
@@ -61,9 +59,6 @@ struct processor
 
   /*! Reference count */
   uint32_t ref_count;
-
-  /*! Identifier */
-  int id;  
 };
 
 /*!
@@ -110,38 +105,6 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t));
 */
 priv_queue_t
 proc_get_queue(processor_t proc, processor_t supplier_proc);
-
-/*!
-  Wake the processor up on the given executor.
-  The given executor should be the executor that is currently running
-  this invocation of proc_get_queue.
-  This is because pushing new jobs to the work stealing queue is not
-  thread safe.
-
-  \param proc the processor to wake
-  \param exec the executor_t that it will be awoken on.
-*/
-void
-proc_wake(processor_t proc, executor_t exec);
-
-/*!
-  Yield the current processor to its executor.
-  
-  \param proc processor to yield.
-*/
-void
-proc_yield_to_executor(processor_t proc);
-
-/*!
-  Step the state of the processor.
-  This is used when the processor is in a transitional state
-  and must be moved to its final state.
-
-  \param proc processor to step
-  \param exec executor to push the processor into if its runnable
-*/
-void
-proc_step_state(processor_t proc, executor_t exec);
 
 /*!
   Wait for a signal that the processor is available (has recently
@@ -200,4 +163,7 @@ void
 proc_deref_priv_queues(processor_t proc);
 
 
+#ifdef __cplusplus
+}
+#endif
 #endif // __PROCESSOR_H_

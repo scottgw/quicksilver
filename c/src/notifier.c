@@ -5,9 +5,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "libqs/executor.h"
-#include "libqs/notifier.h"
 #include "libqs/sync_ops.h"
+#include "libqs/notifier.h"
+
+#include "internal/executor.h"
+#include "internal/queue_impl.h"
 
 //
 // Notifier implementation 
@@ -63,7 +65,7 @@ reschedule_awoken(notifier_t notifier)
   sleeper_t sleeper;
   while (queue_impl_dequeue(awakened, (void**)&sleeper))
     {
-      sync_data_enqueue_runnable(notifier->sync_data, sleeper->proc);
+      sync_data_enqueue_runnable(notifier->sync_data, sleeper->stask);
       free(sleeper);
     }
 
@@ -84,6 +86,7 @@ notifier_run(void* ptr)
       time_is_up = 1;
     }
 
+  pthread_exit(NULL);
   return NULL;
 }
 

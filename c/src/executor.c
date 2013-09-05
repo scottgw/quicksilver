@@ -1,15 +1,18 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <glib.h>
 #include <sys/time.h>
 #include <pthread.h>
 
-#include "libqs/ws_deque.h"
-#include "libqs/debug_log.h"
-#include "libqs/executor.h"
-#include "libqs/processor.h"
+#include "libqs/sync_ops.h"
 #include "libqs/notifier.h"
-#include "libqs/task.h"
+
+#include "internal/ws_deque.h"
+#include "internal/debug_log.h"
+#include "internal/executor.h"
+#include "libqs/sched_task.h"
+#include "internal/task.h"
 
 #define MAX_ATTEMPTS 64
 #define MIN_ATTEMPTS 4
@@ -17,37 +20,44 @@
 pthread_barrier_t barrier;
 
 bool
-exec_steal (executor_t victim_exec, processor_t *proc)
+exec_steal (executor_t victim_exec, sched_task_t *stask)
 {
   assert(victim_exec != NULL);
-  return ws_deque_steal(victim_exec->local_deque, (void**)proc);
+  return ws_deque_steal(victim_exec->local_deque, (void**)stask);
 }
 
 void
-exec_push (executor_t exec, processor_t proc)
+exec_push (executor_t exec, sched_task_t stask)
 {
-  ws_deque_push_bottom(exec->local_deque, proc);
+  ws_deque_push_bottom(exec->local_deque, stask);
 
   // We only inform other processors we have more than 1 piece of work,
   // because this prevents us from contending with the other executors
   // over the only work we have.
   if (ws_deque_size(exec->local_deque) > 1)
     {
-      sync_data_signal_work(exec->task->sync_data);
+      sync_data_signal_work(exec->stask->sync_data);
     }
 }
 
 bool
-exec_pop (executor_t exec, processor_t *proc)
+exec_pop (executor_t exec, sched_task_t *stask)
 {
-  return ws_deque_pop_bottom(exec->local_deque, (void**)proc);
+  if (ws_deque_size(exec->local_deque) > 0)
+    {
+      return ws_deque_pop_bottom(exec->local_deque, (void**)stask);
+    }
+  else
+    {
+      return false;
+    }
 }
 
-processor_t
+sched_task_t
 exec_get_work(executor_t exec, uint32_t attempts)
 {
-  GArray *executors = sync_data_executors (exec->task->sync_data);
-  processor_t proc;
+  GArray *executors = sync_data_executors (exec->stask->sync_data);
+  sched_task_t stask;
   uint32_t len = executors->len;
   executor_t victim;
 
@@ -61,17 +71,17 @@ exec_get_work(executor_t exec, uint32_t attempts)
           continue;
         }
 
-      if (exec_steal(victim, &proc))
+      if (exec_steal(victim, &stask))
         {
-	  assert (proc->task->state == TASK_RUNNABLE);
-          return proc;
+          assert (stask->task->state == TASK_RUNNABLE);
+          return stask;
         }
     }
 
-  if (sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc))
+  if (sync_data_try_dequeue_runnable(exec->stask->sync_data, exec, &stask))
     {
-      assert (proc->task->state == TASK_RUNNABLE);
-      return proc;
+      assert (stask->task->state == TASK_RUNNABLE);
+      return stask;
     }
   else
     {
@@ -81,82 +91,86 @@ exec_get_work(executor_t exec, uint32_t attempts)
 
 
 static
-processor_t
-get_work (executor_t exec)
+bool
+get_work (executor_t exec, sched_task_t *result)
 {
-  processor_t proc;
+  sync_data_t sync_data = exec->stask->sync_data;
 
-  if (sync_data_try_dequeue_runnable(exec->task->sync_data, exec, &proc))
+  if (sync_data_try_dequeue_runnable(sync_data, exec, result))
     {
-      return proc;
+      assert (*result != NULL);
+      return true;
     }
 
-  if (exec_steal(exec, &proc))
+  if (exec_pop(exec, result))
     {
-      return proc;
+      assert (*result != NULL);
+      return true;
     }
 
   while (true)
     {
-      proc = exec_get_work(exec, MAX_ATTEMPTS);
+      *result = exec_get_work(exec, MAX_ATTEMPTS);
 
-      if (proc != NULL)
-	{
-	  return proc;
-            }
+      if (*result != NULL)
+        {
+          return true;
+        }
 
-      if (!sync_data_wait_for_work (exec->task->sync_data))
-	{
-	  return NULL;
-	}
+      sync_data_wait_for_work (sync_data);
+
+      if (sync_data_num_processors(sync_data) == 0)
+        {
+          assert (sync_data_num_processors(sync_data) == 0);
+          return false;
+        }
     }
 }
 
 void
-exec_step_previous(executor_t exec, processor_t ignore_proc)
+exec_step_previous(executor_t exec, sched_task_t ignore_stask)
 {
-  processor_t null_proc = NULL;
-  processor_t last_proc;
-  __atomic_exchange (&exec->current_proc, &null_proc, &last_proc,
-		     __ATOMIC_SEQ_CST);
+  sched_task_t null_stask = NULL;
+  sched_task_t last_stask;
+  __atomic_exchange (&exec->prev_stask, &null_stask, &last_stask,
+                     __ATOMIC_SEQ_CST);
 
-  if (last_proc != ignore_proc && last_proc != NULL)
+  if (last_stask != ignore_stask && last_stask != NULL)
     {
       /* printf("%p transitioning %p\n", proc, last_proc); */
-      proc_step_state(last_proc, exec);
+      stask_step_state(last_stask, exec);
     }
 }
 
 void
-switch_to_next_processor(executor_t exec)
+switch_to_next_task(executor_t exec)
 {
-  // take a new piece of work.
-  BINARY_LOG(2, SYNCOPS_DEQUEUE_START, exec, NULL);
-  processor_t proc = get_work (exec);
-  BINARY_LOG(2, SYNCOPS_DEQUEUE_END, exec, NULL);
-  if (proc != NULL)
+  sched_task_t stask = NULL;
+
+  if (get_work (exec, &stask))
     {
-      DEBUG_LOG(2, "%p is dequeued by executor %p\n", proc, exec);
-      proc->executor = exec;
-      exec->current_proc = proc;
+      assert (exec != NULL);
+      stask->executor = exec;
+      exec->prev_stask = NULL;
 
       // If this task is to finish, it should restore this executors context.
-      proc->task->next = exec->task;
+      stask->task->next = exec->stask->task;
 
-      exec->task->state = TASK_TRANSITION_TO_RUNNABLE;
-      task_switch(exec->task, proc->task);
+      exec->stask->task->state = TASK_TRANSITION_TO_RUNNABLE;
+      task_switch(exec->stask->task, stask->task);
       exec_step_previous (exec, NULL);
     }
   else
     {
       exec->done = true;
     }
-
 }
+
 void
 executor_free(executor_t exec)
 {
-  task_free(exec->task);
+  stask_free(exec->stask);
+  ws_deque_free(exec->local_deque);
   free(exec);
 }
 
@@ -167,32 +181,21 @@ executor_loop(void* data)
   executor_t exec = (executor_t) data;
   while(!exec->done)
     {
-      switch_to_next_processor(exec);
+      switch_to_next_task(exec);
     }
   notifier_done = 1;
   pthread_exit(NULL);
 }
 
-static 
 void*
-executor_run(void* data)
+executor_run(executor_t exec)
 {
-  executor_t exec = data;
+  sync_data_barrier_wait(exec->stask->sync_data);
 
-  pthread_barrier_wait(&barrier);
+  task_set_func_and_run(exec->stask->task, executor_loop, exec);
 
-  task_set_func_and_run(exec->task, executor_loop, exec);
-
-  assert (false && "executor_run: should never reach this point");  
+  assert (false && "executor_run: should never reach this point");
   return NULL;
-}
-
-static
-void
-join_executor(executor_t exec)
-{
-  pthread_join(exec->thread, NULL);
-  executor_free(exec);
 }
 
 int exec_count = 0;
@@ -200,40 +203,18 @@ int exec_count = 0;
 // Constructs the executor thread and adds the executor
 // To the list of executors.
 executor_t
-make_executor(sync_data_t sync_data)
+exec_make(sync_data_t sync_data)
 {
   executor_t exec = malloc(sizeof(struct executor));
 
-  exec->task = task_make(sync_data);
-  exec->current_proc = NULL;
+  // We don't register this task as it doesn't count towards the global
+  // count of tasks.
+  exec->stask = stask_new_no_register(sync_data);
+  exec->prev_stask = NULL;
   exec->done = false;
-  exec->id = exec_count++;
+  exec->id = 0;
   exec->backoff_us = 500;
   exec->local_deque = ws_deque_new ();
+
   return exec;
-}
-
-// Joins the list of executors.
-void
-join_executors(sync_data_t sync_data)
-{
-  GArray *executors = sync_data_executors(sync_data);
-  for (int i = 0; i < executors->len; i++)
-    {
-      join_executor (g_array_index (executors, executor_t, i));
-    }
-}
-
-void
-create_executors(sync_data_t sync_data, int n)
-{
-  GArray *executors = sync_data_executors(sync_data);
-  pthread_barrier_init(&barrier, NULL, n);
-  for(int i = 0; i < n; i++)
-    {
-      executor_t exec = make_executor(sync_data);
-      
-      g_array_append_val (executors, exec);
-      pthread_create(&exec->thread, NULL, executor_run, exec);
-    }
 }

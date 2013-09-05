@@ -4,6 +4,10 @@
 
 #include "types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum 
 {
   CLOS_NORMAL,
@@ -72,5 +76,11 @@ clos_type_t
 closure_pointer_type ();
 
 void closure_apply(closure_t clos, void* res);
+
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif // _CLOSURE_H

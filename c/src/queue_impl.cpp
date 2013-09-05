@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <tbb/concurrent_queue.h>
 
-#include "libqs/queue_impl.h"
+#include "internal/queue_impl.h"
 
 extern "C"
 {

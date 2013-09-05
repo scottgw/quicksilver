@@ -3,12 +3,15 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <pthread.h>
 
 #define STACKSIZE 4*1024*sizeof(int)
 
 // user stacks
 typedef void* user_stack_t;
+
+//
+struct ctx;
+typedef struct ctx* ctx_t;
 
 // lists
 struct list;
@@ -43,9 +46,21 @@ typedef struct executor* executor_t;
 struct task;
 typedef struct task* task_t;
 
+// sched task
+struct sched_task;
+typedef struct sched_task* sched_task_t;
+
 // notifier
 struct notifier;
 typedef struct notifier* notifier_t;
+
+// task mutex
+struct task_mutex;
+typedef struct task_mutex* task_mutex_t;
+
+// task condition
+struct task_condition;
+typedef struct task_condition* task_condition_t;
 
 
 // closure types
@@ -54,6 +69,10 @@ typedef struct closure* closure_t;
 
 struct clos_type;
 typedef struct clos_type* clos_type_t;
+
+// general queue
+struct queue_impl;
+typedef struct queue_impl* queue_impl_t;
 
 // work stealing
 struct ws_deque;
@@ -67,8 +86,8 @@ struct mpscq;
 typedef struct mpscq mpscq_t;
 
 // closure queues (MPSC)
-struct qo_queue;
-typedef struct qo_queue* qo_queue_t;
+struct qoq;
+typedef struct qoq* qoq_t;
 
 
 #endif // _TYPES_H

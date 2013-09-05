@@ -1,20 +1,24 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <pthread.h>
 #include <time.h>
 #include <unistd.h>
 
-#include "libqs/debug_log.h"
 #include "libqs/sync_ops.h"
-#include "libqs/processor.h"
-#include "libqs/task.h"
-#include "libqs/queue_impl.h"
+
+#include "libqs/sched_task.h"
+#include "internal/executor.h"
+#include "internal/task.h"
+#include "internal/queue_impl.h"
+#include "internal/debug_log.h"
+
 
 // global sync data
 struct sync_data
 {
   uint32_t max_tasks;
 
-  volatile uint64_t num_processors;
+  volatile int32_t num_processors;
 
   queue_impl_t sleep_list;
   volatile uint64_t num_sleepers;
@@ -26,6 +30,8 @@ struct sync_data
 
   // List of executors
   GArray *executors;
+  // Barrier for executors
+  pthread_barrier_t barrier;
 };
 
 sync_data_t
@@ -59,15 +65,67 @@ sync_data_new(uint32_t max_tasks)
   return sync_data;
 }
 
+
 void
 sync_data_free(sync_data_t sync_data)
 {
   pthread_cond_destroy(&sync_data->not_empty);
   pthread_mutex_destroy(&sync_data->run_mutex);
+
   queue_impl_free(sync_data->runnable_queue);
   queue_impl_free(sync_data->sleep_list);
+
+  g_array_free(sync_data->executors, true);
+
   free(sync_data);
+
   binary_write();
+}
+
+
+static
+void*
+run_executor(void* data)
+{
+  return executor_run((executor_t)data);
+}
+
+void
+sync_data_barrier_wait(sync_data_t sync_data)
+{
+  pthread_barrier_wait(&sync_data->barrier);
+}
+
+void
+sync_data_create_executors(sync_data_t sync_data, uint32_t n)
+{
+  GArray *executors = sync_data->executors;
+  pthread_barrier_init(&sync_data->barrier, NULL, n);
+  for(int i = 0; i < n; i++)
+    {
+      executor_t exec = exec_make(sync_data);
+      
+      g_array_append_val (executors, exec);
+      pthread_create(&exec->thread, NULL, run_executor, exec);
+    }
+}
+
+void
+sync_data_join_executors(sync_data_t sync_data)
+{
+  GArray *executors = sync_data->executors;
+  for (int i = 0; i < executors->len; i++)
+    {
+      executor_t exec = g_array_index (executors, executor_t, i);
+      pthread_join(exec->thread, NULL);
+    }
+
+  for (int i = 0; i < executors->len; i++)
+    {
+      executor_t exec = g_array_index (executors, executor_t, i);
+      executor_free(exec);
+    }
+
 }
 
 GArray*
@@ -105,13 +163,13 @@ sync_data_wait_for_work(sync_data_t sync_data)
 /* -------------------- */
 
 void
-sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
+sync_data_enqueue_runnable(sync_data_t sync_data, sched_task_t stask)
 {
-  assert(proc != NULL);
-  assert(proc->task != NULL);
-  assert(proc->task->state == TASK_RUNNABLE);
+  assert(stask != NULL);
+  assert(stask->task != NULL);
+  assert(stask->task->state == TASK_RUNNABLE);
   
-  bool success = queue_impl_enqueue(sync_data->runnable_queue, proc);
+  bool success = queue_impl_enqueue(sync_data->runnable_queue, stask);
   assert(success);
 
   /* __sync_fetch_and_add(&sync_data->num_runnable, 1); */
@@ -121,25 +179,25 @@ sync_data_enqueue_runnable(sync_data_t sync_data, processor_t proc)
   pthread_mutex_unlock(&sync_data->run_mutex);
 }
 
-processor_t
+sched_task_t
 sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec)
 {
-  volatile processor_t proc;
-  proc = NULL;
+  volatile sched_task_t stask;
+  stask = NULL;
 
   for (int i = 0; i < 1024; i++)
     {
-      if (queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
+      if (queue_impl_dequeue(sync_data->runnable_queue, (void**)&stask))
         {
-          return proc;
+          return stask;
         }
     }
 
-  if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&proc))
+  if (!queue_impl_dequeue(sync_data->runnable_queue, (void**)&stask))
     {
       DEBUG_LOG(1, "%p runnable dequeue start\n", exec);
       pthread_mutex_lock(&sync_data->run_mutex);
-      while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&proc) && 
+      while (!queue_impl_dequeue (sync_data->runnable_queue, (void**)&stask) && 
              sync_data->num_processors > 0)
         {
           pthread_cond_wait(&sync_data->not_empty, &sync_data->run_mutex);
@@ -149,23 +207,23 @@ sync_data_dequeue_runnable(sync_data_t sync_data, executor_t exec)
     }
 
   if (sync_data->num_processors > 0 &&
-      proc != NULL)
+      stask != NULL)
     {
-      assert(proc->task->state == TASK_RUNNABLE);
+      assert(stask->task->state == TASK_RUNNABLE);
       /* __sync_fetch_and_sub(&sync_data->num_runnable, 1); */
     }
   else
     {
-      proc = NULL;
+      stask = NULL;
       pthread_cond_broadcast(&sync_data->not_empty);    
     }
-  return proc;
+  return stask;
 }
 
 bool
-sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, processor_t *proc)
+sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, sched_task_t *stask)
 {
-  return queue_impl_dequeue(sync_data->runnable_queue, (void**) proc);
+  return queue_impl_dequeue(sync_data->runnable_queue, (void**) stask);
 }
 
 
@@ -173,13 +231,13 @@ sync_data_try_dequeue_runnable(sync_data_t sync_data, executor_t exec, processor
 /* Processor registration */
 /* ---------------------- */
 void
-sync_data_register_proc(sync_data_t sync_data)
+sync_data_register_task(sync_data_t sync_data)
 {
   __sync_fetch_and_add(&sync_data->num_processors, 1);
 }
 
 void
-sync_data_deregister_proc(sync_data_t sync_data)
+sync_data_deregister_task(sync_data_t sync_data)
 {
   if (__sync_sub_and_fetch(&sync_data->num_processors, 1) == 0)
     {
@@ -187,7 +245,7 @@ sync_data_deregister_proc(sync_data_t sync_data)
     }
 }
 
-uint64_t
+int32_t
 sync_data_num_processors(sync_data_t sync_data)
 {
   return sync_data->num_processors;
@@ -199,12 +257,12 @@ sync_data_num_processors(sync_data_t sync_data)
 
 void
 sync_data_add_sleeper(sync_data_t sync_data,
-                      processor_t proc,
+                      sched_task_t stask,
                       struct timespec duration)
 {
-  assert (proc != NULL);
-  assert (proc->task != NULL);
-  assert (proc->task->state == TASK_RUNNING);
+  assert (stask != NULL);
+  assert (stask->task != NULL);
+  assert (stask->task->state == TASK_RUNNING);
 
   queue_impl_t sleepers = sync_data->sleep_list;
   sleeper_t sleeper = (sleeper_t) malloc(sizeof(struct sleeper));
@@ -214,8 +272,8 @@ sync_data_add_sleeper(sync_data_t sync_data,
   struct timespec current_time;
   clock_gettime(CLOCK_REALTIME, &current_time);
 
-  proc->task->state = TASK_WAITING;
-  sleeper->proc = proc;
+  stask->task->state = TASK_WAITING;
+  sleeper->stask = stask;
   sleeper->end_time.tv_sec = current_time.tv_sec + duration.tv_sec;
   sleeper->end_time.tv_nsec = current_time.tv_nsec + duration.tv_nsec;
 

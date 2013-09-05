@@ -1,4 +1,6 @@
 # autoconf generated files
+ar-lib
+test-driver
 build/
 *.lai
 *.0

@@ -1,13 +1,14 @@
 \documentclass[a4]{article}
 
 \usepackage{amsmath}
+\usepackage{amsfonts}
 \usepackage{calc}
 \usepackage{cite}
 \usepackage{tikz}
 \usetikzlibrary{calc, shapes, arrows, chains}
 
 \def\edcomm#1#2{%
-  \framebox{\textbf{#1:} #2}
+  \fbox{\parbox{\linewidth}{\textbf{#1:} #2}}
 }
 
 
@@ -138,16 +139,19 @@ intervening modifications to the state on that processor.
 \subsection{Guarantees}
 While the operational model is useful to understand what may be happening
 in the runtime of SCOOP,
-it is not as suitable to understanding what the user's program
-is doing.
-For this, we would like to have an axiomatic semantics that describes
-what one can rely on in terms of the program state and separate processors.
-We define our axiomatic semantics on a simplified syntax.
+it is not sufficiently abstract to allow experimentation
+with different implementation approaches.
+For this we need a more high level description of what is expected
+of a SCOOP program.
 
-% \[
-% \inference[base]{}{\{P\}a\{Q\}}
-% \inference[sep]{}
-%\]
+To do this, we say that a program has a characteristic set of
+orderings of events.
+The events can also have a heap region associated with them.
+This is because the data in SCOOP programs is segmented by the type system,
+and that has to be represented in the order of events as well,
+to express the order of events between different processors.
+If it isn't clear by now, we are trying to do away with the concept
+of processors and fix ourselves on the heaps which they effectively guard.
 
 The primary guarantee that the SCOOP model provides is that calls to a
 processor $p$ that occur while a processor $q$ has the lock
@@ -182,6 +186,100 @@ This work uses the second option:
 waiting for the result before proceeding.
 It is not as asynchronous, but allows for a simpler execution model,
 and more optimization opportunities later.
+
+\def\order{\mathit{order}}
+\def\events{\mathit{events}}
+\def\procorder{\overrightarrow{\sqsubset}}
+\subsection{Orders}
+
+\edcomm{SW}{For now I still refer to ``processors'', 
+  but I want to start using the term ``heap'' in its place.}
+
+The orders of events that occur in the programs need to ensure:
+\begin{itemize}
+\item that all calls to a separate processor are applied in the order they
+  are logged,
+\item and that only one processor at a time can log calls on another processor.
+\end{itemize}
+
+The first property is ensured by 
+$\events(s_1) \procorder \events(s_2)$,
+which basically says that all events that could arise from
+the execution of $s_1$ must be executed before
+(in processor-order, $\procorder$)
+the events that could arise from the execution of $s_2$.
+Processor order means that the events 
+(events have an associated processor)
+are only ordered with respect to the other events on the same processor.
+This ensures course-level causality between sets of events.
+For more fine-grained ordering we see this in the other rules of $\order$,
+such as
+\[
+\order (\mathit{send}(x, f)) = \mathit{send}_{\bullet} (x.f) \sqsubset x.f
+\]
+which means that the execution of a call can only occur after it has been sent.
+Here the $\bullet$ in the subscript of $\mathit{send}$ indicates that
+it originated on the current processor.
+Also, $a \sqsubset b$ is a set of
+strict preorders that includes $(a, b)$ as a member.
+In other words, if $E$ is the set of events, then
+\[
+a \sqsubset b = \left\{R \in \mathcal{P}( E \times E)\; |\;
+ \mathit{isOrder}(R) \wedge \left(a, b\right) \in R \right\}
+\]
+This is of course used in the definition of $\procorder$, above.
+
+So then, to combine two sets of orders, as is done 
+with sequential composition,
+one takes the intersection, $\cap$.
+Then only the orders that satisfy both orders will remain.
+For example: 
+$\left(s_1 \sqsubset s_2\right) \cap \left(s_2 \sqsubset s_3\right)$
+will only contain
+orders that order $s_1$, $s_2$, and $s_3$ consistently.
+Likewise, $\cup$ allows us to keep both possibilities from a conditional.
+
+\edcomm{SW}{Alternative formulation;
+  Instead of these sets of orderings we could also take a trace
+  as a parameter and have the $\order$ function test it to see if it
+  could be a candidate trace for this program.}
+
+We also include a query syntax which is basically the opposite of the
+send syntax: the storage of the result can only occur after
+the computation is performed on the remote processor.
+
+\begin{flalign*}
+  \order(s ; \mathit{skip}) &= \order(s) \\
+  \order(s_1 ; s_2 ; rest) &=
+    \events(s_1) \procorder \events(s_2) \\
+    & \cap \order(s_1) \cap \order (s_2 ; \mathit{rest}) \\
+  \order (\mathit{if}\; s_1\; \mathit{else}\; s_2\; \mathit{end}) &=
+    \order(s_1) \cup \order(s_2) \\
+  \order (\mathit{send}(x, f)) &=
+    \mathit{send}_{\bullet} (x.f) \sqsubset x.f \\
+  \order(\mathit{query}(x, f, a)) &= x.f \sqsubset a := \\
+  \order (a := ) &= \top
+\end{flalign*}
+
+The only mildly interesting thing about $\events$ is that it
+uses the processor-preserving union,
+where the events that occur on a particular processor are unioned,
+but the processors remain distinct otherwise.
+
+\begin{flalign*}
+  \events(s ; \mathit{skip}) &= \events(s) \\
+  \events(s_1 ; s_2) &= \events(s_1) \overrightarrow{\cup} \events (s_2) \\
+  \events (\mathit{if}\; s_1\; \mathit{else}\; s_2\; \mathit{end}) &=
+    \events(s_1) \overrightarrow{\cup} \events(s_2) \\
+  \events (\mathit{send}(x, f)) &=
+    \left\{\bullet \rightarrow \mathit{send}_{\bullet} (x.f),\;
+           x \rightarrow x.f \right\} \\
+  \order(\mathit{query}(x, f, a)) &=
+    \left\{x \rightarrow x.f,\; \bullet \rightarrow a := \right\} \\
+  \events (a := ) &= \left\{ \bullet \rightarrow a :=  \right\}
+\end{flalign*}
+
+
 
 %}}}
 
@@ -275,6 +373,7 @@ $n$ clients are all vying for the same supplier.
 %}}}
 
 %{{{ Related work
+
 \section{Related work}
 \subsection{Work stealing}
 
@@ -310,6 +409,7 @@ Reading stack:
 \item arbitrary dependencies are impossible to schedule efficiciently:
   Space efficient scheduling of multithreaded computations [Blumofe]
 \end{itemize}
+
 %}}}
 
 %{{{ Conclusion

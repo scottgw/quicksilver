@@ -6,7 +6,7 @@
 #include <tbb/concurrent_queue.h>
 #include <unistd.h>
 
-#include "libqs/debug_log.h"
+#include "internal/debug_log.h"
 
 extern "C"
 {

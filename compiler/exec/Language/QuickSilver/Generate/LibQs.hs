@@ -90,11 +90,11 @@ declareQsFuncs =
                     , [privQueueTypeM, procTypeM]
                     )
 
-                  , ("create_executors"
+                  , ("sync_data_create_executors"
                     , voidType
                     , [syncDataTypeM, int64TypeM]
                     )
-                  , ("join_executors", voidType, [])
+                  , ("sync_data_join_executors", voidType, [syncDataTypeM])
 
                   , ("notifier_spawn", notifierTypeM, [syncDataTypeM])
                   , ("notifier_join", voidType, [notifierTypeM])
