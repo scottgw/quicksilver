@@ -10,18 +10,18 @@ module Main
     local
       chms1: Int_Array
     do
-      create chms1.make(3)
+      create chms1.make(10)
       chms1.put(0, 0)
       chms1.put(1, 1)
       chms1.put(2, 2)
-      -- chms1.put(3, 1)
-      -- chms1.put(4, 2)
-      -- chms1.put(5, 0)
-      -- chms1.put(6, 1)
-      -- chms1.put(7, 2)
-      -- chms1.put(8, 1)
-      -- chms1.put(9, 0)
-      run (6000000, chms1)
+      chms1.put(3, 1)
+      chms1.put(4, 2)
+      chms1.put(5, 0)
+      chms1.put(6, 1)
+      chms1.put(7, 2)
+      chms1.put(8, 1)
+      chms1.put(9, 0)
+      run (600000, chms1)
     end
 
   run(n: Integer; chms: Int_Array)
@@ -33,7 +33,7 @@ module Main
       i: Integer
     do
       create signal.make()
-      create broker.make()
+      create broker.make(n)
       create workers.make(chms.count)
       
       from i := 0
