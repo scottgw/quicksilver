@@ -147,16 +147,6 @@ proc_shutdown(processor_t proc, processor_t requester);
 void
 proc_maybe_yield(processor_t proc);
 
-/*!
-  Decrease the reference count on all the processors we may be
-  connected to.
-
-  \param proc processor whose suppliers' reference counts will be decremented
-*/
-void
-proc_deref_priv_queues(processor_t proc);
-
-
 #ifdef __cplusplus
 }
 #endif
