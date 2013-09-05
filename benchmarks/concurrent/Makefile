@@ -1,4 +1,4 @@
-SUBDIRS = java
+SUBDIRS = java erlang qs
 
 .PHONY: subdirs $(SUBDIRS)
 
