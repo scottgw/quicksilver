@@ -169,12 +169,6 @@ genRoutine isMain rout = do
   withUpdEnv (union env) (local (setRoutine (makeRoutineI $ untypeRout rout))
                           (do preCond rout
                               start rout
-                              if isMain && routineName rout == "main"
-                                then
-                                  do currProc <- getCurrProc
-                                     "proc_deref_priv_queues" <#> [currProc]
-                                     return ()
-                                else return ()
                               routReturn rout
                           )
                          )

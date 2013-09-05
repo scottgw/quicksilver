@@ -27,7 +27,6 @@ declareQsFuncs =
                       ]
                     )
                   , ("proc_get_queue", privQueueTypeM, [procTypeM, procTypeM])
-                  , ("proc_deref_priv_queues", voidType, [procTypeM])
                   , ("proc_shutdown", voidType, [procTypeM, procTypeM])
                   , ("proc_wait_for_available"
                     , voidType
@@ -85,10 +84,6 @@ declareQsFuncs =
                     )
                   , ("priv_queue_last_was_func", int1TypeM, [privQueueTypeM])
                   , ("priv_queue_sync", voidType, [privQueueTypeM, procTypeM])
-                  , ("priv_queue_shutdown"
-                    , voidType
-                    , [privQueueTypeM, procTypeM]
-                    )
 
                   , ("sync_data_create_executors"
                     , voidType

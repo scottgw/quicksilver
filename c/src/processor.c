@@ -47,13 +47,6 @@ notify_available(processor_t proc)
 
 static
 void
-dec_ref(processor_t proc)
-{
-  int n = __sync_sub_and_fetch(&proc->ref_count, 1);
-}
-
-static
-void
 proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
 {
   while (true)
@@ -67,11 +60,9 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
 	}
       else if (closure_is_end(clos))
 	{
-          /* printf("closure shutdown\n"); */
 	  // The end of a private queue decrements the ref_count again.
 	  // This should have been incremented initially when the private
 	  // queue was bound to this processor.
-          dec_ref(proc);
           notify_available(proc);
 	  free(clos);
 	  break;
@@ -99,7 +90,7 @@ proc_loop(processor_t proc)
 {
   stask_step_previous(&proc->stask);
 
-  while (proc->ref_count > 0)
+  while (true)
     {
       priv_queue_t priv_queue;
 
@@ -109,41 +100,14 @@ proc_loop(processor_t proc)
       qoq_dequeue_wait(proc->qoq, (void**)&priv_queue, &proc->stask);
       if (priv_queue == NULL)
         {
-          dec_ref(proc);
+          return;
         }
       else
         {
           proc_duty_loop(proc, priv_queue);
         }
-
-      /* if (priv_queue->shutdown) */
-      /*   { */
-      /*     // This decrement corresponds to shutting down the processor. */
-      /*     // If the refcount is still above 0 then there may still be */
-      /*     // outstanding private queues that want to log their work. */
-      /*     int ref_count = __sync_sub_and_fetch(&proc->ref_count, 1); */
-      /*     priv_queue_free(priv_queue); */
-      /*     proc_deref_priv_queues(proc); */
-      /*     assert (ref_count >= 0); */
-      /*     if (ref_count == 0) */
-      /*       { */
-      /*         break; */
-      /*       } */
-      /*   } */
     }
 }
-
-static
-void
-destroy_priv_queue(gpointer key, gpointer value, gpointer user_data)
-{
-  processor_t supplier_proc = (processor_t) key;
-  priv_queue_t q = (priv_queue_t) value;
-  processor_t client_proc = (processor_t) user_data;
-
-  priv_queue_shutdown(q, client_proc);
-}
-
 
 priv_queue_t
 proc_get_queue(processor_t proc, processor_t supplier_proc)
@@ -187,12 +151,6 @@ proc_wait_for_available(processor_t waitee, processor_t waiter)
 }
 
 void
-proc_deref_priv_queues(processor_t proc)
-{
-  g_hash_table_foreach (proc->privq_cache, destroy_priv_queue, proc);
-}
-
-void
 proc_sleep(processor_t proc, struct timespec duration)
 {
   sync_data_add_sleeper(proc->stask.sync_data, &proc->stask, duration);
@@ -215,8 +173,6 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
   proc->processing_wait = false;
 
   proc->privq_cache = g_hash_table_new(NULL, NULL);
-
-  proc->ref_count = 1;
 
   stask_set_func(&proc->stask, (void (*)(void*))func, proc);
 

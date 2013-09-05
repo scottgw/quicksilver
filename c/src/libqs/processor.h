@@ -33,9 +33,6 @@ struct processor
   /*! Underlying task */
   struct sched_task stask;
 
-  /*! The next processor to execute */
-  processor_t next;
-
   /*! Queue of queues which the processor will take requests from. */
   qoq_t qoq; 
 
@@ -56,9 +53,6 @@ struct processor
 
   /*! Cache of private queues for suppliers that this processor has accessed. */
   GHashTable *privq_cache;
-
-  /*! Reference count */
-  uint32_t ref_count;
 };
 
 /*!

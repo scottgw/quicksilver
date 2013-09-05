@@ -25,8 +25,6 @@ priv_queue_new(processor_t proc)
   pq->supplier_proc = proc;
   pq->shutdown = false;
 
-  __sync_fetch_and_add(&proc->ref_count, 1);
-
   return pq;
 }
 
@@ -65,14 +63,6 @@ priv_queue_resume_supplier(priv_queue_t pq, processor_t client)
     {
       stask_wake(&pq->supplier_proc->stask, client->stask.executor);
     }
-}
-
-void
-priv_queue_shutdown(priv_queue_t pq, processor_t client)
-{
-  priv_queue_lock(pq, client);
-  spsc_enqueue_wait(pq->q, closure_new_end(), &client->stask);
-  priv_queue_unlock(pq, client);
 }
 
 void
