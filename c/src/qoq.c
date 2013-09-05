@@ -94,6 +94,7 @@ void
 qoq_enqueue_wait(qoq_t q, void *data, sched_task_t stask)
 {
   /* assert (data != NULL); */
+  assert(q != NULL);
 
   int n = __sync_fetch_and_add(&q->count, 1);
 
@@ -127,6 +128,7 @@ qoq_enqueue_wait(qoq_t q, void *data, sched_task_t stask)
 void
 qoq_dequeue_wait(qoq_t q, void **data, sched_task_t stask)
 {
+  assert(q != NULL);
   int n = __sync_fetch_and_sub(&q->count, 1);
   mpsc_node_t *node;
   if (n > q->max)
