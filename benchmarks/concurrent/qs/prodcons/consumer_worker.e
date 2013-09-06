@@ -4,10 +4,12 @@ import Int_Stack
 class Consumer_Worker
 
   stack: separate Int_Stack
-
+  done: Boolean
+  
   make(a_stack: separate Int_Stack)
     do
       stack := a_stack
+      done := False
     end
 
   run()
@@ -25,7 +27,7 @@ class Consumer_Worker
           end
         i := i + 1
       end
-
+      done := True
       {Prelude}.print("Worker done %N")
     end
 end

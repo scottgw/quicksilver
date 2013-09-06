@@ -48,17 +48,20 @@ module Main
       from i := 0
       until i >= n
       loop
-        shutdown prod_workers.item(i)
+        prod_worker := prod_workers.item(i)
+        separate prod_worker require prod_worker.done do end
+        shutdown prod_worker
         i := i + 1
       end
 
       from i := 0
       until i >= n
       loop
-        shutdown cons_workers.item(i)
+        cons_worker := cons_workers.item(i)
+        separate cons_worker require cons_worker.done do end
+        shutdown cons_worker
         i := i + 1
       end
- 
 
       shutdown stack
     end
