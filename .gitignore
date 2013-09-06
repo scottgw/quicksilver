@@ -12,3 +12,4 @@ c/conc_queue/test
 ms_print*
 gmon.out
 Lex.hs
+.cabal-sandbox
