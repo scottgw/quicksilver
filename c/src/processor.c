@@ -38,7 +38,7 @@ notify_available(processor_t proc)
     {
       task_mutex_lock(proc->mutex, &proc->stask);
       proc->last_waiter = NULL;
-      task_condition_signal(proc->cv, &proc->stask);
+      task_condition_signal_all(proc->cv, &proc->stask);
       task_mutex_unlock(proc->mutex, &proc->stask);
     }
 
