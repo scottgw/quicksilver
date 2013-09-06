@@ -13,7 +13,7 @@ module Main
       n: Integer
     do
       n := 32
-      create data.make()
+      create data.make(2*n)
       create workers.make(2*n)
 
       from i := 0
@@ -31,9 +31,17 @@ module Main
       from i := 0
       until i >= 2*n
       loop
+        worker := workers.item(i)
+        separate worker
+          require worker.done
+          do end
         shutdown workers.item(i)
         i := i + 1
       end
+
+      separate data
+        require data.done
+        do end
       shutdown data
     end
 end
