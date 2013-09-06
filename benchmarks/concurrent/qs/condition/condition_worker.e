@@ -6,10 +6,12 @@ class Condition_Worker
   data: separate Data
   sign: Integer
   done: Boolean
-
-  make(a_sign: Integer; a_data: separate Data)
+  iters: Integer
+  
+  make(a_sign: Integer; a_iters: Integer; a_data: separate Data)
     do
       sign := a_sign
+      iters := a_iters
       data := a_data
       done := False
     end
@@ -18,10 +20,12 @@ class Condition_Worker
     local
       i: Integer
       l_sign: Integer
+      l_iters: Integer
     do
       l_sign := sign
+      l_iters := iters
       from i := 1
-      until i > 20000
+      until i > l_iters
       loop
         separate data
           require
