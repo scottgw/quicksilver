@@ -15,11 +15,7 @@ import qualified Data.Vector.Algorithms.Intro as Intro
 
 import           System.Environment
 
-bool2Int :: Bool -> Int
-bool2Int b = if b then 1 else 0
-
 {-# INLINE (!) #-}
-(!) :: Unbox.Unbox e => Repa.Array U DIM2 e -> Int -> e
 (!) = Repa.unsafeLinearIndex
 
 winnow :: Int
@@ -33,10 +29,10 @@ winnow n nelts matrix mask = runIdentity $
        !sel <- selectedPts sorted
        return (Repa.toUnboxed sel)
   where
-    selectedPts x = Repa.selectP sel mkPt nelts
+    selectedPts !x = Repa.selectP sel mkPt nelts
         where
           chunk     = Unbox.length x `div` nelts
-          sel i     = True
+          sel !i    = True
           mkPt !idx = let (_, i, j) = Unbox.unsafeIndex x (idx * chunk)
                       in (i, j)
 
@@ -46,14 +42,17 @@ winnow n nelts matrix mask = runIdentity $
     -- Select the unmasked points from the matrix
     roughPts = Repa.selectP sel mkPt (n*n)
         where
-          sel !x = let (i, j) = idx2d n x
+          -- This selection only works for the benchmark code,
+          -- in the chain this should look up the correct value from
+          -- the mask, i.e., `mask ! i`
+          sel !x = let (!i, !j) = idx2d n x
                    in ((i * j) `rem` (n + 1)) == 1
-          -- mask ! i
-          mkPt !idx = let (i, j) = idx2d n idx
+          mkPt !idx = let (!i, !j) = idx2d n idx
                       in (matrix ! idx, i, j)
 
     idx2d :: Int -> Int -> (Int, Int)
-    idx2d !n !i = i `quotRem` n
+    idx2d !n !idx = idx `quotRem` n
+
 
 main =
   do [n, nelts] <- (map read) `fmap` getArgs
@@ -63,7 +62,6 @@ main =
 
 
      matrix <- MUnbox.new (n * n)
-     MUnbox.set matrix 0
      vMatrix <- Unbox.unsafeFreeze matrix
      -- vMatrix <-  Unbox.replicate (n * n) 0
 
