@@ -44,7 +44,6 @@ winnow n nelts matrix mask = runIdentity $
     sortPts = Unbox.modify Intro.sort
 
     -- Select the unmasked points from the matrix
-    -- roughPts :: Identity (Repa.Array U DIM1 (Int, (Int, Int)))
     roughPts = Repa.selectP sel mkPt (n*n)
         where
           sel !x = let (i, j) = idx2d n x
