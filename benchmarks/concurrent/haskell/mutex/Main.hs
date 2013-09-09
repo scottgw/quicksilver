@@ -22,7 +22,7 @@ mutexTest numWorkers numElems var =
   void $ mapConcurrently id muts >> (atomically (readTVar var) >>= print)
   where
     muts = replicate numWorkers mutexLoop
-    
+
     mutexIteration = do
       !x <- readTVar var
       let !x' = x + 1
