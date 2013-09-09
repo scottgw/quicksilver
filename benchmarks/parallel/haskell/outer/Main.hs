@@ -21,25 +21,20 @@ outer nelts points = runIdentity $
           matNoMax = Repa.traverse points reshp go
                where
                  reshp (Z :. n) = Z :. n :. n
-                 go at (Z :. i :. j)
-                   | i /= j = let p1 = at (Z :. i)
-                                  p2 = at (Z :. j)
-                              in distance p1 p2
-                   | otherwise = 0
+                 go at (Z :. i :. j) =
+                    let p1 = at (Z :. i)
+                        p2 = at (Z :. j)
+                    in distance p1 p2
 
        !maxes <- Repa.foldP max 0 matNoMax
-       
+
        let
-           maxMatrix = Repa.backpermuteDft 
-                         (Repa.fromFunction (Z :. nelts :. nelts) (const 0))
-                         (\ (Z :. i :. j) ->
-                           if i /= j
-                           then Just (Z :. i)
-                           else Nothing)
-                         maxes
+           sel (Z :. i :. j) | i == j = Just (Z :. i)
+                             | otherwise = Nothing
+           maxMatrix = Repa.backpermuteDft matNoMax sel maxes
 
        vec' <- Repa.computeUnboxedP (Repa.map (distance (0, 0)) points)
-       matWithMax' <- Repa.computeUnboxedP (maxMatrix +^ matNoMax)
+       matWithMax' <- Repa.computeUnboxedP maxMatrix
 
        return (matWithMax', vec')
     where
