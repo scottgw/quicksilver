@@ -7,8 +7,6 @@ import           Control.Monad.Identity
 
 import qualified Data.Array.Repa as Repa
 import           Data.Array.Repa (U, D, DIM2, DIM1, (:.)(..), Z(..))
-import qualified Data.IntMap as Map
-import           Data.IntMap (IntMap)
 import qualified Data.Vector.Unboxed as Unbox
 import qualified Data.Vector.Unboxed.Mutable as MUnbox
 import qualified Data.Vector.Algorithms.Intro as Intro
