@@ -6,6 +6,7 @@ module Main (main) where
 import           Control.Monad.Identity
 
 import qualified Data.Array.Repa as Repa
+import qualified Data.Array.Repa.Unsafe as Repa
 import           Data.Array.Repa (U, D, DIM2, DIM1, (:.)(..), Z(..), (+^))
 import qualified Data.Vector.Unboxed as Unbox
 import qualified Data.Vector.Unboxed.Mutable as MUnbox
@@ -18,7 +19,7 @@ outer :: Int
 outer nelts points = runIdentity $
     do let
           matNoMax :: Repa.Array D DIM2 Double
-          matNoMax = Repa.traverse points reshp go
+          matNoMax = Repa.unsafeTraverse points reshp go
                where
                  reshp (Z :. n) = Z :. n :. n
                  go at (Z :. i :. j) =
