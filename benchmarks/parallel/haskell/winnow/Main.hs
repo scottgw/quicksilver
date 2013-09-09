@@ -28,16 +28,16 @@ winnow :: Int
        -> Repa.Array U DIM2 Bool
        -> Unbox.Vector (Int, Int)
 winnow n nelts matrix mask = runIdentity $
-    do rough <- roughPts
-       let sorted = sortPts (Repa.toUnboxed rough)
-       sel <- selectedPts sorted
+    do !rough <- roughPts
+       let !sorted = sortPts (Repa.toUnboxed rough)
+       !sel <- selectedPts sorted
        return (Repa.toUnboxed sel)
   where
-    selectedPts x = Repa.selectP sel mkPt (Unbox.length x)
+    selectedPts x = Repa.selectP sel mkPt nelts
         where
-          chunk = Unbox.length x `div` nelts
-          sel i   = i `rem` chunk == 0
-          mkPt !idx = let (_, i, j) = Unbox.unsafeIndex x idx
+          chunk     = Unbox.length x `div` nelts
+          sel i     = True
+          mkPt !idx = let (_, i, j) = Unbox.unsafeIndex x (idx * chunk)
                       in (i, j)
 
     -- Sorting the selected unmasked points
