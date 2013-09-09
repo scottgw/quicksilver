@@ -1,0 +1,5 @@
+*.prof
+*.eventlog
+*.hi
+*.o
+main
