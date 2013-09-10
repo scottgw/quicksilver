@@ -27,12 +27,14 @@ outer nelts points = runIdentity $
                         p2 = at (Z :. j)
                     in distance p1 p2
 
-       !maxes <- Repa.foldP max 0 matNoMax
+
+       (matNoMax' :: Repa.Array U DIM2 Double) <- Repa.computeP matNoMax
+       !maxes <- Repa.foldP max 0 matNoMax'
 
        let
            sel (Z :. i :. j) | i == j = Just (Z :. i)
                              | otherwise = Nothing
-           maxMatrix = Repa.backpermuteDft matNoMax sel maxes
+           maxMatrix = Repa.unsafeBackpermuteDft matNoMax' sel maxes
 
        vec' <- Repa.computeUnboxedP (Repa.map (distance (0, 0)) points)
        matWithMax' <- Repa.computeUnboxedP maxMatrix
@@ -43,7 +45,8 @@ outer nelts points = runIdentity $
       distance (!x1, !y1) (!x2, !y2) =
           let 
               sqrtSub :: Int -> Int -> Double
-              sqrtSub !a !b = (fromIntegral $ a - b)^(2 :: Int)
+              sqrtSub !a !b = let d = a - b
+                              in fromIntegral $ d * d
           in
             sqrt (sqrtSub x2 x1 + sqrtSub y2 y1)
 
