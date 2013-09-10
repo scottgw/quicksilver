@@ -9,23 +9,39 @@ import qualified Data.Array.Repa as Repa
 import qualified Data.Array.Repa.Unsafe as Repa
 import           Data.Array.Repa (U, D, DIM2, DIM1,
                                   (:.)(..), Z(..), (+^), (*^),
-                                  All(..))
+                                  All(..), Any(..))
 import qualified Data.Vector.Unboxed as Unbox
 import qualified Data.Vector.Unboxed.Mutable as MUnbox
 
 import           System.Environment
 
+-- prodct :: Repa.Array U DIM2 Double
+--        -> Repa.Array U DIM1 Double
+--        -> Repa.Array U DIM1 Double
+-- prodct matrix vector =
+--   runIdentity $
+--      let (Z :. n :. _) = Repa.extent matrix
+--          vectorEx :: Repa.Array D DIM2 Double
+--          vectorEx = Repa.unsafeBackpermute
+--                       (Z :. n :. n)
+--                       ( \ (Z :. i :. j) -> (Z :. i))
+--                       vector
+--      in Repa.sumP (vectorEx *^ matrix)
+
+
 prodct :: Repa.Array U DIM2 Double
        -> Repa.Array U DIM1 Double
        -> Repa.Array U DIM1 Double
-prodct matrix vector =
-  runIdentity $
-     let (Z :. n :. _) = Repa.extent matrix
-         vectorEx = Repa.unsafeBackpermute
-                      (Z :. n :. n)
-                      ( \ (Z :. i :. j) -> (Z :. i))
-                      vector
-     in Repa.sumP (vectorEx *^ matrix)
+prodct matrix vector = runIdentity $
+  do let (Z :. n :. _) = Repa.extent matrix
+     Repa.computeP $
+       Repa.fromFunction (Z :. n) $
+         \ (Z :. i) ->
+           Repa.sumAllS $
+           Repa.zipWith (*)
+             (Repa.unsafeSlice matrix (Any :. i :. All))
+             vector
+
 
 main =
   do [nelts :: Int] <- (map read) `fmap` getArgs
