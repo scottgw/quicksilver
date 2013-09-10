@@ -1,6 +1,6 @@
-SUBDIRS = concurrent parallel
+SUBDIRS = haskell # cxx java erlang qs haskell
 
-.PHONY: subdirs $(SUBDIRS)
+.PHONY: clean subdirs $(SUBDIRS)
 
 subdirs: $(SUBDIRS)
 

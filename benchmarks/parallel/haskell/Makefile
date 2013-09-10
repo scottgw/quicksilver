@@ -1,4 +1,4 @@
-SUBDIRS = concurrent parallel
+SUBDIRS = randmat thresh winnow outer product
 
 .PHONY: subdirs $(SUBDIRS)
 
@@ -11,3 +11,4 @@ clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done
+

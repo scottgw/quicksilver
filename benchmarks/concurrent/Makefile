@@ -1,4 +1,4 @@
-SUBDIRS = java erlang qs haskell
+SUBDIRS = cxx java erlang qs haskell
 
 .PHONY: clean subdirs $(SUBDIRS)
 
