@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdlib.h>
+#include <glib.h>
 
 #include "libqs/private_queue.h"
 #include "libqs/processor.h"
@@ -164,5 +165,6 @@ qoq_dequeue_wait(qoq_t q, void **data, sched_task_t stask)
 void
 qoq_free(qoq_t q)
 {
-  
+  free(q->impl);
+  free(q);
 }
