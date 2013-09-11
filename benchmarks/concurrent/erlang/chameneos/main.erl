@@ -86,7 +86,7 @@ cleanup(N, M) ->
     end.
 
 
-main([Arg]) ->
+main([Arg|_Others]) ->
     N = list_to_integer(Arg),
     {Time, _} =
         timer:tc(fun() -> 

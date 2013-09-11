@@ -33,7 +33,7 @@ run(Token) ->
         done -> ok
     end. 
 
-main([Arg]) ->
+main([Arg|_Others]) ->
     {Token, _} = string:to_integer(atom_to_list(Arg)),
     {Time, _} = timer:tc(fun() -> run(Token) end),
     io:format(standard_error, "~p~n", [Time/1000000]).
