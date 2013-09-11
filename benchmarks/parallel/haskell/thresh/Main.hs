@@ -12,7 +12,6 @@ import qualified Data.IntMap as Map
 import           Data.IntMap (IntMap)
 import qualified Data.Vector.Unboxed as Unbox
 import qualified Data.Vector.Unboxed.Mutable as Unbox (new)
-import           Data.Vector.Strategies
 import           Data.Word
 
 import           System.Environment
