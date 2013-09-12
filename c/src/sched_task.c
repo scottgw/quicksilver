@@ -172,6 +172,7 @@ stask_yield_to_executor(sched_task_t stask)
 {
   assert (stask->task->state >= TASK_TRANSITION_TO_WAITING);
   executor_t exec = stask->executor;
+  bool found;
   sched_task_t next_stask;
   QS_STASK_FIND_NEXT_START();
   if (sync_data_try_dequeue_runnable (stask->sync_data, exec, &next_stask))
@@ -179,13 +180,22 @@ stask_yield_to_executor(sched_task_t stask)
       goto yield;
     }
 
-  if (exec_pop(exec, &next_stask))
+  QS_STASK_FIND_NEXT_DEQUEUE_END();
+
+  found = exec_pop(exec, &next_stask);
+
+  QS_STASK_FIND_NEXT_POP_END();
+
+  if (found)
     {
+      QS_STASK_POP_SUCCESS();
       goto yield;
       /* printf("%p stole %p\n", proc, next_proc); */
     }
 
   next_stask = exec_get_work(exec, 8);
+
+  QS_STASK_FIND_NEXT_GET_WORK_END();
 
  yield:
   QS_STASK_FIND_NEXT_END();
