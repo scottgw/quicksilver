@@ -1,8 +1,12 @@
+#define _GNU_SOURCE
+
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <pthread.h>
 #include <time.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include "libqs/sync_ops.h"
 
@@ -12,6 +16,9 @@
 #include "internal/queue_impl.h"
 #include "internal/debug_log.h"
 
+static
+void
+stick_thread_to_core(pthread_t thread, int core_id);
 
 // global sync data
 struct sync_data
@@ -120,8 +127,10 @@ sync_data_create_executors(sync_data_t sync_data, uint32_t n)
       
       g_array_append_val (executors, exec);
       pthread_create(&exec->thread, NULL, run_executor, exec);
+      stick_thread_to_core(exec->thread, i);
     }
 }
+
 
 void
 sync_data_join_executors(sync_data_t sync_data)
@@ -324,3 +333,21 @@ sync_data_get_sleepers(sync_data_t sync_data)
   __sync_fetch_and_sub(&sync_data->num_sleepers, n);
   return awakened;
 }
+
+
+/* pilfered from
+   http://stackoverflow.com/questions/1407786/how-to-set-cpu-affinity-of-a-particular-pthread
+*/
+static
+void
+stick_thread_to_core(pthread_t thread, int core_id) {
+   int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+   assert (core_id < num_cores);
+
+   cpu_set_t cpuset;
+   CPU_ZERO(&cpuset);
+   CPU_SET(core_id, &cpuset);
+
+   pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+}
+
