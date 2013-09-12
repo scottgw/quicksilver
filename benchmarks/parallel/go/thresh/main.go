@@ -16,40 +16,41 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
+	"strconv"
 )
 
 var is_bench = flag.Bool("is_bench", false, "")
 
 type ByteMatrix struct {
-	Rows, Cols uint32
-	array      []byte
+	Size  uint32
+	array []byte
 }
 
-func NewByteMatrix(r, c uint32) *ByteMatrix {
-	return &ByteMatrix{r, c, make([]byte, r*c)}
+func NewByteMatrix(n uint32) *ByteMatrix {
+	return &ByteMatrix{n, make([]byte, n*n)}
 }
 
-func WrapBytes(r, c uint32, bytes []byte) *ByteMatrix {
-	return &ByteMatrix{r, c, bytes}
+func WrapBytes(n uint32, bytes []byte) *ByteMatrix {
+	return &ByteMatrix{n, bytes}
 }
 
 func (m *ByteMatrix) Row(i uint32) []byte {
-	return m.array[i*m.Cols : (i+1)*m.Cols]
+	return m.array[i*m.Size : (i+1)*m.Size]
 }
 
 func (m *ByteMatrix) Bytes() []byte {
-	return m.array[0 : m.Rows*m.Cols]
+	return m.array[0 : m.Size*m.Size]
 }
 
 var mask [][]bool
 
-func thresh(m *ByteMatrix, nrows, ncols, percent uint32) {
+func thresh(m *ByteMatrix, n, percent uint32) {
 	NP := runtime.GOMAXPROCS(0)
 
 	hist_work := make(chan uint32)
 	hist_parts := make(chan []int)
 	go func() {
-		for i := uint32(0); i < nrows; i++ {
+		for i := uint32(0); i < n; i++ {
 			hist_work <- i
 		}
 		close(hist_work)
@@ -77,7 +78,7 @@ func thresh(m *ByteMatrix, nrows, ncols, percent uint32) {
 		}
 	}
 
-	count := (nrows * ncols * percent) / 100
+	count := (n * n * percent) / 100
 	prefixsum := 0
 	threshold := 99
 
@@ -91,7 +92,7 @@ func thresh(m *ByteMatrix, nrows, ncols, percent uint32) {
 	mask_work := make(chan uint32)
 
 	go func() {
-		for i := uint32(0); i < nrows; i++ {
+		for i := uint32(0); i < n; i++ {
 			mask_work <- i
 		}
 		close(mask_work)
@@ -116,21 +117,21 @@ func thresh(m *ByteMatrix, nrows, ncols, percent uint32) {
 }
 
 func main() {
-	var nrows, ncols, percent uint32
-
 	flag.Parse()
+	args := flag.Args()
 
-	fmt.Scanf("%d%d", &nrows, &ncols)
-  mask = make ([][]bool, nrows)
-  for i := range mask {
-    mask [i] = make ([]bool, ncols)
-  }
+	n, _ := strconv.ParseInt(args[0], 0, 0)
+	percent, _ := strconv.ParseInt(args[1], 0, 32)
 
+	mask = make([][]bool, n)
+	for i := range mask {
+		mask[i] = make([]bool, n)
+	}
 
-	m := WrapBytes(nrows, ncols, make([]byte, ncols*nrows))
+	m := WrapBytes(uint32(n), make([]byte, n*n))
 
 	if !*is_bench {
-		for i := uint32(0); i < nrows; i++ {
+		for i := uint32(0); i < uint32(n); i++ {
 			row := m.Row(i)
 			for j := range row {
 				fmt.Scanf("%d", &row[j])
@@ -138,13 +139,11 @@ func main() {
 		}
 	}
 
-	fmt.Scanf("%d", &percent)
-
-	thresh(m, nrows, ncols, percent)
+	thresh(m, uint32(n), uint32(percent))
 
 	if !*is_bench {
-		for i := uint32(0); i < nrows; i++ {
-			for j := uint32(0); j < ncols; j++ {
+		for i := uint32(0); i < uint32(n); i++ {
+			for j := uint32(0); j < uint32(n); j++ {
 				if mask[i][j] {
 					fmt.Printf("1 ")
 				} else {

@@ -1,4 +1,10 @@
-all: main
+.PHONY: test clean
+
+
+main: main.go
+	go build -o main
+
+test: main
 	./main < main.in > main.out
 	diff main.out main.gold
 	./main < main2.in > main.out
@@ -12,5 +18,5 @@ all: main
 	./main < main6.in > main.out
 	diff main.out main6.gold
 
-main: main.go
-	go build -o main
+clean:
+	go clean

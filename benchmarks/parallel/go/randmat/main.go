@@ -15,6 +15,7 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
+	"strconv"
 )
 
 type ByteMatrix struct {
@@ -39,13 +40,13 @@ var (
 	is_bench = flag.Bool("is_bench", false, "")
 )
 
-func randmat(nrows, ncols int, s uint32) *ByteMatrix {
-	matrix := NewByteMatrix(nrows, ncols)
+func randmat(n int, s uint32) *ByteMatrix {
+	matrix := NewByteMatrix(n, n)
 
 	work := make(chan int)
 
 	go func() {
-		for i := 0; i < nrows; i++ {
+		for i := 0; i < n; i++ {
 			work <- i
 		}
 		close(work)
@@ -78,16 +79,15 @@ func randmat(nrows, ncols int, s uint32) *ByteMatrix {
 func main() {
 	flag.Parse()
 
-	var nrows, ncols int
-	var seed uint32
+	var args = flag.Args()
 
-	fmt.Scan(&nrows)
-	fmt.Scan(&ncols)
-	fmt.Scan(&seed)
-	matrix := randmat(nrows, ncols, seed)
+	n, _ := strconv.ParseInt(args[0], 0, 0)
+	seed, _ := strconv.ParseInt(args[1], 0, 32)
+
+	matrix := randmat(int(n), uint32(seed))
 
 	if !*is_bench {
-		for i := 0; i < nrows; i++ {
+		for i := 0; i < int(n); i++ {
 			row := matrix.Row(i)
 			for j := range row {
 				fmt.Printf("%d ", row[j])
