@@ -194,7 +194,6 @@ bool
 ws_deque_steal(ws_deque_t wsd, void** data)
 {
   QS_WS_DEQUE_STEAL_START();
-  DTRACE_PROBE(qs, ws_deque_steal_start);
   size_t b;
   size_t t;
 
