@@ -65,7 +65,9 @@ task_wrapper(wrapper_data* data)
 task_state
 task_get_state(task_t task)
 {
-  return __atomic_load_4(&task->state, __ATOMIC_SEQ_CST);
+  task_state state;
+  __atomic_load(&task->state, &state,__ATOMIC_SEQ_CST);
+  return state;
 }
 
 

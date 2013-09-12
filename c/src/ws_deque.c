@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ck_pr.h>
 
 #include "trace.h"
 #include "internal/ws_deque.h"
@@ -49,6 +50,7 @@ void*
 circ_array_get(circ_array_t c_array, int64_t i)
 {
   void* data;
+  /* data = ck_pr_load_ptr(&c_array->array[i % circ_array_size(c_array)]); */
   __atomic_load(&c_array->array[i % circ_array_size(c_array)],
                  &data,
                  __ATOMIC_RELAXED);
@@ -131,7 +133,8 @@ ws_deque_push_bottom(ws_deque_t wsd, void* data)
   circ_array_put(c_array, b, data);
 
   __atomic_thread_fence(__ATOMIC_RELEASE);
-  __atomic_store_8(&wsd->bottom, b + 1, __ATOMIC_RELAXED);
+  b++;
+  __atomic_store(&wsd->bottom, &b, __ATOMIC_RELAXED);
 }
 
 
@@ -142,7 +145,8 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
   size_t t;
   circ_array_t c_array;
 
-  b = __atomic_load_8(&wsd->bottom, __ATOMIC_RELAXED) - 1;
+  __atomic_load(&wsd->bottom, &b, __ATOMIC_RELAXED);
+  b--;
   __atomic_load(&wsd->c_array, &c_array, __ATOMIC_RELAXED);
   __atomic_store(&wsd->bottom, &b, __ATOMIC_RELAXED);
   __atomic_thread_fence(__ATOMIC_SEQ_CST);
@@ -157,9 +161,10 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
       temp_data = circ_array_get(c_array, b);
       if (t == b)
         {
-          if (!__atomic_compare_exchange_8(&wsd->top, &t, t + 1, false,
-                                           __ATOMIC_SEQ_CST,
-                                           __ATOMIC_RELAXED))
+          size_t desired = t + 1;
+          if (!__atomic_compare_exchange(&wsd->top, &t, &desired, false,
+                                         __ATOMIC_SEQ_CST,
+                                         __ATOMIC_RELAXED))
             {
               // It's already false, but okay this is explicit.
               ret = false;
@@ -171,7 +176,8 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
               ret = true;
             }
 
-          __atomic_store_8(&wsd->bottom, b + 1, __ATOMIC_RELAXED);
+          b++;
+          __atomic_store(&wsd->bottom, &b, __ATOMIC_RELAXED);
         }
       else
         {
@@ -183,7 +189,8 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
   else
     {
       ret = false; // empty
-      __atomic_store_8(&wsd->bottom, b + 1, __ATOMIC_RELAXED);
+      b++;
+      __atomic_store(&wsd->bottom, &b, __ATOMIC_RELAXED);
     }
 
   return ret;
@@ -193,7 +200,7 @@ ws_deque_pop_bottom(ws_deque_t wsd, void** data)
 bool
 ws_deque_steal(ws_deque_t wsd, void** data)
 {
-  QS_WS_DEQUE_STEAL_START();
+  TRACE(QS_WS_DEQUE_STEAL_START());
   size_t b;
   size_t t;
 
@@ -210,9 +217,11 @@ ws_deque_steal(ws_deque_t wsd, void** data)
 
       void* temp_data = circ_array_get(c_array, t);
 
-      if (!__atomic_compare_exchange_8(&wsd->top, &t, t + 1, false,
-                                       __ATOMIC_SEQ_CST,
-                                       __ATOMIC_RELAXED))
+      size_t desired = t + 1;
+
+      if (!__atomic_compare_exchange(&wsd->top, &t, &desired, false,
+                                     __ATOMIC_SEQ_CST,
+                                     __ATOMIC_RELAXED))
         {
           ret = false; // It's already false, but okay this is explicit.
         }
@@ -226,9 +235,9 @@ ws_deque_steal(ws_deque_t wsd, void** data)
 
   if (!ret)
     {
-      QS_WS_DEQUE_STEAL_FAIL();
+      TRACE(QS_WS_DEQUE_STEAL_FAIL());
     }
 
-  QS_WS_DEQUE_STEAL_END();
+  TRACE(QS_WS_DEQUE_STEAL_END());
   return ret;
 }

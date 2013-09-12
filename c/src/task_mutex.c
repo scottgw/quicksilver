@@ -48,34 +48,40 @@ task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
 
   for (int i = 0; i < 100; i++)
     {
+      int32_t desired = 1;
       c = 0;
-      __atomic_compare_exchange_4(&mutex->inner, &c, 1,
-                                  false, __ATOMIC_SEQ_CST,
-                                  __ATOMIC_SEQ_CST);
+      __atomic_compare_exchange(&mutex->inner, &c, &desired,
+                                false, __ATOMIC_SEQ_CST,
+                                __ATOMIC_SEQ_CST);
 
       if(!c)
         {
-	  mutex->owner = stask;
+          mutex->owner = stask;
           return;
         }
     }
 
   if (c == 1)
     {
-      c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST);
+      int newval = 2;
+      __atomic_exchange(&mutex->inner, &newval, &c, __ATOMIC_SEQ_CST);
     }
 
   while (c)
     {
       // set the state to locked and contended, and sleep if it WAS locked
       // before the exchange.
-      if(__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2)
+      int inner;
+      __atomic_load(&mutex->inner, &inner, __ATOMIC_SEQ_CST);
+      if(inner == 2)
         {
           task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
           queue_impl_enqueue(mutex->wait_queue, stask);
           stask_yield_to_executor(stask);
         }
-      c = __atomic_exchange_4(&mutex->inner, 2, __ATOMIC_SEQ_CST);
+
+      int desired = 2;
+      __atomic_exchange(&mutex->inner, &desired, &c, __ATOMIC_SEQ_CST);
     }
 
   mutex->owner = stask;
@@ -84,24 +90,34 @@ task_mutex_lock(task_mutex_t mutex, volatile sched_task_t stask)
 void
 task_mutex_unlock(volatile task_mutex_t mutex, sched_task_t stask)
 {
-  if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST) == 2)
+  int inner;
+  __atomic_load(&mutex->inner, &inner, __ATOMIC_SEQ_CST);
+  if (inner == 2)
     {
-      __atomic_store_4(&mutex->inner, 0, __ATOMIC_SEQ_CST);
+      inner = 0;
+      __atomic_store(&mutex->inner, &inner, __ATOMIC_SEQ_CST);
     }
-  else if (__atomic_exchange_4(&mutex->inner, 0, __ATOMIC_SEQ_CST) == 1)
+  else
     {
-      return;
+      int newval = 0;
+      __atomic_exchange(&mutex->inner, &newval, &inner, __ATOMIC_SEQ_CST);
+      if (inner == 1)
+        {
+          return;
+        }
     }
 
 
   for (int i = 0; i < 200; i++)
     {
-      if (__atomic_load_4(&mutex->inner, __ATOMIC_SEQ_CST))
+      __atomic_load(&mutex->inner, &inner, __ATOMIC_SEQ_CST);
+      if (inner)
         {
           int old = 1;
-          __atomic_compare_exchange_4(&mutex->inner, &old, 2,
-                                      false, __ATOMIC_SEQ_CST,
-                                      __ATOMIC_SEQ_CST);
+          int desired = 2;
+          __atomic_compare_exchange(&mutex->inner, &old, &desired,
+                                    false, __ATOMIC_SEQ_CST,
+                                    __ATOMIC_SEQ_CST);
           if (old)
             {
               return;
