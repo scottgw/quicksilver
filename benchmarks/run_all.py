@@ -37,7 +37,7 @@ def run(results, sort, task, lang, num_workers):
     t2 = time.time ()
 
     if lang == 'erlang':
-        print(err)
+        # print(err)
         lastline = string.split(err.strip(),'\n')[-1]
         tdiff = float(lastline)
     else:
