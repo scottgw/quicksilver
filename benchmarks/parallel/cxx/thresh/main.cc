@@ -35,21 +35,21 @@ typedef combinable<view> histogram_type;
 
 typedef tbb::blocked_range<size_t> range;
 
-void thresh(int nrows, int ncols, int percent) {
+void thresh(int n, int percent) {
   int nmax = 0;
   histogram_type histogram;
 
   nmax = tbb::parallel_reduce(
-      range(0, nrows), 0,
+      range(0, n), 0,
       [=,&histogram](range r, int result)->int {
         view& v =  histogram.local ();
         for (size_t i = r.begin(); i != r.end(); i++) {
-          for (int j = 0; j < ncols; j++) {
+          for (int j = 0; j < n; j++) {
             int val;
             if (is_bench) {
-              matrix[i*ncols + j] = (i * j) % 100;
+              matrix[i*n + j] = (i * j) % 100;
             }
-            val = (int)matrix[i*ncols + j];
+            val = (int)matrix[i*n + j];
 
             result = max(result, val);
             v.h[val]++;
@@ -67,7 +67,7 @@ void thresh(int nrows, int ncols, int percent) {
         v.h[i] += x.h[i];
     });
 
-  int count = (nrows * ncols * percent) / 100;
+  int count = (n * n * percent) / 100;
 
   int prefixsum = 0;
   int threshold = nmax;
@@ -78,52 +78,66 @@ void thresh(int nrows, int ncols, int percent) {
   }
 
   tbb::parallel_for(
-      range(0, nrows),
+      range(0, n),
       [=](range r) {
         for (size_t i = r.begin(); i != r.end(); ++i) {
-          for (int j = 0; j < ncols; j++) {
-            mask[i*ncols + j] = matrix[i*ncols + j] >= threshold;
+          for (int j = 0; j < n; j++) {
+            mask[i*n + j] = matrix[i*n + j] >= threshold;
           }
         }
       });
 }
 
 int main(int argc, char** argv) {
-  int nrows, ncols, percent;
+  int n, percent;
+
+  int param_num = 0;
 
   for (int i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "--is_bench")) {
-      is_bench = 1;
-    } else if (!strcmp(argv[i], "--threads")) {
-      sscanf(argv[i + 1], "%d", &n_threads);
-      i++;
-    }
+    if (argv[i][0] == '-')
+      {
+        if (!strcmp(argv[i], "--is_bench")) {
+          is_bench = 1;
+        } else if (!strcmp(argv[i], "--threads")) {
+          n_threads = atoi(argv[i+1]);
+          i++;
+        }
+      }
+    else
+      {
+        if (param_num == 0)
+          {
+            n = atoi(argv[i]);
+            param_num++;
+          }
+        else
+          {
+            percent = atoi(argv[i]);
+            break;
+          }
+      }
   }
 
   task_scheduler_init init(n_threads);
-
-  scanf("%d%d", &nrows, &ncols);
   
-  matrix = (unsigned char*) malloc (sizeof (unsigned char) * nrows * ncols);
-  mask = (unsigned char*) malloc (sizeof (unsigned char) * nrows * ncols);
+  matrix = (unsigned char*) malloc (sizeof (unsigned char) * n * n);
+  mask = (unsigned char*) malloc (sizeof (unsigned char) * n * n);
 
   if (!is_bench) {
-    for (int i = 0; i < nrows; i++) {
-      for (int j = 0; j < ncols; j++) {
-        scanf("%hhu", &matrix[i*ncols + j]);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        scanf("%hhu", &matrix[i*n + j]);
       }
     }
   }
 
-  scanf("%d", &percent);
-
-  thresh(nrows, ncols, percent);
+  thresh(n, percent);
 
   if (!is_bench) {
-    printf("%d %d\n", nrows, ncols);
-    for (int i = 0; i < nrows; i++) {
-      for (int j = 0; j < ncols; j++) {
-        printf("%hhu ", mask[i*ncols + j]);
+    printf("%d %d\n", n, n);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        printf("%hhu ", mask[i*n + j]);
       }
       printf("\n");
     }
