@@ -5,7 +5,7 @@
 #include "libqs/sched_task.h"
 #include "internal/executor.h"
 #include "internal/task.h"
-
+#include "trace.h"
 static
 sched_task_t
 stask_new_register(sync_data_t sync_data, bool register_task)
@@ -173,7 +173,7 @@ stask_yield_to_executor(sched_task_t stask)
   assert (stask->task->state >= TASK_TRANSITION_TO_WAITING);
   executor_t exec = stask->executor;
   sched_task_t next_stask;
-
+  QS_STASK_FIND_NEXT_START();
   if (sync_data_try_dequeue_runnable (stask->sync_data, exec, &next_stask))
     {
       goto yield;
@@ -188,6 +188,7 @@ stask_yield_to_executor(sched_task_t stask)
   next_stask = exec_get_work(exec, 8);
 
  yield:
+  QS_STASK_FIND_NEXT_END();
   stask_switch(stask, next_stask);
 }
 
