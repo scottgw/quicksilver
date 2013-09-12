@@ -99,6 +99,19 @@ sync_data_barrier_wait(sync_data_t sync_data)
 void
 sync_data_create_executors(sync_data_t sync_data, uint32_t n)
 {
+  if (n == 0)
+    {
+      char* libqs_execs = getenv("LIBQS_EXECS");
+      if (libqs_execs == NULL)
+        {
+          n = 4;
+        }
+      else
+        {
+          n = atoi(libqs_execs);
+        }
+    }
+
   GArray *executors = sync_data->executors;
   pthread_barrier_init(&sync_data->barrier, NULL, n);
   for(int i = 0; i < n; i++)
