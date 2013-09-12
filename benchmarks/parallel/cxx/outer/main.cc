@@ -71,17 +71,24 @@ int main(int argc, char** argv) {
   int nelts;
 
   for (int i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "--is_bench")) {
-      is_bench = 1;
-    } else if (!strcmp(argv[i], "--threads")) {
-      sscanf(argv[i + 1], "%d", &n_threads);
-      i++;
-    }
+    if (argv[i][0] == '-')
+      {
+        if (!strcmp(argv[i], "--is_bench")) {
+          is_bench = 1;
+        } else if (!strcmp(argv[i], "--threads")) {
+          n_threads = atoi(argv[i+1]);
+          i++;
+        }
+      }
+    else
+      {
+        nelts = atoi(argv[i]);
+        break;
+      }
   }
 
   task_scheduler_init init(n_threads);
 
-  scanf("%d", &nelts);
   matrix = (double *) malloc (sizeof (double) * nelts * nelts);
   vec = (double *) malloc (sizeof (double) * nelts);
   points = (pair<int, int>*) malloc (sizeof (pair<int, int>) * nelts);

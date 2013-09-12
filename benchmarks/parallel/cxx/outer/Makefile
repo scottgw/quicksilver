@@ -1,10 +1,11 @@
-all: main
+.PHONY: test
+
+main: main.cc
+
+test:
 	./$< < $<.in > main.out --threads 4
 	diff main.out main.gold
 	./$< < $<.in --threads 4
 	./$< < $<.in --threads 4 --is_bench
 
-CXXFLAGS+=-std=c++0x -O2 -m64 -ltbb -lpthread -lrt -lrt
-LDFLAGS+=-ltbb
-LDFLAGS+=-ltbb
-CXX=icpc
+CXXFLAGS+=-std=c++11 -O2 -ltbb -lpthread -lrt
