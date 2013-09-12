@@ -49,7 +49,7 @@ genMain clas = do
   Just mainFunc <- getNamedFunction mainName
 
   maxProcs <- int 32000
-  numExecs <- int 4
+  numExecs <- int 0
 
   syncData <- "sync_data_new" <#> [maxProcs]
   "proc_new_root" <#> [syncData, mainFunc]
