@@ -19,9 +19,9 @@ AC_ARG_ENABLE([systemtap],
 AM_CONDITIONAL([ENABLE_SYSTEMTAP], [test x$ENABLE_SYSTEMTAP = xyes])
 AC_MSG_RESULT(${ENABLE_SYSTEMTAP})
 
-#if test "x${ENABLE_SYSTEMTAP}" = xyes; then
-  # Additional configuratino 
-#fi
+if test "x${ENABLE_SYSTEMTAP}" = xyes; then
+   AC_DEFINE([HAVE_SYSTEMTAP], [1], [Define as 1 if using probes.])
+fi
 
 # check for the dtrace program
 AC_CHECK_PROGS(DTRACE, dtrace)
@@ -29,13 +29,12 @@ if test -z "$DTRACE"; then
   AC_MSG_ERROR([dtrace not found])
 fi
 
+
 # check for the sbt SystemTap headers
 AC_CHECK_HEADER([sys/sdt.h],
                 [SDT_H_FOUND='yes'],
                 [SDT_H_FOUND='no';
                  AC_MSG_ERROR([systemtap support needs sys/sdt.h header])])
-
-AC_DEFINE([HAVE_SYSTEMTAP], [1], [Define as 1 if using probes.])
 
 AC_ARG_WITH([tapset-install-dir],
               [AS_HELP_STRING([--with-tapset-install-dir],
