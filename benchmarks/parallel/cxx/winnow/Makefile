@@ -14,4 +14,7 @@ test: main
 	./$< --threads 4 < $<.in
 	./$< --threads 4 --is_bench < $<.in
 
+clean:
+	@rm -f main
+
 CXXFLAGS+=-std=c++11 -O2 -ltbb -lpthread -lrt -lstdc++

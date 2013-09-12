@@ -18,4 +18,7 @@ test: main
 	./$< < $<.in
 	./$< < $<.in --is_bench
 
+clean:
+	@rm -f main
+
 CXXFLAGS+=-std=c++0x -O2 -m64 -ltbb -lpthread -lrt -lrt
