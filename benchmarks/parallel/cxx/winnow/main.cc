@@ -4,7 +4,7 @@
  *   matrix: an integer matrix, whose values are used as masses
  *   mask: a boolean matrix, showing which points are eligible for
  *     consideration
- *   nrows, ncols: number of rows and columns
+ *   n: number of rows and columns
  *   nelts: the number of points to select
  *
  * output:
@@ -58,19 +58,19 @@ public:
   void assign(ScanSum& other) { sum = other.sum; }
 };
 
-void winnow(int nrows, int ncols, int nelts) {
+void winnow(int n, int nelts) {
   int count = 0;
 
   count = parallel_reduce(
-    range(0, nrows), 0,
+    range(0, n), 0,
     [=](range r, int result)->int {
       for (size_t i = r.begin(); i != r.end(); i++) {
         int cur = 0;
-        for (int j = 0; j < ncols; j++) {
+        for (int j = 0; j < n; j++) {
           if (is_bench) {
-            mask[i*ncols + j] = ((i * j) % (ncols + 1)) == 1;
+            mask[i*n + j] = ((i * j) % (n + 1)) == 1;
           }
-          cur += mask[i*ncols + j];
+          cur += mask[i*n + j];
         }
         result += count_per_line[i + 1] = cur;
       }
@@ -82,17 +82,17 @@ void winnow(int nrows, int ncols, int nelts) {
 
   ScanSum scan_sum;
   tbb::parallel_scan(
-      range(0, nrows + 1),
+      range(0, n + 1),
       scan_sum);
 
   tbb::parallel_for(
-      range(0, nrows),
+      range(0, n),
       [=](range r) {
         for (size_t i = r.begin(); i != r.end(); i++) {
           int count = total_count[i];
-          for (int j = 0; j < ncols; j++) {
-            if (mask[i*ncols + j]) {
-              values[count] = (make_pair(matrix[i*ncols + j],
+          for (int j = 0; j < n; j++) {
+            if (mask[i*n + j]) {
+              values[count] = (make_pair(matrix[i*n + j],
                   make_pair(i, j)));
               count++;
             }
@@ -103,8 +103,7 @@ void winnow(int nrows, int ncols, int nelts) {
 
   tbb::parallel_sort (values, values + count);
 
-  size_t n = count;
-  size_t chunk = n / nelts;
+  size_t chunk = count / nelts;
 
   for (int i = 0; i < nelts; i++) {
     int index = i * chunk;
@@ -112,60 +111,75 @@ void winnow(int nrows, int ncols, int nelts) {
   }
 }
 
-void read_matrix(int nrows, int ncols) {
-  for (int i = 0; i < nrows; i++) {
-    for (int j = 0; j < ncols; j++) {
+void read_matrix(int n) {
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
       int v;
       cin >> v;
-      matrix[i*ncols + j] = v;
+      matrix[i*n + j] = v;
     }
   }
 }
 
-void read_mask(int nrows, int ncols) {
-  for (int i = 0; i < nrows; i++) {
-    for (int j = 0; j < ncols; j++) {
+void read_mask(int n) {
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
       int v;
       cin >> v;
-      mask[i*ncols + j] = v;
+      mask[i*n + j] = v;
     }
   }
 }
 
 int main(int argc, char** argv) {
-  int nrows, ncols, nelts;
+  int n, nelts;
+  int param_num = 0;
 
   for (int i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "--is_bench")) {
-      is_bench = 1;
-    } else if (!strcmp(argv[i], "--threads")) {
-      sscanf(argv[i + 1], "%d", &n_threads);
-      i++;
-    }
+    if (argv[i][0] == '-')
+      {
+        if (!strcmp(argv[i], "--is_bench")) {
+          is_bench = 1;
+        } else if (!strcmp(argv[i], "--threads")) {
+          n_threads = atoi(argv[i+1]);
+          i++;
+        }
+      }
+    else
+      {
+        if (param_num == 0)
+          {
+            n = atoi(argv[i]);
+            param_num++;
+          }
+        else
+          {
+            nelts = atoi(argv[i]);
+            break;
+          }
+      }
   }
 
   task_scheduler_init init(n_threads);
 
-  scanf("%d%d", &nrows, &ncols);
-  matrix = (int *) malloc (sizeof (int) * nrows * ncols);
-  mask = (int *) malloc (sizeof (int) * nrows * ncols);
+  matrix = (int *) malloc (sizeof (int) * n * n);
+  mask = (int *) malloc (sizeof (int) * n * n);
   
-  total_count = (int *) malloc (sizeof (int) * (nrows + 1));
-  memset (total_count, 0, sizeof (int) * (nrows + 1));
+  total_count = (int *) malloc (sizeof (int) * (n + 1));
+  memset (total_count, 0, sizeof (int) * (n + 1));
 
-  count_per_line = (int *) malloc (sizeof (int) * (nrows + 1));
-  memset (count_per_line, 0, sizeof (int) * (nrows + 1));
+  count_per_line = (int *) malloc (sizeof (int) * (n + 1));
+  memset (count_per_line, 0, sizeof (int) * (n + 1));
 
   if (!is_bench) {
-    read_matrix(nrows, ncols);
-    read_mask(nrows, ncols);
+    read_matrix(n);
+    read_mask(n);
   }
 
-  scanf("%d", &nelts);
   points = (pair <int, int> *) malloc (sizeof (pair <int, int>) * nelts);
-  values = (pair <int, pair <int, int> > *) malloc (sizeof (pair <int, pair <int, int> >) * nrows * ncols);
+  values = (pair <int, pair <int, int> > *) malloc (sizeof (pair <int, pair <int, int> >) * n * n);
 
-  winnow(nrows, ncols, nelts);
+  winnow(n, nelts);
 
   if (!is_bench) {
     printf("%d\n", nelts);

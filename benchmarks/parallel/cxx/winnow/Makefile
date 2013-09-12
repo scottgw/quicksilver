@@ -1,5 +1,8 @@
-CXXFLAGS+=-std=c++0x -O2 -m64 -ltbb -lpthread -lrt -lstdc++
-all: main
+.PHONY: test
+
+main: main.cc
+
+test: main
 	./$< --threads 4 < $<.in > main.out
 	diff main.out main.gold
 	./$< --threads 4 < $<2.in > main2.out
@@ -11,7 +14,4 @@ all: main
 	./$< --threads 4 < $<.in
 	./$< --threads 4 --is_bench < $<.in
 
-
-CXXFLAGS+=-std=c++0x -O2
-LDFLAGS+=-ltbb
-CXX=gcc
+CXXFLAGS+=-std=c++11 -O2 -ltbb -lpthread -lrt -lstdc++
