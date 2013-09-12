@@ -22,8 +22,6 @@ struct mpscq
   sched_task_t           tail;
   struct sched_task      stub;
 };
-typedef struct mpscq mpscq_t;
-
 
 void mpscq_create(mpscq_t* self, mpscq_node_t* stub);
 void mpscq_push(mpscq_t* self, sched_task_t n);

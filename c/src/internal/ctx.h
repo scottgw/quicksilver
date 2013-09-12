@@ -4,8 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-struct ctx;
-typedef struct ctx * ctx_t;
+#include "../libqs/types.h"
 
 ctx_t
 ctx_new();

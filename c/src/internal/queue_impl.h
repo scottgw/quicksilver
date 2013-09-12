@@ -1,12 +1,9 @@
 #include <stdbool.h>
+#include "../libqs/types.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-  struct queue_impl;
-  typedef struct queue_impl * queue_impl_t;
-
   queue_impl_t
   queue_impl_new(size_t size);
 

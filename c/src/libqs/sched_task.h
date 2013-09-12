@@ -16,8 +16,6 @@ struct sched_task
   executor_t executor;
 };
 
-typedef struct sched_task* sched_task_t;
-
 sched_task_t
 stask_new(sync_data_t);
 
