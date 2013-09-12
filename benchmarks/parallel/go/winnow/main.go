@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"runtime"
 	"sort"
+	"strconv"
 )
 
 type ByteMatrix struct {
@@ -26,12 +27,12 @@ type ByteMatrix struct {
 	array      []byte
 }
 
-func WrapBytes(r, c int, bytes []byte) *ByteMatrix {
-	return &ByteMatrix{r, c, bytes}
+func WrapBytes(n int, bytes []byte) *ByteMatrix {
+	return &ByteMatrix{n, n, bytes}
 }
 
-func NewByteMatrix(r, c int) *ByteMatrix {
-	return &ByteMatrix{r, c, make([]byte, r*c)}
+func NewByteMatrix(n int) *ByteMatrix {
+	return &ByteMatrix{n, n, make([]byte, n*n)}
 }
 
 func (m *ByteMatrix) Row(i int) []byte {
@@ -103,7 +104,7 @@ func WinnowMerge(points chan WinnowPoints) {
 	points <- merged
 }
 
-func Winnow(m *ByteMatrix, nrows, ncols, winnow_nelts int) {
+func Winnow(m *ByteMatrix, n, winnow_nelts int) {
 	NP := runtime.GOMAXPROCS(0)
 	var values WinnowPoints
 	values.m = m
@@ -113,7 +114,7 @@ func Winnow(m *ByteMatrix, nrows, ncols, winnow_nelts int) {
 	values_done <- WinnowPoints{m, make([]int, 0)}
 
 	go func() {
-		for i := 0; i < nrows; i++ {
+		for i := 0; i < n; i++ {
 			values_work <- i
 		}
 		close(values_work)
@@ -132,10 +133,10 @@ func Winnow(m *ByteMatrix, nrows, ncols, winnow_nelts int) {
 		go func() {
 			var local_indexes []int
 			for i := range values_work {
-				for j := 0; j < ncols; j++ {
-					idx := i*ncols + j
+				for j := 0; j < n; j++ {
+					idx := i*n + j
 					if *is_bench {
-						mask[i][j] = ((i * j) % (ncols + 1)) == 1
+						mask[i][j] = ((i * j) % (n + 1)) == 1
 					}
 					if mask[i][j] {
 						local_indexes = append(local_indexes, idx)
@@ -194,52 +195,50 @@ func read_integer() int {
 	return value
 }
 
-func read_matrix(nrows, ncols int) {
-	for i := 0; i < nrows; i++ {
-		for j := 0; j < ncols; j++ {
-			matrix[i*ncols+j] = byte(read_integer())
+func read_matrix(n int) {
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+			matrix[i*n+j] = byte(read_integer())
 		}
 	}
 }
 
-func read_mask(nrows, ncols int) {
-	for i := 0; i < nrows; i++ {
-		for j := 0; j < ncols; j++ {
+func read_mask(n int) {
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
 			mask[i][j] = (read_integer() == 1)
 		}
 	}
 }
 
 func main() {
-	var nrows, ncols, nelts int
+	flag.Parse()
+	args := flag.Args()
 
-  flag.Parse()
+	n, _ := strconv.ParseInt(args[0], 0, 0)
+	nelts, _ := strconv.ParseInt(args[1], 0, 32)
 
-	nrows = int(read_integer())
-	ncols = int(read_integer())
-
-	m := NewByteMatrix(nrows, ncols)
+	m := NewByteMatrix(int(n))
 
 	matrix = m.array
 
-	mask = make([][]bool, nrows)
+	mask = make([][]bool, n)
 	for i := range mask {
-		mask[i] = make([]bool, ncols)
+		mask[i] = make([]bool, n)
 	}
 	if !*is_bench {
-		read_matrix(nrows, ncols)
-		read_mask(nrows, ncols)
+		read_matrix(int(n))
+		read_mask(int(n))
 	}
 
-	nelts = int(read_integer())
 	points = make([]int, nelts)
 
-	Winnow(m, nrows, ncols, nelts)
+	Winnow(m, int(n), int(nelts))
 
 	if !*is_bench {
 		fmt.Printf("%d\n", nelts)
-		for i := 0; i < nelts; i++ {
-			fmt.Printf("%d %d\n", points[i]/ncols, points[i]%ncols)
+		for i := 0; i < int(nelts); i++ {
+			fmt.Printf("%d %d\n", points[i]/int(n), points[i]%int(n))
 		}
 		fmt.Printf("\n")
 	}
