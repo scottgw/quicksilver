@@ -68,10 +68,12 @@ struct qoq
 
   mpscq_t producers;
 
-  uint64_t max;
+  uint64_t size;
 
   mpsc_t *impl;
   mpsc_node_t stub;
+  mpsc_node_t *elems;
+  uint64_t elem_count;
 };
 
 qoq_t
@@ -80,7 +82,7 @@ qoq_new(uint32_t size)
   qoq_t q = (qoq_t)malloc(sizeof(*q));
 
   q->count  = 0;
-  q->max    = size;
+  q->size    = size;
 
   mpscq_create (&q->producers, NULL);
 
@@ -88,8 +90,21 @@ qoq_new(uint32_t size)
   mpsc_node_t *node = malloc (sizeof(*node));
   mpsc_create (q->impl, node);
 
+  q->elems = malloc(2 * size * sizeof(mpsc_node_t));
+  q->elem_count = 0;
+
   return q;
 }
+
+
+static
+mpsc_node_t*
+alloc_node(qoq_t q)
+{
+  uint64_t i = __sync_fetch_and_add(&q->elem_count, 1);
+  return q->elems + (i % (q->size*2));
+}
+
 
 void
 qoq_enqueue_wait(qoq_t q, void *data, sched_task_t stask)
@@ -101,26 +116,26 @@ qoq_enqueue_wait(qoq_t q, void *data, sched_task_t stask)
 
   if (n == -1)
     {
-      mpsc_node_t *node = malloc (sizeof(*node));
+      mpsc_node_t *node = alloc_node(q); // malloc (sizeof(*node));
       node->state = data;
       mpsc_push(q->impl, node);
 
       while (q->waiter == NULL);
       stask_wake (q->waiter, stask->executor);
     }
-  else if (n >= q->max)
+  else if (n >= q->size)
     {
       mpscq_push(&q->producers, stask);
       task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
       stask_yield_to_executor(stask);
 
-      mpsc_node_t *node = malloc (sizeof(*node));
+      mpsc_node_t *node = alloc_node(q); // malloc (sizeof(*node));
       node->state = data;
       mpsc_push(q->impl, node);
     }
   else
     {
-      mpsc_node_t *node = malloc (sizeof(*node));
+      mpsc_node_t *node = alloc_node(q); // malloc (sizeof(*node));
       node->state = data;
       mpsc_push(q->impl, node);
     }
@@ -132,7 +147,7 @@ qoq_dequeue_wait(qoq_t q, void **data, sched_task_t stask)
   assert(q != NULL);
   int n = __sync_fetch_and_sub(&q->count, 1);
   mpsc_node_t *node;
-  if (n > q->max)
+  if (n > q->size)
     {
       while ((node = mpsc_pop(q->impl)) == NULL);
       *data = node->state;
@@ -159,12 +174,13 @@ qoq_dequeue_wait(qoq_t q, void **data, sched_task_t stask)
       /* assert (*data != NULL); */
     }
 
-  free(node);
+  /* free(node); */
 }
 
 void
 qoq_free(qoq_t q)
 {
+  free(q->elems);
   free(q->impl);
   free(q);
 }
