@@ -14,7 +14,7 @@ ring = 503
 
 new ret l i = do
   r <- newEmptyMVar
-  forkOn numCapabilities (thread ret i l r)
+  forkIO (thread ret i l r)
   return r
 
 
@@ -30,5 +30,5 @@ main = do
   a <- newMVar . read . head =<< getArgs
   ret <- newEmptyMVar
   z <- foldM (new ret) a [2..ring]
-  forkOn numCapabilities (thread ret 1 z a)
+  forkIO (thread ret 1 z a)
   takeMVar ret
