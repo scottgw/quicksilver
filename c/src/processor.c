@@ -54,33 +54,33 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
       closure_t clos = priv_dequeue(priv_queue, proc);
 
       if (clos == NULL)
-	{
+        {
           notify_available(proc);
-	  break;
-	}
+          break;
+        }
       else if (closure_is_end(clos))
-	{
-	  // The end of a private queue decrements the ref_count again.
-	  // This should have been incremented initially when the private
-	  // queue was bound to this processor.
+        {
+          // The end of a private queue decrements the ref_count again.
+          // This should have been incremented initially when the private
+          // queue was bound to this processor.
           notify_available(proc);
-	  free(clos);
-	  break;
-	}
+          free(clos);
+          break;
+        }
       else if (closure_is_sync(clos))
-	{
-	  processor_t client = (processor_t) clos->fn;
-	  while (client->stask.task->state != TASK_WAITING);
-	  proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
+        {
+          processor_t client = (processor_t) clos->fn;
+          while (client->stask.task->state != TASK_WAITING);
+          proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
 
-	  stask_switch(&proc->stask, &client->stask);
-	  /* proc_wake(client, proc->executor); */
-	}
+          stask_switch(&proc->stask, &client->stask);
+          /* proc_wake(client, proc->executor); */
+        }
       else
-	{
-	  closure_apply(clos, NULL);
-	  closure_free(clos);
-	}
+        {
+          closure_apply(clos, NULL);
+          closure_free(clos);
+        }
     }
 }
 
