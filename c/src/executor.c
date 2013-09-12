@@ -4,10 +4,8 @@
 #include <glib.h>
 #include <sys/time.h>
 #include <pthread.h>
-
 #include "libqs/sync_ops.h"
 #include "libqs/notifier.h"
-
 #include "internal/ws_deque.h"
 #include "internal/debug_log.h"
 #include "internal/executor.h"
@@ -30,7 +28,7 @@ exec_steal (executor_t victim_exec, sched_task_t *stask)
 void
 exec_push (executor_t exec, sched_task_t stask)
 {
-  QS_EXEC_PUSH();
+  TRACE(QS_EXEC_PUSH());
   ws_deque_push_bottom(exec->local_deque, stask);
 
   // We only inform other processors we have more than 1 piece of work,
@@ -38,7 +36,7 @@ exec_push (executor_t exec, sched_task_t stask)
   // over the only work we have.
   if (ws_deque_size(exec->local_deque) > 1)
     {
-      QS_EXEC_SIGNAL_WORK();
+      TRACE(QS_EXEC_SIGNAL_WORK());
       sync_data_signal_work(exec->stask->sync_data);
     }
 }
