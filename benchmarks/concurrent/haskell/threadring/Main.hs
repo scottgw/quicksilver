@@ -2,7 +2,8 @@
 -- http://benchmarksgame.alioth.debian.org/
 -- Contributed by Jed Brown with improvements by Spencer Janssen, Don Stewart and Alex Mason
 --
--- Compile with: <ghc> --make -O2 -fglasgow-exts -threaded threadring.ghc-4.hs -o threadring.ghc-4.ghc_run
+
+module Main (main) where
 
 import Control.Monad
 import Control.Concurrent
