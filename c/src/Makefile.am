@@ -47,7 +47,7 @@ pkginclude_HEADERS = \
 	libqs/types.h
 
 FLAGS = -pthread -U_FORTIFY_SOURCE -DENABLE_LOG \
-	-Wall -Wno-unused-value -Wno-unused-variable -Werror
+	-Wall -Wno-unused-value -Wno-unused-variable -Werror -march=native
 libqs_la_CFLAGS = -std=gnu99 $(FLAGS) $(DEPS_CFLAGS)
 libqs_la_CXXFLAGS = -std=c++11 $(FLAGS) $(DEPS_CFLAGS)
 libqs_la_LIBADD =
