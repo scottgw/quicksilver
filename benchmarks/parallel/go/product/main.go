@@ -15,6 +15,7 @@ import (
 	"flag"
 	"fmt"
 	"runtime"
+	"strconv"
 )
 
 var is_bench = flag.Bool("is_bench", false, "")
@@ -90,13 +91,14 @@ func read_vector(nelts int) {
 }
 
 func main() {
-	var nelts int
-
 	flag.Parse()
+	args := flag.Args()
 
-	nelts = read_integer()
-  matrix = make ([]float64, nelts*nelts)
-  vector = make ([]float64, nelts)
+	nelts64, _ := strconv.ParseInt(args[0], 0, 0)
+	nelts := int(nelts64)
+
+	matrix = make([]float64, nelts*nelts)
+	vector = make([]float64, nelts)
 
 	if !*is_bench {
 		read_matrix(nelts)
