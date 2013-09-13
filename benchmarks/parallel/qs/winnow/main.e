@@ -1,5 +1,6 @@
 import Array
 
+import Input_Creator
 import Winnow_Value_Point
 import Winnow_Point
 import Winnow_Sort
@@ -18,7 +19,8 @@ module Main
       cols: Integer
       n: Integer
       nelts: Integer
-      
+
+      inp: separate Input_Creator
       sep_mask: separate Int_Matrix
       sep_matrix: separate Int_Matrix
 
@@ -32,14 +34,19 @@ module Main
       x_points: Int_Array
       y_points: Int_Array
     do
-      cols := 800
-      rows := 800
-      nelts := 80
+      cols := 10000
+      rows := 10000
+      nelts := 1000
       n := 32
 
       -- Create mask and matrix
-      sep_mask := load_mask (cols, rows)
-      sep_matrix := load_matrix (cols, rows)
+      create inp.make(cols)
+      separate inp
+        do
+          sep_mask := inp.mask
+          sep_matrix := inp.matrix
+        end
+
       create workers.make (n)
 
       -- Construct and call the unmasked call.
@@ -76,63 +83,6 @@ module Main
       -- the 'value' part.
       chunk_points (val_points, nelts, x_points, y_points)
       {Prelude}.exit_with(0) 
-    end
-
-  
-  load_matrix (cols: Integer; rows: Integer): separate Int_Matrix
-    local
-      i: Integer
-      j: Integer
-      sep_matrix: separate Int_Matrix
-    do
-      create sep_matrix.make (cols, rows)
-
-      separate sep_matrix
-        do
-          from i := 0
-          until i >= rows
-          loop
-            from j := 0
-            until j >= cols
-            loop
-              sep_matrix.put (j, i, i*j)
-              j := j + 1
-            end
-            i := i + 1
-          end
-        end
-
-      Result := sep_matrix
-    end
-
-  load_mask (cols: Integer; rows: Integer): separate Int_Matrix
-    local
-      i: Integer
-      j: Integer
-      sep_mask: separate Int_Matrix
-    do
-      create sep_mask.make (cols, rows)
-
-      separate sep_mask
-        do
-          from i := 0
-          until i >= rows
-          loop
-            from j := 0
-            until j >= cols
-            loop
-              if ((i * j) \\ (cols + 1)) = 1 then
-                sep_mask.put (j, i, 1)
-              else
-                sep_mask.put (j, i, 0)
-              end
-              j := j + 1
-            end
-            i := i + 1
-          end
-        end
-
-      Result := sep_mask
     end
   
   merge_val_points(workers: Array[separate Winnow_Worker]):

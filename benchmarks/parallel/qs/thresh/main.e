@@ -33,8 +33,8 @@ module Main
       workers: Array [separate Thresh_Histogram]
     do
       n := 32
-      rows := 8000
-      cols := 8000
+      rows := 10000
+      cols := 10000
       percent := 1
 
       create workers.make(n)

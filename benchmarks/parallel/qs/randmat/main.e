@@ -31,8 +31,8 @@ module Main
       worker_height: Integer
       workers: Array[separate Randmat_Worker]
     do
-      nrows := 8000
-      ncols := 8000
+      nrows := 10000
+      ncols := 10000
       s := 8
       num_workers := 32
  

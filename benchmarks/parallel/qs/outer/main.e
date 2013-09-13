@@ -27,7 +27,7 @@ module Main
       x_points: separate Int_Array
       y_points: separate Int_Array
     do
-      nelts := 8000
+      nelts := 10000
       n := 32
 
       -- Create storage for the results
@@ -37,8 +37,8 @@ module Main
       -- Create x and y point vectors
       create x_points.make (nelts)
       create y_points.make (nelts)
-      fill_points (x_points, nelts)
-      fill_points (y_points, nelts)
+      -- fill_points (x_points, nelts)
+      -- fill_points (y_points, nelts)
 
       -- Create worker vector
       create workers.make (n)

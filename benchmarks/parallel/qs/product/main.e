@@ -25,7 +25,7 @@ module Main
       workers: Array [separate Product_Worker]
     do
 
-      nelts := 8000
+      nelts := 10000
       n := 32
 
       -- Create storage for the input and result
