@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math"
 	"runtime"
+	"strconv"
 )
 
 var is_bench = flag.Bool("is_bench", false, "")
@@ -100,12 +101,13 @@ func read_vector_of_points(nelts int) {
 }
 
 func main() {
-	var nelts int
-
 	flag.Parse()
+	args := flag.Args()
 
-	nelts = read_integer()
-  points = make ([]Point, nelts)
+	nelts64, _ := strconv.ParseInt(args[0], 0, 0)
+	nelts := int(nelts64)
+
+	points = make([]Point, nelts)
 
 	if !*is_bench {
 		read_vector_of_points(nelts)
@@ -115,12 +117,12 @@ func main() {
 
 	if !*is_bench {
 		fmt.Printf("%d %d\n", nelts, nelts)
-    for _, row := range matrix {
-      for _, elem := range row {
-        fmt.Printf("%g ", elem)
-      }
-      fmt.Printf("\n")
-    }
+		for _, row := range matrix {
+			for _, elem := range row {
+				fmt.Printf("%g ", elem)
+			}
+			fmt.Printf("\n")
+		}
 		fmt.Printf("\n")
 
 		fmt.Printf("%d\n", nelts)
