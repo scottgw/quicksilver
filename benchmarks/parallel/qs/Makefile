@@ -1,6 +1,6 @@
-SUBDIRS = haskell cxx go qs # erlang
+SUBDIRS = randmat thresh winnow outer product
 
-.PHONY: clean subdirs $(SUBDIRS)
+.PHONY: subdirs $(SUBDIRS)
 
 subdirs: $(SUBDIRS)
 
@@ -11,3 +11,4 @@ clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done
+
