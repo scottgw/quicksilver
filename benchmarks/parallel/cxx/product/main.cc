@@ -67,7 +67,9 @@ int main(int argc, char** argv) {
   task_scheduler_init init(n_threads);
 
   matrix = (double *) malloc (sizeof(double) * nelts * nelts);
+  memset(matrix, 0, nelts * nelts);
   vec = (double *) malloc (sizeof (double) * nelts);
+  memset(vec, 0, nelts);
   result = (double *) malloc (sizeof (double) * nelts);
 
   if (!is_bench) {

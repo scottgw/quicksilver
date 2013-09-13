@@ -5,7 +5,7 @@ import time
 import csv
 from subprocess import Popen, call, PIPE
 
-langs=['cxx', 'haskell', 'go', 'erlang', 'qs'] # 'qs', 'erlang']
+langs=['cxx', 'haskell', 'go', 'qs'] # , 'erlang']
 
 tasks={'concurrent': ['condition', 'mutex', 'prodcons', 'threadring', 'chameneos'],
        'parallel': ['randmat', 'thresh', 'winnow', 'outer', 'product']}
@@ -48,7 +48,7 @@ def run(results, sort, task, lang, num_workers):
     print (data)
 
 def main():
-    for sort in ['concurrent']:
+    for sort in ['parallel']:
         results = []
 
         for task in tasks[sort]:

@@ -1,2 +1,2 @@
 #!/bin/bash
-LIBQS_EXECS=$1 ./main
+LIBQS_EXECS=$3 ./main
