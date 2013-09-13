@@ -12,7 +12,7 @@ module Main
       chms2: Int_Array
       n: Integer
     do
-      n := 6000000
+      n := 600000
       create chms1.make(3)
       chms1.put(0, 0)
       chms1.put(1, 1)

@@ -5,21 +5,21 @@ import time
 import csv
 from subprocess import Popen, call, PIPE
 
-langs=['cxx', 'haskell', 'qs', 'erlang']
+langs=['cxx', 'haskell', 'go', 'erlang', 'qs'] # 'qs', 'erlang']
 
 tasks={'concurrent': ['condition', 'mutex', 'prodcons', 'threadring', 'chameneos'],
        'parallel': ['randmat', 'thresh', 'winnow', 'outer', 'product']}
 
-inputs= {'mutex': '20000',
-         'condition': '20000',
-         'prodcons': '20000',
-         'threadring': '50000000',
-         'chameneos': '6000000',
-         'randmat': '0 8000',
-         'thresh': '8000 1',
-         'winnow': '8000 800',
-         'outer': '8000',
-         'product': '8000'}
+inputs= {'mutex': '20000 32',
+         'condition': '20000 32',
+         'prodcons': '20000 32',
+         'threadring': '5000000',
+         'chameneos': '600000',
+         'randmat': '10000 0',
+         'thresh': '10000 1',
+         'winnow': '10000 1000',
+         'outer': '10000',
+         'product': '10000'}
 
 def make_command(lang, task, num_workers):
     return './run.sh ' + inputs[task] + ' ' + str(num_workers)
@@ -53,7 +53,7 @@ def main():
 
         for task in tasks[sort]:
             for lang in langs:
-                for workers in [32]:
+                for workers in [4]:
                     for i in range(1):
                         run(results, sort, task, lang, workers)
 

@@ -14,7 +14,7 @@ module Main
       num_passes: Integer
     do
       n := 503
-      num_passes := 50000000
+      num_passes := 5000000
 
       create token.make(num_passes)
       
