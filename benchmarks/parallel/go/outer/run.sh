@@ -1,3 +1,3 @@
 #!/bin/bash
 
-GOMAXPROCS=$1 ./main --is_bench ${@:2}
+GOMAXPROCS=$2 ./main --is_bench $1

@@ -42,6 +42,6 @@ rand s = lcg_a * s + lcg_c
     lcg_c = 1013904223
 
 main =
-  do [seed, n] <- (map read) `fmap` getArgs
+  do [n, seed] <- (map read) `fmap` getArgs
      let x = randmat seed n
      print (Unbox.length x)

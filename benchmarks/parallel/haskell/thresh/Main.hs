@@ -19,7 +19,7 @@ import           System.Environment
 thresh :: Int -> Int -> Unbox.Vector Int -> IO (Repa.Array U DIM2 Bool)
 thresh n thr v =
     do !arrayMax <- Repa.foldAllP max 0 rv
-
+       print arrayMax
        let
          hist' = mkHist (Repa.toUnboxed rv)
 
@@ -27,11 +27,11 @@ thresh n thr v =
          hist = Map.unionWith (+) hist
                 (Map.fromList [(i,0) | i <- [0 .. arrayMax]])
 
-         limit = n * n * thr `div` 100
+         limit = (n * n * thr) `div` 100
 
          lastNumber :: Int
          lastNumber = either id (const 0)
-                      (foldr go (Right 0) [arrayMax, 98 .. 0])
+                      (foldr go (Right 0) [arrayMax, arrayMax - 1 .. 0])
            where
              go !i (Right !s) | s >= limit = Left i
                               | otherwise  = Right (s + hist Map.! i)
@@ -48,8 +48,8 @@ thresh n thr v =
     rv = Repa.fromUnboxed (Z :. n :. n) v
 
 main =
-  do [thr, n] <- (map read) `fmap` getArgs
-     mv <- Unbox.new (n * n)
-     v <- Unbox.unsafeFreeze mv
+  do [n, thr] <- (map read) `fmap` getArgs
+     let v = Unbox.replicate (n * n) 0
+     -- v <- Unbox.unsafeFreeze mv
      x <- thresh n thr v
      print (Unbox.length $ Repa.toUnboxed x)

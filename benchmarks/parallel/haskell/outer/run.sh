@@ -1,2 +1,2 @@
 #!/bin/bash
-./main $@ +RTS -N -RTS
+./main $1 +RTS -N$2 -RTS
