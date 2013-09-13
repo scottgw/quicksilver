@@ -24,7 +24,7 @@ main(Iters, Workers) ->
         {done, I} -> io:format("~p~n", [Workers*Iters - I])
     end.
 
-main([ItersStr, WorkersStr]) ->
+main([ItersStr, WorkersStr, _Rest]) ->
     {Iters, _} = string:to_integer(atom_to_list(ItersStr)),
     {Workers, _} = string:to_integer(atom_to_list(WorkersStr)),
 
