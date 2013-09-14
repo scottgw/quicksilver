@@ -77,13 +77,13 @@ pointer_64_get (int64_t* p, int64_t i)
 void
 pointer_real_put (int64_t* p, int64_t i, double c)
 {
-  p[i] = c;
+  ((double*)p)[i] = c;
 }
 
 double
 pointer_real_get (int64_t* p, int64_t i)
 {
-  return (double)p[i];
+  return ((double*) p)[i];
 }
 
 /************************************
