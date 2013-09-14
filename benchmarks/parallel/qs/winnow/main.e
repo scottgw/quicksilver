@@ -71,6 +71,7 @@ module Main
 
       -- Reconstruct a single array of value points
       val_points := merge_val_points (workers)
+
       sort_list (val_points)
 
 --      shutdown sep_mask
@@ -108,13 +109,17 @@ module Main
         worker := workers.item (i)
         separate worker
           do
-            val_pt_count := val_pt_count + worker.val_points.count
+           sep_val_points := worker.val_points
           end
+        separate sep_val_points
+          do
+            val_pt_count := val_pt_count + sep_val_points.count
+         end
         i := i + 1
       end
 
       create val_points.make (val_pt_count)
-
+ 
       -- Fetch the value points from each array
       from
         i := 0
@@ -141,8 +146,9 @@ module Main
             end
           end
         i := i + 1
-        shutdown worker  
+        -- shutdown worker  
       end
+      
       Result := val_points
     end
   

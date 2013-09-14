@@ -17,17 +17,17 @@ create make
     do
       create matrix.make (cols, rows)
 
-      from i := 0
-      until i >= rows
-      loop
-        from j := 0
-        until j >= cols
-        loop
-          matrix.put (j, i, i*j)
-          j := j + 1
-        end
-        i := i + 1
-      end
+--      from i := 0
+--      until i >= rows
+--      loop
+--        from j := 0
+--        until j >= cols
+--        loop
+--          matrix.put (j, i, i*j)
+--          j := j + 1
+--        end
+--        i := i + 1
+--      end
     end
 
   load_mask (cols: Integer; rows: Integer)
@@ -37,21 +37,21 @@ create make
     do
       create mask.make (cols, rows)
 
-      from i := 0
-      until i >= rows
-      loop
-        from j := 0
-        until j >= cols
-        loop
-          if ((i * j) \\ (cols + 1)) = 1 then
-            mask.put (j, i, 1)
-          else
-            mask.put (j, i, 0)
-          end
-          j := j + 1
-        end
-        i := i + 1
-      end
+--      from i := 0
+--      until i >= rows
+--      loop
+--        from j := 0
+--        until j >= cols
+--        loop
+--          if ((i * j) \\ (cols + 1)) = 1 then
+--            mask.put (j, i, 1)
+--          else
+--            mask.put (j, i, 0)
+--          end
+--          j := j + 1
+--        end
+--        i := i + 1
+--      end
     end
   
   mask: Int_Matrix

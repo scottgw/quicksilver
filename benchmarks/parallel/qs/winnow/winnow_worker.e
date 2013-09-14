@@ -32,8 +32,8 @@ create make
       sep_mask := a_sep_mask
       sep_matrix := a_sep_matrix
 
-      fetch_mask()
-      fetch_matrix()
+--      fetch_mask()
+      -- fetch_matrix()
     end
 
   gather_unmasked()
@@ -45,14 +45,15 @@ create make
       val_pt_idx: Integer
     do
       count := 0
-
       from i := start
       until i >= final
       loop
         from j := 0
         until j >= ncols
         loop
-          count := count + mask.item(j, i)
+          if (j* i ) // (ncols + 1) = 1 then
+            count := count + 1
+          end
           j := j + 1
         end
         i := i + 1
@@ -64,10 +65,11 @@ create make
       from i := start
       until i >= final
       loop
+
         from j := 0
         until j >= ncols
         loop
-          if mask.item(j, i) = 1 then
+          if (j * i) // (ncols + 1) = 1 then -- mask.item(j, i) = 1 then
             create value_point.make(local_mat.item(j, i), j, i)
             val_points.put (val_pt_idx, value_point)
             val_pt_idx := val_pt_idx + 1            
