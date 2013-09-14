@@ -31,14 +31,14 @@ create make
       sep_matrix := a_sep_matrix
       sep_vector := a_sep_vector
 
-      create prod_vector.make_with_base (final - start, start)
-      create matrix.make_with_start_row (nelts, final - start, start)
+      create prod_vector.make (final - start)
+      create matrix.make (nelts, final - start)
       create vector.make (nelts)
     end
 
   calculate()
     do
-      fetch_points()
+--      fetch_points()
       calc_product()
     end
 
@@ -46,26 +46,37 @@ create make
     local
       i: Integer
       j: Integer
+      s: Integer
+      f: Integer
+      n: Integer
+      m: Real_Matrix
+      sm: separate Real_Matrix
     do
+      n := nelts
+      s := start
+      f := final
+      m := matrix
+      sm := sep_matrix
+
       separate sep_vector
         do
           from i := 0
-          until i >= nelts
+          until i >= n
           loop
             vector.put (i, sep_vector.item (i))
             i := i + 1
           end
         end
 
-      separate sep_matrix
+      separate sm
         do
-          from i := start
-          until i >= final
+          from i := s
+          until i >= f
           loop
             from j := 0
-            until j >= nelts
+            until j >= n
             loop
-              matrix.put (j, i, sep_matrix.item (j, i))
+              m.put (j, i - s, sm.item (j, i))
               j := j + 1
             end
             i := i + 1
@@ -77,18 +88,30 @@ create make
     local
       sum: Real
       i, j: Integer
+      n: Integer
+      w: Integer
+      m: Real_Matrix
+      v: Real_Array
+      p: Real_Array
     do
-      from i := start
-      until i >= final
+      n := nelts
+      w := final - start
+      m := matrix
+      v := vector
+      p := prod_vector
+
+
+      from i := 0
+      until i >= w
       loop
         sum := 0.0
         from j := 0
         until j >= nelts
         loop
-          sum := sum + vector.item(j) * matrix.item(j, i)
+          sum := sum + v.item(j) * m.item(j, i)
           j := j + 1
         end
-        prod_vector.put (i, sum)
+        p.put (i, sum)
 
         i := i + 1
       end

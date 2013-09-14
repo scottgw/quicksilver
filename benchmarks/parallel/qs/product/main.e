@@ -85,14 +85,14 @@ module Main
     do
       separate worker
         do
-          i := worker.start
---          from i := worker.start
---          until i >= worker.final
---          loop
---            result_vector.put (i, result_vector.item(i) +
---              worker.prod_vector.item (i))
---            i := i + 1
---          end
+--          i := worker.start
+          from i := worker.start
+          until i >= worker.final
+          loop
+            result_vector.put (i, result_vector.item(i) +
+              worker.prod_vector.item (i))
+            i := i + 1
+          end
         end
       -- shutdown worker
     end
