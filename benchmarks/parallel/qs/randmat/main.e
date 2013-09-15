@@ -74,19 +74,20 @@ module Main
 
         separate worker_matrix
           do
-            from
-              ii := worker_start
-              iend := ii + worker_height
-            until ii >= iend
-            loop
-              from jj := 0
-              until jj >= ncols
-              loop
-                matrix.put (jj, ii, worker_matrix.item (jj, ii))
-                jj := jj + 1
-              end
-              ii := ii + 1
-            end
+            ii := worker_start
+--            from
+--              ii := worker_start
+--              iend := ii + worker_height
+--            until ii >= iend
+--            loop
+--              from jj := 0
+--              until jj >= ncols
+--              loop
+--                matrix.put (jj, ii, worker_matrix.item (jj, ii))
+--                jj := jj + 1
+--              end
+--              ii := ii + 1
+--            end
           end
         i := i + 1
       end
