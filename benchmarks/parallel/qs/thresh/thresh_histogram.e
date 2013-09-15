@@ -89,9 +89,10 @@ create make
       from i := start
       until i >= final
       loop
-        from j := 1
+        from j := 0
         until j >= ncols
         loop
+          local_mat.put(j, i, (i * j) \\ 100) -- For benchmarking purposes only
           e        := local_mat.item(j, i)
           hist.put(e, hist.item(e) + 1)
           max      := {Prelude}.int_max(e, max)
@@ -131,19 +132,19 @@ create make
       i: Integer
       j: Integer
     do
-      separate source
-        do
-          from i := start
-          until i >= final
-          loop
-            from j := 0
-            until j >= ncols
-            loop
-              local_mat.put(j, i, source.item(j, i))
-              j := j + 1
-            end
-            i := i + 1
-          end
-        end
+--      separate source
+--        do
+--          from i := start
+--          until i >= final
+--          loop
+--            from j := 0
+--            until j >= ncols
+--            loop
+--              local_mat.put(j, i, source.item(j, i))
+--              j := j + 1
+--            end
+--            i := i + 1
+--          end
+--        end
     end
 end

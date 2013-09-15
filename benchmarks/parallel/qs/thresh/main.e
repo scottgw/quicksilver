@@ -96,21 +96,21 @@ module Main
             iend := hist.final
           end
 
-        separate worker_mask
-          do
-            from
-               ii := start
-            until ii >= iend
-            loop
-              from jj := 0
-              until jj >= cols
-              loop
-                result_mask.put (jj, ii, worker_mask.item(jj, ii))
-                jj := jj + 1
-              end
-              ii := ii + 1
-            end
-          end
+--        separate worker_mask
+--          do
+--            from
+--               ii := start
+--            until ii >= iend
+--            loop
+--              from jj := 0
+--              until jj >= cols
+--              loop
+--                result_mask.put (jj, ii, worker_mask.item(jj, ii))
+--                jj := jj + 1
+--              end
+--              ii := ii + 1
+--            end
+--          end
 --        shutdown hist
         i := i + 1
       end
