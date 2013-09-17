@@ -12,7 +12,7 @@ create make
       ncols := a_ncols
       seed := a_seed
       done := False
-      create matrix.make_with_start_row (height, ncols, start)
+      create matrix.make (height, ncols)
     end
 
     
@@ -33,7 +33,7 @@ create make
         until j >= ncols
         loop
           s := lcg_a * s + lcg_c
-          matrix.put(j, i, s \\ rand_max)
+          matrix.put(j, i - start, s \\ rand_max)
           j := j + 1
         end
         i := i + 1

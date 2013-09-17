@@ -60,8 +60,32 @@ module Main
         i := i + 1
       end
 
+      fetch_results(workers, ncols, matrix)
+       
+      {Prelude}.exit_with(0)
+--      from i := 0 
+--      until i >= num_workers
+--      loop
+--        shutdown workers.item(i)
+--        i := i + 1
+--      end
+    end
+  fetch_results(workers: Array[separate Randmat_Worker];
+                ncols: Integer;
+                matrix: Int_Matrix)
+    local
+      i: Integer
+      ii: Integer
+      jj: Integer
+      iend: Integer
+      worker: separate Randmat_Worker
+      worker_start: Integer
+      worker_height: Integer
+      worker_matrix: separate Int_Matrix
+    do
+
       from i := 0
-      until i >= num_workers
+      until i >= workers.count
       loop
         worker := workers.item(i)
         separate worker
@@ -74,31 +98,21 @@ module Main
 
         separate worker_matrix
           do
-            ii := worker_start
---            from
---              ii := worker_start
---              iend := ii + worker_height
---            until ii >= iend
---            loop
---              from jj := 0
---              until jj >= ncols
---              loop
---                matrix.put (jj, ii, worker_matrix.item (jj, ii))
---                jj := jj + 1
---              end
---              ii := ii + 1
---            end
+            from
+              ii := worker_start
+              iend := ii + worker_height
+            until ii >= iend
+            loop
+              from jj := 0
+              until jj >= ncols
+              loop
+                matrix.put (jj, ii, worker_matrix.item (jj, ii - worker_start))
+                jj := jj + 1
+              end
+              ii := ii + 1
+            end
           end
         i := i + 1
       end
-        
-      {Prelude}.exit_with(0)
---      from i := 0 
---      until i >= num_workers
---      loop
---        shutdown workers.item(i)
---        i := i + 1
---      end
-    end
-
+   end
 end
