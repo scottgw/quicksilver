@@ -37,8 +37,8 @@ create make
       sep_hist := a_sep_hist
 
       source := a_source
-      create local_mat.make_with_start_row(ncols, final - start, start)
-      create mask.make_with_start_row(ncols, final - start, start)
+      create local_mat.make (ncols, final - start)
+      create mask.make (ncols, final - start)
     end
 
   -- Histogram calculation
@@ -92,8 +92,8 @@ create make
         from j := 0
         until j >= ncols
         loop
-          local_mat.put(j, i, (i * j) \\ 100) -- For benchmarking purposes only
-          e        := local_mat.item(j, i)
+          local_mat.put(j, i - start, (i * j) \\ 100) -- For benchmarking purposes only
+          e        := local_mat.item(j, i - start)
           hist.put(e, hist.item(e) + 1)
           max      := {Prelude}.int_max(e, max)
           j := j + 1
@@ -114,10 +114,10 @@ create make
         from j := 0
         until j >= ncols
         loop
-          if local_mat.item(j, i) >= cutoff then
-            mask.put(j, i, 1)
+          if local_mat.item(j, i - start) >= cutoff then
+            mask.put(j, i - start, 1)
           else
-            mask.put(j, i, 0)
+            mask.put(j, i - start, 0)
           end
           
           j := j + 1
