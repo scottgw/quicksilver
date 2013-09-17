@@ -48,7 +48,7 @@ def run(results, sort, task, lang, num_workers):
     print (data)
 
 def main():
-    for sort in ['parallel']:
+    for sort in ['concurrent', 'parallel']:
         results = []
 
         for task in tasks[sort]:
