@@ -6,20 +6,13 @@ create make
 
   height: Integer
   width: Integer
-  start_row: Integer
 
   array: Int_Array
 
-  make(h: Integer; w: Integer)
-    do
-      make_with_start_row (h, w, 0)
-    end
-
-  make_with_start_row (h: Integer; w: Integer; a_start_row: Integer)
+  make (h: Integer; w: Integer)
     do
       height := h
       width := w
-      start_row := a_start_row
 
       create array.make(w * h)
     end
@@ -36,6 +29,6 @@ create make
 
   calc_index(x: Integer; y: Integer): Integer
     do
-      Result : = x + (y - start_row) * width
+      Result : = x + y * width
     end
 end
