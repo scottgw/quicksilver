@@ -5,7 +5,7 @@ import time
 import csv
 from subprocess import Popen, call, PIPE
 
-langs=['cxx', 'haskell', 'go', 'qs'] # , 'erlang']
+langs=['cxx', 'haskell', 'go', 'qs' , 'erlang']
 
 tasks={'concurrent': ['condition', 'mutex', 'prodcons', 'threadring', 'chameneos'],
        'parallel': ['randmat', 'thresh', 'winnow', 'outer', 'product']}
