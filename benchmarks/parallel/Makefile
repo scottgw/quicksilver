@@ -1,4 +1,4 @@
-SUBDIRS = haskell cxx go qs # erlang
+SUBDIRS = haskell cxx go qs erlang
 
 .PHONY: clean subdirs $(SUBDIRS)
 
