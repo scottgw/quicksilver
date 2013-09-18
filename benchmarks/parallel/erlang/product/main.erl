@@ -11,16 +11,15 @@
 %
 
 -module(main).
--export([main/0, main/1]).
--export([product/3]).
+-export([main/0]).
+-export([product/2]).
 
 join(Pids) ->
     Parts = [receive {Pid, Result, Time} -> {Result, Time} end || Pid <- Pids],
     {Results, Times} = lists:unzip(Parts),
     TotalTime = lists:sum(Times),
-    io:format("workers: ~p~n", [length(Parts)]),
-    io:format(standard_error, "~p~n", [TotalTime/1000000]),
-    lists:reverse(lists:append(Results)).
+    Result = lists:reverse(lists:append(Results)),
+    {TotalTime, Result}.
 
 prod_row ([], [], Acc) ->
     Acc;
@@ -43,54 +42,47 @@ chunk(Matrix, S, L, Acc) ->
     if
         L > S ->
             {X, Rest} = lists:split(S, Matrix),
-            chunk (Rest, S, L - S, [X|Acc]);
+            chunk (Rest, S, L - S, [X | Acc]);
         true -> [Matrix | Acc]
     end.
 
-product(Nelts, Matrix, Vector) ->
-    Parent = self(), % parallel for on rows
-    Chunked = chunk(Matrix, Nelts div 4, Nelts, []),
-    %% Pids = [{C, spawn(fun() -> run(Parent) end)} || C <- Chunked],
-    %% [Pid ! {C, Vector} || {C, Pid} <- Pids],
+core_chunk(Matrix, Cores) ->
+    chunk(Matrix, length(Matrix) div Cores, length(Matrix), []).
+
+product(Matrix, Vector) ->
+    Parent = self(),
+    Cores = erlang:system_info(schedulers_online),
+    Chunked = core_chunk(Matrix, Cores),
     
-    %% join(Pids).
-    {Time, _Answer} = 
-        timer:tc(
-          fun() ->
-                  join([spawn(
-                          fun() -> 
-                                  {X, Time} = prod_chunk (C, Vector),
-                                  Parent ! {self(), X, Time}
-                          end) || C <- Chunked])
-          end),
-    io:format(standard_error, "~p~n", [Time/1000000]).
+    {Time, Answer} = 
+        join([spawn(
+                fun() -> 
+                        {X, Time} = prod_chunk (C, Vector),
+                        Parent ! {self(), X, Time}
+                end)
+              || C <- Chunked]),
+    io:format(standard_error, "~p~n", [Time/(Cores*1000000)]),
+    Answer.
 
-read_vector(IsBench, 0) -> [];
-read_vector(IsBench, Nelts) -> 
-    Val = if IsBench -> 0;
-             true -> {ok, [X]} = io:fread("", "~f"), X
-          end,
-    [ Val | read_vector(IsBench, Nelts - 1)].
+read_vector(Nelts) ->
+    lists:duplicate(Nelts, 0).
 
-read_matrix(IsBench, 0, _) -> [];
-read_matrix(IsBench, Nelts, Total) ->
-  [ read_vector(IsBench, Total) | read_matrix(IsBench, Nelts - 1, Total)].
+read_matrix(Nelts) ->
+    lists:duplicate(Nelts, lists:duplicate(Nelts, 0)).
 
 run(Nelts) ->
-    Matrix = read_matrix(true, Nelts, Nelts),
-    Vector = read_vector(true, Nelts),
+    Matrix = read_matrix(Nelts),
+    Vector = read_vector(Nelts),
     %% fprof:trace(start),
-    product(Nelts, Matrix, Vector).
+    {Time, _Answer} =
+        timer:tc(fun() -> product(Matrix, Vector) end),
+    io:format(standard_error, "~p~n", [Time/1000000]).
     %% fprof:trace(stop),
     %% fprof:profile(),
     %% fprof:analyse(),
-    
-    
 
-main() -> main(['']).
-main(Args) ->
+main() ->
     {ok, [[NeltsStr]]} = init:get_argument(nelts),
-    Cores = erlang:system_info(schedulers_online),
     Nelts = list_to_integer(NeltsStr),
     run(Nelts).
 
