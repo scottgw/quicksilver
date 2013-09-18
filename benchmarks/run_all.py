@@ -38,16 +38,28 @@ def run(results, sort, task, lang, num_workers):
 
     if lang == 'erlang':
         # print(err)
-        lastline = string.split(err.strip(),'\n')[-1]
-        tdiff = float(lastline)
+        lines = string.split(err.strip(),'\n')
+
+        total_time_str = lines[-1]
+        tdiff = float(total_time_str)
+
+        if len(lines) > 1:
+            computation_time_str = lines[-2]
+            compdiff = float(computation_time_str)            
+        else:
+            compdiff = tdiff
+
+
     else:
         tdiff = t2 - t1
+        compdiff = tdiff
 
-    data = [task, lang, num_workers, tdiff]
+    data = [task, lang, num_workers, tdiff, compdiff]
     results.append(data)
     print (data)
 
 def main():
+    headings = ['Task', 'Language', 'Threads', 'Total Time', 'Computation Time']
     for sort in ['concurrent', 'parallel']:
         results = []
 
@@ -59,7 +71,7 @@ def main():
 
         with open(sort + '_results.csv', 'wb') as csv_file:
             perfwriter = csv.writer(csv_file, quoting=csv.QUOTE_MINIMAL)
-            perfwriter.writerow(['Task', 'Language', 'Threads', 'Time'])
+            perfwriter.writerow(headings)
             for result in results:
                 perfwriter.writerow(result)
 
