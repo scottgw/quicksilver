@@ -15,15 +15,6 @@
 -module(main).
 -export([main/0]).
 
-join(Pids) ->
-    Results = [receive 
-                   {Pid, Result} -> 
-                       Result 
-               end 
-               || Pid <- Pids],
-    Results.
-    %% lists:concat(Results).
-
 sqr(X) ->
     X * X.
 
@@ -39,50 +30,49 @@ calc_row (Nelts, RowN, [Other|Others], Points, Acc) ->
     Final = Pre ++ [Max*Nelts|Post],
     calc_row(Nelts, RowN + 1, Others, Points, [Final | Acc]).
 
-calc_rows (Gather, Parent, Nelts, {RowStart, Rows}, Points) ->
-    X = calc_row(Nelts, RowStart, Rows, Points, []),
-    case Gather of
-        true -> Parent ! {self(), X};
-        _ -> Parent ! {self(), ok}
-    end.
+calc_rows (Parent, Nelts, {RowStart, Rows}, Points) ->
+    X = timer:tc(fun() -> calc_row(Nelts, RowStart, Rows, Points, []) end),
+    Parent ! {self(), X}.
 
-
-chunk(Points, RowStart, L, Acc) ->
-    S = 1,
+chunk(Points, RowStart, S, L, Acc) ->
     if
-        L >= S ->
+        L > S ->
             {X, Rest} = lists:split(S, Points),
-            chunk (Rest, RowStart + S, L - S, [{RowStart, X}|Acc]);
+            chunk (Rest, RowStart + S, S, L - S, [{RowStart, X}|Acc]);
         true -> [{RowStart, Points} | Acc]
     end.
 
-chunk(Points) ->
-    chunk(Points, 0, length(Points), []).
+core_chunk(Matrix, Cores) ->
+    chunk(Matrix, 0, length(Matrix) div Cores, length(Matrix), []).
 
-outer(Gather, Nelts, Points) ->
+outer(Nelts, Points) ->
     Parent = self(),
-    PointChunks = chunk(Points),
+    Cores = erlang:system_info(schedulers_online),
+    PointChunks = core_chunk(Points, Cores),
     io:format("generating indices~n"),
     io:format("calculating rows~n"),
-    Pids = [spawn(fun() -> calc_rows(Gather, Parent, Nelts, PointChunk, Points) end)
+    Pids = [spawn(fun() -> calc_rows(Parent, Nelts, PointChunk, Points) end)
             || PointChunk <- PointChunks ],
-    Matrix = join (Pids),
+
+    {Times, Matrix} = 
+        lists:unzip([receive {Pid, Result} -> Result end || Pid <- Pids]),
+
+    TotalTime = lists:sum(Times),
+
     io:format("calculating vector~n"),
-    Vector = [distance ({0,0}, A) || A <- Points],
+    {Time, Vector} =
+        timer:tc(fun() -> [distance ({0,0}, A) || A <- Points] end),
+    io:format(standard_error, "~p~n", [(Time + TotalTime)/(Cores*1000000)]),
     {Matrix, Vector}.
 
 read_vector_of_points(Nelts) -> lists:duplicate(Nelts, {0, 0}).
 
 main() ->
-    Gather = case gather of
-                 error -> false;
-                 _ -> true
-             end,
     {ok, [[NeltsStr]]} = init:get_argument(nelts),
     Nelts = list_to_integer(NeltsStr),
 
     Points = read_vector_of_points(Nelts),
-    {Time, _Result} = timer:tc(fun () ->  outer(Gather, Nelts, Points) end),
+    {Time, _Result} = timer:tc(fun () ->  outer(Nelts, Points) end),
     io:format(standard_error, "~p~n", [Time/1000000]),
     ok.
 
