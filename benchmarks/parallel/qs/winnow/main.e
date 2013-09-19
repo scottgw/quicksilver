@@ -33,11 +33,13 @@ module Main
       val_points: Array [Winnow_Value_Point]
       x_points: Int_Array
       y_points: Int_Array
+
+      time: Real
     do
       cols := 10000
       rows := 10000
       nelts := 1000
-      n := 32
+      n := {Prelude}.get_int_env("LIBQS_EXECS")
 
       -- Create mask and matrix
       create inp.make(cols)
@@ -69,9 +71,8 @@ module Main
         i := i + 1
       end
 
-      -- Reconstruct a single array of value points
       val_points := merge_val_points (workers)
-
+      time := {Prelude}.get_time();
       sort_list (val_points)
 
 --      shutdown sep_mask
@@ -83,9 +84,34 @@ module Main
       -- Pull out every kth element from the sorted list, throw away 
       -- the 'value' part.
       chunk_points (val_points, nelts, x_points, y_points)
+      time := get_time(workers) / {Prelude}.int_to_real(n) +
+             {Prelude}.get_time() - time
+      {Prelude}.print_err({Prelude}.real_to_str(time))
+      {Prelude}.print_err("%N")
       {Prelude}.exit_with(0) 
     end
   
+  get_time(workers: Array[separate Winnow_Worker]): Real
+    local
+      time: Real
+      i: Integer
+      worker: separate Winnow_Worker
+    do
+      time := 0.0
+      from i := 0
+      until i >= workers.count
+      loop
+        worker := workers.item(i)
+        separate worker
+          do
+            time := time + worker.time
+          end
+        i := i + 1
+      end
+      Result := time
+    end
+
+
   merge_val_points(workers: Array[separate Winnow_Worker]):
     Array [Winnow_Value_Point]
     local

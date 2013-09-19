@@ -18,7 +18,9 @@ create make
 
   sep_mask: separate Int_Matrix
   sep_matrix: separate Int_Matrix
-  
+
+  time: Real
+
   make(a_start: Integer; a_final: Integer; a_ncols: Integer
        a_sep_mask: separate Int_Matrix; a_sep_matrix: separate Int_Matrix)
     do
@@ -32,8 +34,8 @@ create make
       sep_mask := a_sep_mask
       sep_matrix := a_sep_matrix
 
---      fetch_mask()
-      -- fetch_matrix()
+      fetch_mask()
+      fetch_matrix()
     end
 
   gather_unmasked()
@@ -43,7 +45,9 @@ create make
       count: Integer
       value_point: Winnow_Value_Point
       val_pt_idx: Integer
+      l_time: Real
     do
+      l_time := {Prelude}.get_time()
       count := 0
       from i := start
       until i >= final
@@ -77,7 +81,9 @@ create make
           j := j + 1
         end
         i := i + 1
-      end      
+      end
+      l_time := {Prelude}.get_time() - l_time
+      time := l_time
     end
 
 
