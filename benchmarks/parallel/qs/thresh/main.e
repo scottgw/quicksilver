@@ -31,8 +31,10 @@ module Main
       hist: separate Thresh_Histogram
       worker_mask: separate Int_Matrix
       workers: Array [separate Thresh_Histogram]
+
+      time: Real
     do
-      n := 32
+      n := {Prelude}.get_int_env("LIBQS_EXECS")
       rows := 10000
       cols := 10000
       percent := 1
@@ -85,6 +87,7 @@ module Main
         i := i + 1
       end
 
+      time := 0.0
       from i := 0
       until i >= n
       loop
@@ -94,6 +97,7 @@ module Main
             worker_mask := hist.mask
             start := hist.start
             iend := hist.final
+            time := time + hist.time
           end
 
         separate worker_mask
@@ -114,7 +118,9 @@ module Main
         shutdown hist
         i := i + 1
       end
-
+      time := time / {Prelude}.int_to_real(workers.count)
+      {Prelude}.print_err({Prelude}.real_to_str(time))
+      {Prelude}.print_err("%N")
       {Prelude}.exit_with(0)
 
 --      shutdown sep_hist

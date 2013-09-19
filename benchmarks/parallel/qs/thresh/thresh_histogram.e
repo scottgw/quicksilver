@@ -14,7 +14,9 @@ create make
 
   local_mat: Int_Matrix
   mask: Int_Matrix
-  
+
+  time: Real
+
   -- Histogram
   hist: Int_Array
   max: Integer
@@ -76,6 +78,7 @@ create make
       i, j: Integer
       e: Integer
     do
+      time := {Prelude}.get_time()
       create hist.make(101)
       max := 0
 
@@ -100,6 +103,7 @@ create make
         end
         i := i + 1
       end
+      time := {Prelude}.get_time() - time
     end
 
   -- Thresholding on local matrix
@@ -107,7 +111,9 @@ create make
     local
       i: Integer
       j: Integer
+      l_time: Real
     do
+      l_time := {Prelude}.get_time()
       from i := start
       until i >= final
       loop
@@ -124,6 +130,7 @@ create make
         end
         i := i + 1
       end
+      time := time + {Prelude}.get_time() - l_time
     end      
 
   -- Util
@@ -132,19 +139,19 @@ create make
       i: Integer
       j: Integer
     do
---      separate source
---        do
---          from i := start
---          until i >= final
---          loop
---            from j := 0
---            until j >= ncols
---            loop
---              local_mat.put(j, i, source.item(j, i))
---              j := j + 1
---            end
---            i := i + 1
---          end
---        end
+      separate source
+        do
+          from i := start
+          until i >= final
+          loop
+            from j := 0
+            until j >= ncols
+            loop
+              local_mat.put(j, i, source.item(j, i))
+              j := j + 1
+            end
+            i := i + 1
+          end
+        end
     end
 end
