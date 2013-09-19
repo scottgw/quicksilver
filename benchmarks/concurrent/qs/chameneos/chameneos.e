@@ -49,14 +49,36 @@ create make
     end
 
   request_meeting()
+    local
+      met: Boolean
+      other_cham: separate Chameneos
+      other_c: Integer
+      n: Integer
     do
-      separate broker
-        do
-          broker.register_cham(c, Current)
+      from met := True
+      until not met
+      loop
+        separate broker
+          do
+            met := broker.register_cham(c, Current)
+            if met then
+              other_cham := broker.current_cham
+              other_c := broker.current_c
+              n := broker.n
+              broker.clear()
+           end
+          end
+        if met then
+          separate other_cham
+            do
+              other_cham.meet_with(c, n, True)
+            end
+           meet_with (other_c, n, False)
         end
+      end
     end
 
-  meet_with(other_c: Integer; n: Integer)
+  meet_with(other_c: Integer; n: Integer; restart: Boolean)
     do
       c := compl(c, other_c)
       if n >= max then
@@ -65,7 +87,7 @@ create make
           do
             signal.signal()
           end
-      else
+      elseif restart then
         request_meeting()
       end
     end

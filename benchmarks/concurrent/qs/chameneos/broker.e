@@ -17,28 +17,38 @@ create make
       n := 0
     end
   
-  register_cham(c: Integer; cham: separate Chameneos)
+  register_cham(c: Integer; cham: separate Chameneos): Boolean
     do
       if n <= max then
         if current_cham = Void then
           current_cham := cham
           current_c := c
+          Result := False
         else
-          send_cham(current_c, cham)
-          send_cham(c, current_cham)
-          current_cham := Void
-          n := n + 1
+--          send_cham(current_c, cham)
+--          send_cham(c, current_cham)
+--          current_cham := Void
+          Result := True
         end
+      else
+        Result := False
       end
     end
 
-  send_cham(c: Integer; cham: separate Chameneos) 
-   do
-      separate cham
-        do
-          cham.meet_with(c, n)
-        end
-      end
+  clear(): Boolean
+    do
+      current_cham := Void
+      n := n + 1
+      Result := True
+    end
+
+--  send_cham(c: Integer; cham: separate Chameneos) 
+--   do
+--      separate cham
+--        do
+--          cham.meet_with(c, n)
+--        end
+--      end
 
 end
 
