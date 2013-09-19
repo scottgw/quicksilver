@@ -18,18 +18,25 @@ langs = unique(results$Language)
 results$CommTime = results$TotalTime - results$CompTime
 
 ## drop the total time column
-results = subset(results, select = -c(TotalTime))
+split_results = subset(results, select = -c(TotalTime))
 
 ## melt them so that we get the comp and comm times as a column 
-results = melt(results, id=(c("Language", "Task", "Threads")))
+split_results = melt(results, id=(c("Language", "Task", "Threads")))
 
 #rename them because melt has given them bad names
-names(results)[names(results) == 'variable'] = 'TimeType'
-names(results)[names(results) == 'value'] = 'Time'
+names(split_results)[names(split_results) == 'variable'] = 'TimeType'
+names(split_results)[names(split_results) == 'value'] = 'Time'
 
-p <- ggplot(results, aes(x=Language, y=Time, fill=TimeType))
+p <- ggplot(split_results, aes(x=Language, y=Time, fill=TimeType))
 p <- p + geom_bar(stat="identity", colour="black")
 p <- p + scale_fill_brewer()
 p <- p + facet_wrap(~ Task, scales="free_y")
 
 ggsave(pdf_file, p)
+
+for(lang in langs)
+  {
+    lang_res = results[results$Language == lang,]
+    print (lang)
+    print (exp(mean(log(lang_res$TotalTime))))
+  }
