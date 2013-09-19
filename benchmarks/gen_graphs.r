@@ -1,6 +1,7 @@
 #!/usr/bin/Rscript
 
 library(ggplot2)
+library(reshape)
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = paste(args[1], '_results.csv', sep="")
@@ -13,8 +14,22 @@ results = read.csv(csv_file)
 
 tasks = unique(results$Task)
 langs = unique(results$Language)
+print(results$TotalTime)
+print(results$CompTime)
+results$CommTime = results$TotalTime - results$CompTime
 
-p <- ggplot(results, aes(x=Language, y=Time, fill=Language))
+## drop the total time column
+results = subset(results, select = -c(TotalTime))
+
+## melt them so that we get the comp and comm times as a column 
+results = melt(results, id=(c("Language", "Task", "Threads")))
+
+#rename them because melt has given them bad names
+names(results)[names(results) == 'variable'] = 'TimeType'
+names(results)[names(results) == 'value'] = 'Time'
+
+## print(results)
+p <- ggplot(results, aes(x=Language, y=Time, fill=TimeType))
 p <- p + geom_bar(stat="identity", colour="black")
 p <- p + scale_fill_brewer()
 p + facet_wrap(~ Task, scales="free_y")

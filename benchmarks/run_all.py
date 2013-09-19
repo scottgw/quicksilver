@@ -48,8 +48,14 @@ def run(results, sort, task, lang, num_workers):
             compdiff = float(computation_time_str)            
         else:
             compdiff = tdiff
-
-
+    elif lang == 'qs':
+        tdiff = t2 - t1
+        if len(err) > 0:
+            lines = string.split(err.strip(),'\n')
+            computation_time_str = lines[-1]
+            compdiff = float(computation_time_str)            
+        else:
+            compdiff = tdiff
     else:
         tdiff = t2 - t1
         compdiff = tdiff
@@ -59,7 +65,7 @@ def run(results, sort, task, lang, num_workers):
     print (data)
 
 def main():
-    headings = ['Task', 'Language', 'Threads', 'Total Time', 'Computation Time']
+    headings = ['Task', 'Language', 'Threads', 'TotalTime', 'CompTime']
     for sort in ['concurrent', 'parallel']:
         results = []
 
