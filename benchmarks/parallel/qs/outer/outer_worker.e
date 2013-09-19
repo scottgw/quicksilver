@@ -22,6 +22,8 @@ create make
   sep_y_points: separate Int_Array
   points: Array [Outer_Point]
 
+  time: Real
+
   make(a_start: Integer; a_final: Integer; a_nelts: Integer;
        a_sep_x_points: separate Int_Array;
        a_sep_y_points: separate Int_Array)
@@ -68,6 +70,7 @@ create make
       p1, p2: Outer_Point
       i, j: Integer
     do
+      time := {Prelude}.get_time()
       from i := start
       until i >= final
       loop
@@ -88,6 +91,7 @@ create make
         vector.put (i, distance (0, 0, a_points.item(i).x, a_points.item(i).y))
         i := i + 1
       end
+      time := {Prelude}.get_time() - time
     end
 
   distance (x1, y1, x2, y2: Integer): Real

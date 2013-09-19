@@ -26,9 +26,11 @@ module Main
 
       x_points: separate Int_Array
       y_points: separate Int_Array
+
+      time: Real
     do
       nelts := 10000
-      n := 32
+      n := {Prelude}.get_int_env("LIBQS_EXECS")
 
       -- Create storage for the results
       create result_vector.make (nelts)
@@ -63,21 +65,27 @@ module Main
         i := i + 1
       end
 
+      time := 0.0
       -- Fetch results back
       from i := 0
       until i >= n
       loop
-        fetch_from_worker (workers.item(i), nelts,
-                           result_matrix, result_vector)
+        time := time + 
+           fetch_from_worker (workers.item(i), nelts,
+                              result_matrix, result_vector)
         i := i + 1
       end
+      time := time / {Prelude}.int_to_real(n)
+      {Prelude}.print_err({Prelude}.real_to_str(time))
+      {Prelude}.print_err("%N")
       {Prelude}.exit_with (0)      
       shutdown x_points
       shutdown y_points
     end
 
-  fetch_from_worker (worker: separate Outer_Worker; nelts: Integer;
-                    result_matrix: Real_Matrix; result_vector: Real_Array)
+  fetch_from_worker (
+      worker: separate Outer_Worker; nelts: Integer;
+      result_matrix: Real_Matrix; result_vector: Real_Array): Real
     local
       i: Integer
       j: Integer
@@ -85,17 +93,18 @@ module Main
       separate worker
         do
           from i := worker.start
-          until True -- i >= worker.final
+          until i >= worker.final
           loop
---            from j := 0
---            until j >= nelts
---            loop
---              result_matrix.put (j, i, worker.matrix.item (j, i))
---              j := j + 1
---            end
---            result_vector.put (i, worker.vector.item (i))
---            i := i + 1
+            from j := 0
+            until j >= nelts
+            loop
+              result_matrix.put (j, i, worker.matrix.item (j, i))
+              j := j + 1
+            end
+            result_vector.put (i, worker.vector.item (i))
+            i := i + 1
           end
+          Result := worker.time
         end
 --      shutdown worker
     end
