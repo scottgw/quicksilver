@@ -34,39 +34,12 @@ Data exchange mechanism is gcc built-in atomic ops.
 
 using namespace std;
 
-struct CPUs {
-   enum { perslot = 2 };
-   CPUs() {
-      for ( int i = 0; i < 33; i++ )
-         CPU_ZERO( &affinities[i] );
-      cpu_set_t &cs = affinities[0];
-      sched_getaffinity( 0, sizeof(cs), &cs );
-
-      count = 0;
-      for ( int i = 0; i < CPU_SETSIZE; i++ ) {
-         if ( CPU_ISSET( i, &cs ) ) {
-            CPU_SET( i, &affinities[(count / perslot) + 1] );
-            count++;
-         }
-      }
-      mod = ( count > 2 ) ? count >> 1 : 1;
-   }
-   
-   cpu_set_t *getaffinity( int slot ) { 
-      return &affinities[ slot ? ( slot % mod ) + 1 : 0 ]; 
-   }
-
-   int count, mod;
-   cpu_set_t affinities[33]; // up to 64 cores!
-
-} cpus;
-
 // kludge to make running on a single core at least SOMEWHAT performant
 
 struct SingleCoreYield {
    SingleCoreYield() : counter(0) {}
    void Run() {
-      if ( cpus.count <= 1 || counter++ > 20000 ) {
+      if (counter++ > 20000 ) {
          sched_yield();
          counter = 0;
       }
@@ -164,10 +137,10 @@ struct Creature {
 
    void Start( int affinity = 0 ) {
       pthread_attr_init( &threadAttr );
-      if ( cpus.count >= 4 ) {
-         cpu_set_t *cores = cpus.getaffinity( affinity );
-         pthread_attr_setaffinity_np( &threadAttr, sizeof(cpu_set_t), cores );
-      }
+      // if ( cpus.count >= 4 ) {
+      //    cpu_set_t *cores = cpus.getaffinity( affinity );
+      //    pthread_attr_setaffinity_np( &threadAttr, sizeof(cpu_set_t), cores );
+      // }
       pthread_create( &threadHandle, &threadAttr, &Creature::ThreadRun, this );
    }
 
@@ -202,7 +175,7 @@ struct MeetingPlace {
    // max # of creatures is ( 1 << S ) - 1, max # of meetings is ( 1 << ( 32 - S ) ) - 1
 
    enum { S = 4, creatureMask = (1 << S) - 1 };
-   MeetingPlace( int N ) : state(N << S), idGenerator(1) { creatures = new Creature *[N]; }
+  MeetingPlace( int N ) : state(N << S), idGenerator(1), runs(0) { creatures = new Creature *[N]; }
    ~MeetingPlace() { delete[] creatures; }
    
    void Register( Creature &creature ) {
@@ -223,26 +196,33 @@ struct MeetingPlace {
 
             tryState = useState | creature->id;
          else
-            // nobody waiting and no meetings left, we're done
-
-            return;
+           {
+             // nobody waiting and no meetings left, we're done
+             return;
+           }
 
          int oldState = __sync_val_compare_and_swap( &state, useState, tryState );
          if ( oldState == useState ) {
             if ( waiting )
                creature->Meet( creatures[waiting] );
-            else
+            else {
                creature->WaitUntilMet();
+               if (__sync_add_and_fetch(&runs, 1) == 5000000)
+                 {
+                   printf("runs: %d", runs);
+                 }
+            }
             useState = state;
          } else {
             useState = oldState;
          }
+         
       }
    }
 
 protected:
    volatile int state; // state is read & set from other threads, don't cache in a register
-
+   int runs;
    int idGenerator;
    Creature **creatures;
 };
@@ -319,13 +299,15 @@ int main( int argc, const char *argv[] ) {
 
    Game< 3> g1( n, r1 ); 
    Game<10> g2( n, r2 );
-   if ( cpus.count < 4 ) {
-      g1.Start(); g1.Wait();
-      g2.Start(); g2.Wait();
-   } else {
-      g1.Start(1); g2.Start(2);
-      g1.Wait(); g2.Wait();
-   }
+
+   // if ( cpus.count < 4 ) {
+   // The first game must end before the next starts...
+
+   g1.Start(); 
+   g1.Wait();
    g1.Display();
+
+   g2.Start();
+   g2.Wait();
    g2.Display();
 }
