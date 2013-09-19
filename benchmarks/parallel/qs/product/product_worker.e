@@ -19,7 +19,9 @@ create make
   sep_vector: separate Real_Array
 
   prod_vector: Real_Array
-  
+
+  time: Real
+
   make(a_start: Integer; a_final: Integer; a_nelts: Integer;
        a_sep_matrix: separate Real_Matrix;
        a_sep_vector: separate Real_Array)
@@ -99,7 +101,7 @@ create make
       m := matrix
       v := vector
       p := prod_vector
-
+      time := {Prelude}.get_time()
 
       from i := 0
       until i >= w
@@ -115,6 +117,7 @@ create make
 
         i := i + 1
       end
+      time := {Prelude}.get_time() - time
     end
 
   distance (x1, y1, x2, y2: Integer): Real

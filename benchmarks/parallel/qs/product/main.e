@@ -23,10 +23,12 @@ module Main
 
       worker: separate Product_Worker
       workers: Array [separate Product_Worker]
+
+      time: Real
     do
 
       nelts := 10000
-      n := 32
+      n := {Prelude}.get_int_env("LIBQS_EXECS")
 
       -- Create storage for the input and result
       create vector.make (nelts)
@@ -65,13 +67,16 @@ module Main
       end
 
       -- Fetch results back
+      time := 0.0
       from i := 0
       until i >= n
       loop
-        fetch_from_worker (workers.item(i), nelts, result_vector)
+        time := time + fetch_from_worker (workers.item(i), nelts, result_vector)
         i := i + 1
       end
-
+      time := time / {Prelude}.int_to_real(n)
+      {Prelude}.print_err({Prelude}.real_to_str(time))
+      {Prelude}.print_err("%N")
       {Prelude}.exit_with (0)
       -- shutdown vector
       -- shutdown matrix
@@ -79,7 +84,7 @@ module Main
 
 
   fetch_from_worker (worker: separate Product_Worker; nelts: Integer;
-                    result_vector: Real_Array)
+                     result_vector: Real_Array): Real
     local
       i: Integer
     do
@@ -91,6 +96,7 @@ module Main
           loop
             result_vector.put (i, result_vector.item(i) +
               worker.prod_vector.item (i))
+            Result := worker.time
             i := i + 1
           end
         end
