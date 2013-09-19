@@ -33,7 +33,7 @@ p <- p + geom_bar(stat="identity", colour="black")
 p <- p + scale_fill_brewer()
 p <- p + facet_wrap(~ Task, scales="free_y")
 
-ggsave(pdf_file, p)
+ggsave(pdf_file, p, width=9)
 
 geom_mean = function (x) {
   return (exp(mean(log(x))))
