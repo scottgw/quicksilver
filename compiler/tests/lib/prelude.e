@@ -2,9 +2,19 @@ import String
 
 module Prelude
   print(s: String)
-    external "print"
+    do
+      print_to_stream(1, s)
     end
 
+  print_err(s: String)
+    do
+      print_to_stream(2, s)
+    end
+  
+  print_to_stream(i: Integer; s:String)
+    external "print_to_stream"
+    end
+  
   exit_with(i: Integer)
     external "exit_with"
     end
@@ -20,7 +30,7 @@ module Prelude
   fd_read(fd: Integer; data: Pointer_8; size: Integer): Integer
     external "fd_read"
     end
-  
+
   int8_to_char(i: Integer_8): Character_8
     external "int8_to_char"
     end
@@ -35,6 +45,10 @@ module Prelude
 
   int_to_int8(i: Integer): Integer_8
     external "int_to_int8"
+    end
+
+  int_to_real(i: Integer): Real
+    external "int_to_real"
     end
 
   int_to_str(i: Integer): String
@@ -63,6 +77,10 @@ module Prelude
       Result := str
     end
 
+  real_to_str(r: Real): String
+    external "real_to_str"
+    end
+
   int_max(x: Integer; y: Integer): Integer
     do
       if x >= y then
@@ -70,5 +88,15 @@ module Prelude
       else
         Result := y
       end
+    end
+
+  
+  get_int_env(s: String): Integer
+    external "get_int_env"
+    end
+
+
+  get_time(): Real
+    external "get_time"
     end
 end

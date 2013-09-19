@@ -1,8 +1,11 @@
+#include <assert.h>
 #include <fcntl.h>
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 
@@ -149,16 +152,46 @@ int_to_int8 (int64_t i)
   return (int8_t) i;
 }
 
+/*********************
+ * Number conversion *
+ * *******************/
+
+double
+int_to_real(int64_t i)
+{
+  return (double)i;
+}
+
+/**********/
+/* String */
+/**********/
+
 struct string
 {
   int64_t length;
   uint8_t* data;
 };
 
-void
-print(struct string* str)
+struct string*
+real_to_str(double d)
 {
-  write(STDOUT_FILENO, str->data, str->length);
+  struct string* string = malloc(sizeof(struct string));
+
+  // the defeault (%f) should use 6 decimal places, so 20 characters
+  // should be enough for the times we expect (from the benchmarks).
+  char* data = malloc(sizeof(char) * 20);
+  int len = snprintf(data, 20, "%f", d);
+  
+  string->data = (uint8_t*) data;
+  string->length = len;
+
+  return string;
+}
+
+void
+print_to_stream(int64_t stream, struct string* str)
+{
+  write(stream, str->data, str->length);
 }
 
 
@@ -236,4 +269,33 @@ int
 socket_send(int socketfd, void* buf, int len)
 {
   return send(socketfd, buf, len, 0);
+}
+
+
+/*************************/
+/* Environment variables */
+/*************************/
+
+int64_t
+get_int_env(struct string *str)
+{
+  char* cstr = strndup((char*)str->data, str->length);
+  char* envstr = getenv(cstr);
+  assert (envstr != NULL);
+  free(cstr);
+
+  return atoi(envstr);
+}
+
+
+/********/
+/* Time */
+/********/
+
+double
+get_time()
+{
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
+  return ((double)now.tv_sec) + ((double)now.tv_nsec) / 1000000000.0;
 }
