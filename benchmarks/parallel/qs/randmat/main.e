@@ -34,8 +34,8 @@ module Main
       nrows := 10000
       ncols := 10000
       s := 8
-      num_workers := 32
- 
+      num_workers := {Prelude}.get_int_env("LIBQS_EXECS")
+
       create matrix.make (nrows, ncols)
       create workers.make (num_workers)
 
@@ -82,8 +82,9 @@ module Main
       worker_start: Integer
       worker_height: Integer
       worker_matrix: separate Int_Matrix
+      worker_time: Real
     do
-
+      worker_time := 0.0      
       from i := 0
       until i >= workers.count
       loop
@@ -94,6 +95,7 @@ module Main
             worker_start := worker.start
             worker_height := worker.height
             worker_matrix := worker.matrix
+            worker_time := worker_time + worker.time
           end
 
         separate worker_matrix
@@ -114,5 +116,8 @@ module Main
           end
         i := i + 1
       end
+      worker_time := worker_time / {Prelude}.int_to_real(workers.count)
+      {Prelude}.print_err({Prelude}.real_to_str(worker_time))
+      {Prelude}.print_err("%N")
    end
 end

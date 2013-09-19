@@ -21,6 +21,7 @@ create make
       s, lcg_a, lcg_c, rand_max: Integer
       i, j: Integer
     do
+      time := {Prelude}.get_time()
       lcg_a := 1664525
       lcg_c := 1013904223
       rand_max := 100
@@ -39,8 +40,10 @@ create make
         i := i + 1
       end
       done := True
+      time := {Prelude}.get_time() - time
     end
 
+  time: Real
   done: Boolean
   matrix: Int_Matrix
   height: Integer
