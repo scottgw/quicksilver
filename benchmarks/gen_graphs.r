@@ -16,12 +16,13 @@ tasks = unique(results$Task)
 langs = unique(results$Language)
 
 results$CommTime = results$TotalTime - results$CompTime
+## results = results[results$Task != "chameneos",]
 
 ## drop the total time column
 split_results = subset(results, select = -c(TotalTime))
 
 ## melt them so that we get the comp and comm times as a column 
-split_results = melt(results, id=(c("Language", "Task", "Threads")))
+split_results = melt(split_results, id=(c("Language", "Task", "Threads")))
 
 #rename them because melt has given them bad names
 names(split_results)[names(split_results) == 'variable'] = 'TimeType'
@@ -34,9 +35,9 @@ p <- p + facet_wrap(~ Task, scales="free_y")
 
 ggsave(pdf_file, p)
 
-for(lang in langs)
-  {
-    lang_res = results[results$Language == lang,]
-    print (lang)
-    print (exp(mean(log(lang_res$TotalTime))))
-  }
+geom_mean = function (x) {
+  return (exp(mean(log(x))))
+}
+
+print ("Geometric means:")
+print (tapply(results$TotalTime, results$Language, geom_mean))
