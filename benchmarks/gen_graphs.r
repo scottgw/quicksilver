@@ -14,8 +14,7 @@ results = read.csv(csv_file)
 
 tasks = unique(results$Task)
 langs = unique(results$Language)
-print(results$TotalTime)
-print(results$CompTime)
+
 results$CommTime = results$TotalTime - results$CompTime
 
 ## drop the total time column
@@ -28,10 +27,9 @@ results = melt(results, id=(c("Language", "Task", "Threads")))
 names(results)[names(results) == 'variable'] = 'TimeType'
 names(results)[names(results) == 'value'] = 'Time'
 
-## print(results)
 p <- ggplot(results, aes(x=Language, y=Time, fill=TimeType))
 p <- p + geom_bar(stat="identity", colour="black")
 p <- p + scale_fill_brewer()
-p + facet_wrap(~ Task, scales="free_y")
+p <- p + facet_wrap(~ Task, scales="free_y")
 
-ggsave(pdf_file)
+ggsave(pdf_file, p)
