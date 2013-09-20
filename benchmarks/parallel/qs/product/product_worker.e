@@ -40,7 +40,7 @@ create make
 
   calculate()
     do
---      fetch_points()
+      fetch_points()
       calc_product()
     end
 
