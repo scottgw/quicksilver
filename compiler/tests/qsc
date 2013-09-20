@@ -4,10 +4,14 @@
 set -e
 
 BCFILE=${1%.*}.bc
+OBCFILE=${1%.*}.obc
 OBJFILE=${1%.*}.o
+ASFILE=${1%.*}.s
 
 qs $1 -m
 llvm-link ${QS_LIB_PATH}/stdlib.bc ${BCFILE} ${@:2} |\
-  opt -O3 -std-compile-opts |\
-  llc -filetype=obj -o  ${OBJFILE}
-gcc ${OBJFILE} `pkg-config libqs --libs` -lstdc++ -lm -o ${1%.*}
+  opt -load=$HOME/tmp/llvm-3.3.src/Release+Asserts/lib/libLLVMQs.so -lift-sync -O2 -std-link-opts -std-compile-opts -vectorize-loops -vectorize-slp -vectorize-slp-aggressive -o ${OBCFILE}
+  llc -filetype=obj ${OBCFILE} -o  ${OBJFILE}
+#gcc ${OBJFILE} -L/home/scott/local/lib -lqs -lrt -l:libffi.so.6 -ltbb -lglib-2.0 -lstdc++ -lm -o ${1%.*}
+# gcc -S ${ASFILE}
+gcc -flto -march=native ${OBJFILE} `pkg-config libqs --libs` -lstdc++ -lm -o ${1%.*}
