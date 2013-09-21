@@ -11,6 +11,7 @@
  */
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 
 #include <vector>
 
@@ -32,19 +33,32 @@ extern double *product_result;
 
 int main(int argc, char** argv) {
   int nelts, randmat_seed, thresh_percent, winnow_nelts;
+  int param_start = 0;
 
-  for (int i = 1; i < argc; i++) {
-    if (!strcmp(argv[i], "--is_bench")) {
-      is_bench = 1;
-    } else if (!strcmp(argv[i], "--threads")) {
-      sscanf(argv[i + 1], "%d", &n_threads);
-      i++;
+  for (int i = 1; i < argc; i++) 
+    {
+      if (argv[i][0] == '-')
+        {
+          if (strcmp(argv[i], "--is_bench") == 0)
+            {
+              is_bench = 1;
+              param_start = i+1;
+            }
+          else if (!strcmp(argv[i], "--threads"))
+            {
+              i++;
+              n_threads = atoi(argv[i]);
+              param_start = i + 1;
+            }
+        }
     }
-  }
+
+  nelts = atoi(argv[param_start]);
+  randmat_seed = atoi(argv[param_start + 1]);
+  thresh_percent = atoi(argv[param_start + 2]);
+  winnow_nelts = atoi(argv[param_start + 3]);
 
   task_scheduler_init init(n_threads);
-
-  scanf("%d%d%d%d", &nelts, &randmat_seed, &thresh_percent, &winnow_nelts);
 
   randmat(nelts, nelts, randmat_seed);
   thresh(nelts, nelts, thresh_percent);
