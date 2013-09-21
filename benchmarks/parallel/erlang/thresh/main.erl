@@ -60,16 +60,12 @@ chunk_hist(Parent, Chunk) ->
 
     T2 = now(),
     Parent ! {histmax, {Max, Hist}},
-    T3 = now(),
     Thresh = receive
                     Result -> Result
              end,
 
-    Filtered = lists:map(
-                 fun(X)
-                    -> X >= Thresh
-                 end,
-                 Flat),
+    T3 = now(),
+    Filtered = lists:map(fun(X) -> X >= Thresh end, Flat),
     T4 = now(),
 
     TotalTime = timer:now_diff(T2, T1) + timer:now_diff(T4, T3),
