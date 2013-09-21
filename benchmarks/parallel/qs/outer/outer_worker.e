@@ -36,8 +36,8 @@ create make
       sep_y_points := a_sep_y_points
 
       create points.make (nelts)
-      create matrix.make_with_start_row (nelts, final - start, start)
-      create vector.make_with_base (final - start, start)
+      create matrix.make (nelts, final - start)
+      create vector.make (final - start)
     end
 
   calculate()
@@ -75,20 +75,20 @@ create make
       until i >= final
       loop
         nmax := -1.0
-        p1 := a_points.item(i)
+        p1 := a_points.item(i - start)
         from j := 0
         until j >= nelts
         loop
           if i /= j then
             p2 := a_points.item(j)
             d := distance (p1.x, p1.y, p2.x, p2.y)
-            matrix.put (j, i, d)
+            matrix.put (j, i - start, d)
             nmax := {Real_Math}.max (nmax, d)
           end
           j := j + 1
         end
-        matrix.put (i, i, nmax * {Real_Math}.from_int (nelts))
-        vector.put (i, distance (0, 0, a_points.item(i).x, a_points.item(i).y))
+        matrix.put (i, i - start, nmax * {Real_Math}.from_int (nelts))
+        vector.put (i, distance (0, 0, p1.x, p2.y))
         i := i + 1
       end
       time := {Prelude}.get_time() - time

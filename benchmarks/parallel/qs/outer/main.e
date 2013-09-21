@@ -84,27 +84,41 @@ module Main
     end
 
   fetch_from_worker (
-      worker: separate Outer_Worker; nelts: Integer;
-      result_matrix: Real_Matrix; result_vector: Real_Array): Real
+      worker: separate Outer_Worker;
+      nelts: Integer;
+      result_matrix: Real_Matrix;
+      result_vector: Real_Array): Real
     local
       i: Integer
       j: Integer
+      start: Integer
+      final: Integer
+      sep_mat: separate Real_Matrix
+      sep_vec: separate Real_Array
     do
       separate worker
         do
-          from i := worker.start
-          until i >= worker.final
+          sep_mat := worker.matrix
+          sep_vec := worker.vector
+          start := worker.start
+          final := worker.final
+          Result := worker.time
+        end
+
+      separate sep_mat sep_vec
+        do
+          from i := start
+          until i >= final
           loop
             from j := 0
             until j >= nelts
             loop
-              result_matrix.put (j, i, worker.matrix.item (j, i))
+              result_matrix.put (j, i, sep_mat.item (j, i - start))
               j := j + 1
             end
-            result_vector.put (i, worker.vector.item (i))
+            result_vector.put (i, sep_vec.item (i - start))
             i := i + 1
           end
-          Result := worker.time
         end
 --      shutdown worker
     end
