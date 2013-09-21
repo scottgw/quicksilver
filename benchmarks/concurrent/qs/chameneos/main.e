@@ -18,7 +18,7 @@ module Main
       chms1.put(1, 1)
       chms1.put(2, 2)
       run (n, chms1)
-      {Prelude}.print("Finished first%N")
+      -- {Prelude}.print("Finished first%N")
 
       create chms2.make(10)
       chms2.put(0, 0)
@@ -32,7 +32,7 @@ module Main
       chms2.put(8, 1)
       chms2.put(9, 0)
       run (n, chms2)
-      {Prelude}.print("Finished second%N")
+      -- {Prelude}.print("Finished second%N")
     end
 
   run(n: Integer; chms: Int_Array)

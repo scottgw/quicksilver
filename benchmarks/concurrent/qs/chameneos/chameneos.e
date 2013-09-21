@@ -82,7 +82,7 @@ create make
     do
       c := compl(c, other_c)
       if n >= max then
-        {Prelude}.print("shutting down%N")
+        -- {Prelude}.print("shutting down%N")
         separate signal
           do
             signal.signal()
