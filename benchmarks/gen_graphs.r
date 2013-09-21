@@ -39,5 +39,8 @@ geom_mean = function (x) {
   return (exp(mean(log(x))))
 }
 
-print ("Geometric means:")
+print ("Geometric means (total):")
 print (tapply(results$TotalTime, results$Language, geom_mean))
+
+print ("Geometric mean (comp):")
+print (tapply(results$CompTime, results$Language, geom_mean))
