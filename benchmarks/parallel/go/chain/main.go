@@ -17,6 +17,7 @@ import (
 	"math"
 	"runtime"
 	"sort"
+	"strconv"
 )
 
 type ByteMatrix struct {
@@ -46,7 +47,7 @@ const (
 )
 
 var (
-	is_bench   = flag.Bool("is_bench", false, "")
+	is_bench = flag.Bool("is_bench", false, "")
 )
 
 func Randmat(nelts int, s uint32) *ByteMatrix {
@@ -387,12 +388,12 @@ func Product(m [][]float64, vec []float64, nelts int) (result []float64) {
 
 func main() {
 	flag.Parse()
-  var nelts, thresh_percent, seed, winnow_nelts int
+	args := flag.Args()
 
-	fmt.Scan(&nelts)
-	fmt.Scan(&seed)
-	fmt.Scan(&thresh_percent)
-	fmt.Scan(&winnow_nelts)
+	nelts, _ := strconv.Atoi(args[0])
+	seed, _ := strconv.Atoi(args[1])
+	thresh_percent, _ := strconv.Atoi(args[2])
+	winnow_nelts, _ := strconv.Atoi(args[3])
 
 	rand_matrix := Randmat(nelts, uint32(seed))
 	mask := Thresh(rand_matrix, nelts, thresh_percent)
