@@ -35,13 +35,13 @@ module Main
       create matrix.make (nelts, nelts)
       create result_vector.make (nelts)
       
-      -- FIXME: fill the vector and matrix
-      from i := 0
-      until i >= nelts
-      loop
-        result_vector.put (i, 0.0)
-        i := i + 1
-      end
+--      -- FIXME: fill the vector and matrix
+--      from i := 0
+--      until i >= nelts
+--      loop
+--        result_vector.put (i, 0.0)
+--        i := i + 1
+--      end
       
       -- Create worker vector
       create workers.make (n)
@@ -94,8 +94,7 @@ module Main
           from i := worker.start
           until i >= worker.final
           loop
-            result_vector.put (i, result_vector.item(i) +
-              worker.prod_vector.item (i))
+            result_vector.put (i, worker.prod_vector.item (i))
             Result := worker.time
             i := i + 1
           end
