@@ -30,33 +30,34 @@ merge_hist (Hist1, Hist2) ->
 empty_hist () ->
     dict:from_list ([]). %%{X,0} || X <- lists:seq (0, 99)]).    
 
-adapt_key(Tab, Key) ->
-    case ets:member(Tab, Key) of
-        true -> [{_,Elem}] = ets:lookup(Tab, Key),
-                {Key, Elem};
-        _ -> {Key, 0}
+adapt_key(Key) ->
+    case get(Key) of
+        undefined -> {Key, 0};
+        V -> {Key, V}
     end.
 
 chunk_hist(Parent, Chunk) ->
     T1 = now(),
-    Tab = ets:new(histogram_table, []),
-    Flat = lists:concat(Chunk),
+
     Max = lists:foldl(
-            fun(X, Acc2) ->
-                    case ets:member(Tab, X) of
-                        true -> ets:update_counter(Tab, X, 1);
-                        _ -> ets:insert(Tab, {X, 1})
-                    end,
-                    max(Acc2, X)
+            fun(Row, MaxAcc1) ->
+                    M = lists:foldl(fun(X, MaxAcc2) ->
+                                            case get(X) of
+                                                undefined -> put(X, 1);
+                                                V -> put(X, V + 1)
+                                            end,
+                                            max(MaxAcc2, X)
+                                    end,
+                                    MaxAcc1,
+                                    Row),
+                    max(MaxAcc1, M)
             end,
             0,
-            Flat),
+            Chunk),
 
     Hist = dict:from_list(
-             lists:map(
-               fun(Key) -> adapt_key(Tab, Key) end,
-               lists:seq(0, 99))),
-    ets:delete(Tab),
+             lists:map(fun(Key) -> adapt_key(Key) end, lists:seq(0, 99))),
+
 
     T2 = now(),
     Parent ! {histmax, {Max, Hist}},
@@ -65,7 +66,9 @@ chunk_hist(Parent, Chunk) ->
              end,
 
     T3 = now(),
-    Filtered = lists:map(fun(X) -> X >= Thresh end, Flat),
+    FilterRow = fun(X) -> X >= Thresh end,
+    FilterChunk = fun(X) -> FilterRow(X) end,
+    Filtered = lists:map(FilterChunk, Chunk),
     T4 = now(),
 
     TotalTime = timer:now_diff(T2, T1) + timer:now_diff(T4, T3),
