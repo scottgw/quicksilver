@@ -11,7 +11,8 @@
  *     distances
  */
 #include <cassert>
-#include <cmath>
+// #include <cmath>
+#include <math.h>
 #include <cstdio>
 #include <cstdlib> 
 #include <cstring>
@@ -46,17 +47,18 @@ double distance(const pair<int, int>& x, const pair<int, int>& y) {
 void outer(int nelts) {
   parallel_for(
     range(0, nelts),
-    [&,nelts](range r) {
+    [&](range r) {
       for (size_t i = r.begin(); i != r.end(); ++i) {
         double nmax = -1;
+        pair<int, int> pti = points[i];
         for (int j = 0; j < nelts; j++) {
           if (i != j) {
-            matrix[i*nelts + j] = ::distance(points[i], points[j]);
+            matrix[i*nelts + j] = ::distance(pti, points[j]);
             nmax = max(nmax, matrix[i*nelts + j]);
           }
         }
         matrix[i*nelts + i] = nelts * nmax;
-        vec[i] = ::distance(make_pair(0, 0), points[i]);
+        vec[i] = ::distance(make_pair(0, 0), pti);
       }
     });
 }
