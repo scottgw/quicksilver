@@ -85,10 +85,12 @@ int main(int argc, char** argv) {
     }
   }
 
- clock_gettime(CLOCK_MONOTONIC, &start);
+  clock_gettime(CLOCK_MONOTONIC, &start);
   product(nelts);
   clock_gettime(CLOCK_MONOTONIC, &end);
-  printf("%f\n", (end.tv_nsec - start.tv_nsec)/1000000000.0);
+  printf("%f\n",
+         (double)(end.tv_sec - start.tv_sec) +
+         (end.tv_nsec - start.tv_nsec)/1000000000.0);
 
   if (!is_bench) {
     printf("%d\n", nelts, nelts);
