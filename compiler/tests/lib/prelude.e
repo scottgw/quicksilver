@@ -10,6 +10,11 @@ module Prelude
     do
       print_to_stream(2, s)
     end
+
+  print_int(i: Integer)
+    do
+      print(int_to_str(i))
+    end
   
   print_to_stream(i: Integer; s:String)
     external "print_to_stream"
