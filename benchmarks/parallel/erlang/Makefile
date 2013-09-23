@@ -1,4 +1,4 @@
-SUBDIRS = randmat thresh winnow outer product
+SUBDIRS = randmat thresh winnow outer product chain
 
 .PHONY: subdirs $(SUBDIRS)
 
