@@ -94,7 +94,7 @@ module Main
           from i := worker.start
           until i >= worker.final
           loop
-            result_vector.put (i, worker.prod_vector.item (i))
+            result_vector.put (i, worker.prod_vector.item (i - worker.start))
             Result := worker.time
             i := i + 1
           end

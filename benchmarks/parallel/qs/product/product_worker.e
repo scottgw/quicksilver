@@ -90,30 +90,26 @@ create make
     local
       sum: Real
       i, j: Integer
-      n: Integer
-      w: Integer
       m: Real_Matrix
       v: Real_Array
       p: Real_Array
     do
-      n := nelts
-      w := final - start
       m := matrix
       v := vector
       p := prod_vector
       time := {Prelude}.get_time()
 
-      from i := 0
-      until i >= w
+      from i := start
+      until i >= final
       loop
         sum := 0.0
         from j := 0
         until j >= nelts
         loop
-          sum := sum + v.item(j) * m.item(j, i)
+          sum := sum + v.item(j) * m.item(j, i - start)
           j := j + 1
         end
-        p.put (i, sum)
+        p.put (i - start, sum)
 
         i := i + 1
       end
