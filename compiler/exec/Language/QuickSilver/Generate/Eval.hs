@@ -107,7 +107,7 @@ genBinOp op e1 e2 _resType =
       [ (Add, dblIntSel add fadd)
       , (Sub, dblIntSel sub fsub)
       , (Mul, dblIntSel mul fmul)
-      , (Rem, strictApply srem)
+      , (Rem, strictApply urem)
       , (Quot, strictApply sdiv)
       , (Div, dblIntSel sdiv fdiv)
       , (Or, strictApply orr)
