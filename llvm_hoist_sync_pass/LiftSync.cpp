@@ -105,7 +105,6 @@ namespace
             {
               errs() << "coalesce\n";
             }
-          F.viewCFG();
         }
       return full_lift || coalesce;
     }
