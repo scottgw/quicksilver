@@ -212,15 +212,21 @@ expr (VarOrCall s) =
      case tyMb of
        Just ty -> tagPos (T.Var s ty)
        Nothing ->
-         do !curr <- currentM
-            !currCls <- getFlat' (T.texpr curr)
-            case findAttrInt currCls s of
-              Just a ->
-                do let resType = declType $ attrDecl a
-                   access <- tagPos $ T.Access curr s resType
-                   castResult curr access resType resType
-              Nothing ->
-                throwError "TypeCheck.Expr.expr: var or attribute not found"
+         do currEi <- current <$> ask
+            case currEi of
+              Left _ -> throwError $
+                        "TypeCheck.Expr.expr: var or attribute not found: " ++ Text.unpack s
+              Right currType ->
+                do curr <- tagPos (T.CurrentVar currType)
+                   currCls <- getFlat' (T.texpr curr)
+                   case findAttrInt currCls s of
+                     Just a ->
+                       do let resType = declType $ attrDecl a
+                          access <- tagPos $ T.Access curr s resType
+                          castResult curr access resType resType
+                     Nothing ->
+                       throwError $
+                         "TypeCheck.Expr.expr: var or attribute not found: " ++ Text.unpack s
 
 expr t = throwError ("TypeCheck.Expr.expr: " ++ show t)
 
