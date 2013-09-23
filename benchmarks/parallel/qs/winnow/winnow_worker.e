@@ -73,7 +73,7 @@ create make
         from j := 0
         until j >= ncols
         loop
-          if (j * i) // (ncols + 1) = 1 then -- mask.item(j, i) = 1 then
+          if (j * i) // (ncols + 1) = 1 then -- mask.item(j, i - start) = 1 then
             create value_point.make(local_mat.item(j, i - start), j, i)
             val_points.put (val_pt_idx, value_point)
             val_pt_idx := val_pt_idx + 1            
