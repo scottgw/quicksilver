@@ -49,12 +49,13 @@ constructClassTypes pcMap =
      return pcMap'
 
 setupRoutines :: ClassEnv -> ClassInfo -> Build ()
-setupRoutines pcMap (ClassInfo cls _t) = 
+setupRoutines pcMap (ClassInfo cls _t) =
     local (setClassEnv pcMap) $ mapM_ genRoutineType (view routines cls)    
     where
       genRoutineType rtn =
-          do fType <- featDeclType rtn
-             let name = fullNameStr (view className cls) (routineName rtn)
+          do let name = fullNameStr (view className cls) (routineName rtn)
+             debug $ concat [ "Adding routine prototype ", Text.unpack name ]
+             fType <- featDeclType rtn
 
              -- External routines should also declare the external
              -- thing they bind to as a function. The type of that
@@ -65,7 +66,7 @@ setupRoutines pcMap (ClassInfo cls _t) =
                            void (addFunction extern fType)
                        _ -> return ()
              fPtr <- addFunction name fType
-             debug $ concat [ "Adding routine prototype "
+             debug $ concat [ "Added routine prototype "
                             , Text.unpack name ," @ ", show fPtr
                             ]
              return fPtr

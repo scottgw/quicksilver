@@ -24,6 +24,7 @@ import Language.QuickSilver.TypeCheck.TypedExpr
 preamble :: TClass -> Build (BuildState -> BuildState)
 preamble clas = do
   vt <- vtables
+  debug "Declaring Qs functions"
   declareQsFuncs
   debug "Adding consts and string consts"
   declMap <- (liftM2 union) addConstDecls addStringConsts
