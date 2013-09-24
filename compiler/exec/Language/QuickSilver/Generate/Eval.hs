@@ -481,6 +481,7 @@ closType t =
       Int16Type -> "closure_sint16_type" <#> []
       Int32Type -> "closure_sint32_type" <#> []
       Int64Type -> "closure_sint_type" <#> []
+      DoubleType -> "closure_double_type" <#> []
       ClassType _ _ -> "closure_pointer_type" <#> []
       NoType -> "closure_void_type" <#> []
       ProcessorType -> "closure_pointer_type" <#> []
