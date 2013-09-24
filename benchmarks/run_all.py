@@ -70,11 +70,15 @@ def main():
     headings = ['Task', 'Language', 'Threads', 'TotalTime', 'CompTime']
     for sort in ['concurrent', 'parallel']:
         results = []
+        if sort == 'parallel':
+            worker_range = [1, 2, 4]
+        else:
+            worker_range = [4]
 
         for task in tasks[sort]:
             for lang in langs:
-                for workers in [4]:
-                    for i in range(1):
+                for workers in worker_range:
+                    for i in range(1, 10):
                         run(results, sort, task, lang, workers)
 
         with open(sort + '_results.csv', 'wb') as csv_file:
