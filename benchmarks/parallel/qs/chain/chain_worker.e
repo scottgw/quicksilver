@@ -202,6 +202,8 @@ create make
         i := i + 1
       end
 
+      val_points := {Winnow_Sort}.sort_val_points(val_points)
+      
       time := time + {Prelude}.get_time() - l_time
       {Prelude}.print("Worker: finished winnow ")
       {Prelude}.print({Prelude}.int_to_str(val_points.count))
@@ -216,7 +218,10 @@ create make
 
   start_outer(a_start: Integer;
               a_height: Integer;
-              winnow_gatherer: separate Winnow_Gatherer)
+              winnow_gatherer: separate Winnow_Gatherer;
+              a_shared_outer_vector: separate Real_Array;
+              a_shared_outer_count: separate Int_Array
+             )
     local
       i: Integer
       xs: separate Int_Array
@@ -225,10 +230,11 @@ create make
       {Prelude}.print("Worker: starting outer%N")
       start := a_start
       final := start + a_height
+      shared_outer_vector := a_shared_outer_vector
+      shared_outer_count := a_shared_outer_count
       {Prelude}.print("Worker: outer height ")
       {Prelude}.print_int(a_height)
       {Prelude}.print("%N")
-      
       
       {Prelude}.print("Worker: creating points%N")
       create x_points.make(winnow_nelts)
@@ -273,6 +279,8 @@ create make
 
   outer_matrix: Real_Matrix
   outer_vector: Real_Array
+  shared_outer_vector: separate Real_Array
+  shared_outer_count: separate Int_Array
   
   calc_outer()
     local
@@ -307,10 +315,33 @@ create make
         end
 
         outer_matrix.put (i, i - start, nmax * {Real_Math}.from_int (nelts))
-
-        outer_vector.put (i, distance (0, 0, x1, y1))
+        outer_vector.put (i - start, distance (0, 0, x1, y1))
         i := i + 1
       end
+
+      separate shared_outer_vector shared_outer_count
+        do
+          from i := start
+          until i >= final
+          Loop
+            shared_outer_vector.put (i, outer_vector.item(i - start))
+            i := i + 1
+          end
+          shared_outer_count.put(0, shared_outer_count.item(0) + final - start)
+        end
+
+        
+      separate shared_outer_vector shared_outer_count
+        require shared_outer_count.item(0) = winnow_nelts
+        do
+          from i := 0
+          until i >= winnow_nelts
+          loop
+            outer_vector.put (i, shared_outer_vector.item(i))
+            i := i + 1
+          end
+        end
+        
       time := time + {Prelude}.get_time() - l_time
     end
 

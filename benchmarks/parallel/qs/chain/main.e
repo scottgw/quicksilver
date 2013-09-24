@@ -30,6 +30,10 @@ module Main
       -- Result of winnow stage:
       winnow_gatherer: separate Winnow_Gatherer
 
+      -- Results of outer stage:
+      shared_outer_vector: separate Real_Array
+      shared_outer_count: separate Int_Array
+
       -- Result of product stage
       result_vector: Real_Array
     do
@@ -133,6 +137,12 @@ module Main
 
       -- For outer
       {Prelude}.print("Master: starting outer%N")
+      create shared_outer_vector.make(winnow_nelts)
+      create shared_outer_count.make(1)
+      separate shared_outer_count
+        do
+          shared_outer_count.put(0, 0)
+        end
       from
         start := 0
         i := 0
@@ -142,7 +152,10 @@ module Main
         worker := workers.item(i)
         separate worker
           do
-            worker.start_outer(start, height, winnow_gatherer)
+            worker.start_outer(start, height,
+                               winnow_gatherer,
+                               shared_outer_vector,
+                               shared_outer_count)
           end
 
         start := start + height
