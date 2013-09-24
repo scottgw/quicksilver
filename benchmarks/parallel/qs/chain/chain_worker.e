@@ -113,7 +113,7 @@ create make
         do
           a_sep_max.put(0, {Prelude}.int_max(a_sep_max.item(0), max))
         end
-
+      {Prelude}.print("Worker: merging max")
       separate a_sep_hist
         do
           from i := 0
@@ -124,6 +124,7 @@ create make
             i := i + 1
           end      
         end
+      {Prelude}.print("Worker: merging histogram")
     end
 
   mask_matrix: Int_Matrix

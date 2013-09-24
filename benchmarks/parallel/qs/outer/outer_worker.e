@@ -4,7 +4,6 @@ import Prelude
 import Real_Matrix
 import Real_Array
 import Real_Math
-import Outer_Point
 
 class Outer_Worker
 
@@ -20,7 +19,9 @@ create make
 
   sep_x_points: separate Int_Array
   sep_y_points: separate Int_Array
-  points: Array [Outer_Point]
+  
+  x_points: Int_Array
+  y_points: Int_Array
 
   time: Real
 
@@ -35,7 +36,9 @@ create make
       sep_x_points := a_sep_x_points
       sep_y_points := a_sep_y_points
 
-      create points.make (nelts)
+      create x_points.make (nelts)
+      create y_points.make (nelts)
+
       create matrix.make (nelts, final - start)
       create vector.make (final - start)
     end
@@ -43,54 +46,71 @@ create make
   calculate()
     do
       fetch_points()
-      calc_outer(points)
+      calc_outer()
     end
 
   fetch_points()
     local
       i: Integer
-      pt: Outer_Point
     do
-      separate sep_x_points sep_y_points
+      separate sep_x_points
         do
           from i := 0
           until i >= nelts
           loop
-            create pt.make (sep_x_points.item(i), sep_y_points.item(i))
-            points.put (i, pt)
+            x_points.put (i, sep_x_points.item(i))
+            i := i + 1
+          end
+        end
+
+      separate sep_y_points
+        do
+          from i := 0
+          until i >= nelts
+          loop
+            y_points.put (i, sep_y_points.item(i))
             i := i + 1
           end
         end
     end
 
-  calc_outer(a_points: Array [Outer_Point])
+  calc_outer()
     local
       nmax: Real
       d: Real
-      p1, p2: Outer_Point
+      p1x, p2x, p1y, p2y: Integer
       i, j: Integer
     do
       time := {Prelude}.get_time()
+
       from i := start
       until i >= final
       loop
         nmax := -1.0
-        p1 := a_points.item(i - start)
+
+        p1x := x_points.item(i - start)
+        p1y := y_points.item(i - start) 
+
         from j := 0
         until j >= nelts
         loop
           if i /= j then
-            p2 := a_points.item(j)
-            d := distance (p1.x, p1.y, p2.x, p2.y)
+            p2y := y_points.item(j)
+            p2x := x_points.item(j)
+            d := distance (p1x, p1y, p2x, p2y)
             matrix.put (j, i - start, d)
             nmax := {Real_Math}.max (nmax, d)
           end
+
           j := j + 1
         end
+
         matrix.put (i, i - start, nmax * {Real_Math}.from_int (nelts))
-        vector.put (i, distance (0, 0, p1.x, p2.y))
+        vector.put (i - start, distance (0, 0, p1x, p1y))
+
         i := i + 1
       end
+
       time := {Prelude}.get_time() - time
     end
 

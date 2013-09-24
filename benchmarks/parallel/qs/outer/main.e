@@ -39,8 +39,6 @@ module Main
       -- Create x and y point vectors
       create x_points.make (nelts)
       create y_points.make (nelts)
-      -- fill_points (x_points, nelts)
-      -- fill_points (y_points, nelts)
 
       -- Create worker vector
       create workers.make (n)
@@ -79,8 +77,6 @@ module Main
       {Prelude}.print_err({Prelude}.real_to_str(time))
       {Prelude}.print_err("%N")
       {Prelude}.exit_with (0)      
-      shutdown x_points
-      shutdown y_points
     end
 
   fetch_from_worker (
@@ -105,7 +101,7 @@ module Main
           Result := worker.time
         end
 
-      separate sep_mat sep_vec
+      separate sep_mat
         do
           from i := start
           until i >= final
@@ -116,27 +112,19 @@ module Main
               result_matrix.put (j, i, sep_mat.item (j, i - start))
               j := j + 1
             end
+            i := i + 1
+          end
+        end
+
+      separate sep_vec
+        do
+          from i := start
+          until i >= final
+          loop
             result_vector.put (i, sep_vec.item (i - start))
             i := i + 1
           end
         end
---      shutdown worker
-    end
-
-  fill_points(points: separate Int_Array; nelts: Integer)
-    local
-      i: Integer
-    do
-      separate points
-        do
-          from i := 0
-          until i >= nelts
-          loop
-            points.put (i, 0)
-            i := i + 1
-          end
-        end
-    end
-  
+    end  
 end
 
