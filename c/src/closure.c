@@ -133,6 +133,12 @@ closure_sint_type ()
 }
 
 clos_type_t
+closure_double_type ()
+{
+  return (clos_type_t)&ffi_type_double;
+}
+
+clos_type_t
 closure_pointer_type ()
 {
   return (clos_type_t)&ffi_type_pointer;

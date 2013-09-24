@@ -46,6 +46,7 @@ declareQsFuncs =
                   , ("closure_sint8_type", closTypeTypeM, [])
                   , ("closure_sint32_type", closTypeTypeM, [])
                   , ("closure_sint_type", closTypeTypeM, [])
+                  , ("closure_double_type", closTypeTypeM, [])
                   , ("closure_void_type", closTypeTypeM, [])
 
                   , ("priv_queue_new", privQueueTypeM, [procTypeM])

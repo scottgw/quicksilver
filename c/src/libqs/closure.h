@@ -67,10 +67,13 @@ clos_type_t
 closure_sint32_type ();
 
 clos_type_t
-closure_void_type ();
+closure_sint_type ();
 
 clos_type_t
-closure_sint_type ();
+closure_double_type ();
+
+clos_type_t
+closure_void_type ();
 
 clos_type_t
 closure_pointer_type ();
