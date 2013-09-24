@@ -31,7 +31,7 @@ static
 void
 mpsc_create(mpsc_t* self, mpsc_node_t* stub)
 {
-  stub->next = 0;
+  stub->next = NULL;
   self->head = stub;
   self->tail = stub;
 }
@@ -40,7 +40,7 @@ static
 void
 mpsc_push(mpsc_t* self, mpsc_node_t* n)
 {
-  n->next = 0;
+  n->next = NULL;
   mpsc_node_t* prev;
   __atomic_exchange(&self->head, &n, &prev,  __ATOMIC_SEQ_CST);
   prev->next = n; // serialization-point wrt consumer, release
@@ -58,12 +58,12 @@ mpsc_pop(mpsc_t* self)
       tail->state = next->state;
       return tail;
     }
-  return 0;
+  return NULL;
 }
 
 struct qoq
 {
-  volatile uint32_t count;
+  volatile int32_t count;
   volatile sched_task_t waiter;
 
   mpscq_t producers;
@@ -113,7 +113,7 @@ qoq_enqueue_wait(qoq_t q, void *data, sched_task_t stask)
   /* assert (data != NULL); */
   assert(q != NULL);
 
-  int n = __sync_fetch_and_add(&q->count, 1);
+  int32_t n = __sync_fetch_and_add(&q->count, 1);
 
   if (n == -1)
     {
