@@ -78,7 +78,7 @@ def main():
         for task in tasks[sort]:
             for lang in langs:
                 for workers in worker_range:
-                    for i in range(1, 10):
+                    for i in range(0, 3):
                         run(results, sort, task, lang, workers)
 
         with open(sort + '_results.csv', 'wb') as csv_file:
