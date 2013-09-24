@@ -430,12 +430,14 @@ prepareClosure retType trg f args trgProc nonSepTrg args' =
 
          storeArg (t, val) idx =
            do debug $ "storeArg: " ++ show (t, val, idx)
-              ptr <- if isBasic t
-                     then join (intToPtr val <$> voidPtrType <*> pure "")
-                     else join (bitcast val <$> voidPtrType <*> pure "")
+
               argLoc <- gepInt argArrayPtr [idx]
               argRef <- load' argLoc
-              store ptr argRef
+
+              valPtrType <- pointer0 <$> typeOfVal val
+
+              castedArgRef <- bitcast argRef valPtrType ""
+              store val castedArgRef
 
      zipWithM storeType allTypes [0 ..]
      zipWithM storeArg (zip allTypes allEvald) [0 ..]
