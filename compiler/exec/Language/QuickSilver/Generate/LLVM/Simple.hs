@@ -83,7 +83,11 @@ module Language.QuickSilver.Generate.LLVM.Simple
     , intToPtr
     , gep
     , bitcast
+    , constBitCast
     , constPtrToInt
+
+      -- ** Values
+    , isConstant
 
       -- ** Basic blocks
     , BasicBlock
@@ -112,6 +116,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
     , getTypeByName
     , getElementType
     , functionType
+    , typeOfVal
 
       -- ** Functions      
     , addFunction
@@ -137,6 +142,7 @@ import           LLVM.Wrapper.Core ( Builder, Context, Module
                                    , IntPredicate
                                    , Linkage
                                    , constInt, constReal, constPtrToInt
+                                   , constBitCast
                                    )
 import           LLVM.FFI.Core (Visibility)
 
@@ -348,6 +354,10 @@ positionAtEnd = withBuilder1 W.positionAtEnd
 
 getInsertBlock :: LLVM m => m Value
 getInsertBlock = withBuilder0 W.getInsertBlock
+
+-- Values
+isConstant :: LLVM m => Value -> m Bool
+isConstant v = liftIO (W.isConstant v)
 
 add, fadd, sub, fsub, orr, andd, mul, fmul, fdiv, sdiv, srem, urem :: 
    LLVM m => Value -> Value -> String -> m Value
