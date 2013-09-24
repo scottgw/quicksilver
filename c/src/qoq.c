@@ -101,8 +101,9 @@ static
 mpsc_node_t*
 alloc_node(qoq_t q)
 {
-  uint64_t i = __sync_fetch_and_add(&q->elem_count, 1);
-  return q->elems + (i % (q->size*2));
+  /* uint64_t i = __sync_fetch_and_add(&q->elem_count, 1); */
+  /* return q->elems + (i % (q->size*2)); */
+  return malloc(sizeof(struct mpsc_node));
 }
 
 
@@ -174,7 +175,7 @@ qoq_dequeue_wait(qoq_t q, void **data, sched_task_t stask)
       /* assert (*data != NULL); */
     }
 
-  /* free(node); */
+  free(node);
 }
 
 void
