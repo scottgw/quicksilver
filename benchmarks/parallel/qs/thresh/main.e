@@ -77,8 +77,9 @@ module Main
         i := i + 1
       end
 
+      time := {Prelude}.get_time()
       thresh := calculate_threshold(rows, cols, percent, sep_max, sep_hist)
-
+      time := {Prelude}.get_time() - time
       from i := 0
       until i >= n
       loop
@@ -87,7 +88,6 @@ module Main
         i := i + 1
       end
 
-      time := 0.0
       from i := 0
       until i >= n
       loop
@@ -97,7 +97,7 @@ module Main
             worker_mask := hist.mask
             start := hist.start
             iend := hist.final
-            time := time + hist.time
+            time := time + hist.time / {Prelude}.int_to_real(workers.count)
           end
 
         separate worker_mask
@@ -118,7 +118,6 @@ module Main
         shutdown hist
         i := i + 1
       end
-      time := time / {Prelude}.int_to_real(workers.count)
       {Prelude}.print_err({Prelude}.real_to_str(time))
       {Prelude}.print_err("%N")
       {Prelude}.exit_with(0)
