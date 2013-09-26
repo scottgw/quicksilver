@@ -1,16 +1,16 @@
 import Array
 import Int_Array
 import Int_Matrix
-import Thresh_Histogram
 import Prelude
+import Real_Math
+import Thresh_Histogram
 
 module Main
 
   main()
     local
       n: Integer
-      rows: Integer
-      cols: Integer
+      nelts: Integer
       percent: Integer
 
       i: Integer
@@ -28,20 +28,20 @@ module Main
 
       thresh: Integer
 
-      hist: separate Thresh_Histogram
+      worker: separate Thresh_Histogram
       worker_mask: separate Int_Matrix
       workers: Array [separate Thresh_Histogram]
+      worker_time: Real
 
       time: Real
     do
       n := {Prelude}.get_int_env("LIBQS_EXECS")
-      rows := 10000
-      cols := 10000
+      nelts := 10000
       percent := 1
 
       create workers.make(n)
-      create mat.make (rows, cols)
-      create result_mask.make (rows, cols)
+      create mat.make (nelts, nelts)
+      create result_mask.make (nelts, nelts)
       create sep_max.make (1)
       create sep_hist.make (101)
 
@@ -56,13 +56,13 @@ module Main
       until
         i >= n
       loop
-        height := (rows - start) // (n - i)
-        create hist.make(start, start + height, cols, sep_max, sep_hist, mat)
-        workers.put(i, hist)
+        height := (nelts - start) // (n - i)
+        create worker.make(start, start + height, nelts, sep_max, sep_hist, mat)
+        workers.put(i, worker)
 
-        separate hist
+        separate worker
           do
-            hist.calc_histogram()
+            worker.calc_histogram()
           end
 
         start := start + height
@@ -72,32 +72,33 @@ module Main
       from i := 0
       until i >= n
       loop
-        hist := workers.item(i)
-        separate hist do hist.start end
+        worker := workers.item(i)
+        separate worker do worker.start end
         i := i + 1
       end
 
       time := {Prelude}.get_time()
-      thresh := calculate_threshold(rows, cols, percent, sep_max, sep_hist)
+      thresh := calculate_threshold(nelts, percent, sep_max, sep_hist)
       time := {Prelude}.get_time() - time
       from i := 0
       until i >= n
       loop
-        hist := workers.item(i)
-        separate hist do hist.threshold(thresh) end
+        worker := workers.item(i)
+        separate worker do worker.threshold(thresh) end
         i := i + 1
       end
 
+      worker_time := 0.0
       from i := 0
       until i >= n
       loop
-        hist := workers.item(i)
-        separate hist
+        worker := workers.item(i)
+        separate worker
           do
-            worker_mask := hist.mask
-            start := hist.start
-            iend := hist.final
-            time := time + hist.time / {Prelude}.int_to_real(workers.count)
+            worker_mask := worker.mask
+            start := worker.start
+            iend := worker.final
+            worker_time := {Real_Math}.max(worker.time, worker_time)
           end
 
         separate worker_mask
@@ -107,7 +108,7 @@ module Main
             until ii >= iend
             loop
               from jj := 0
-              until jj >= cols
+              until jj >= nelts
               loop
                 result_mask.put (jj, ii, worker_mask.item(jj, ii - start))
                 jj := jj + 1
@@ -115,9 +116,10 @@ module Main
               ii := ii + 1
             end
           end
-        shutdown hist
+        shutdown worker
         i := i + 1
       end
+      time := time + worker_time
       {Prelude}.print_err({Prelude}.real_to_str(time))
       {Prelude}.print_err("%N")
       {Prelude}.exit_with(0)
@@ -127,7 +129,7 @@ module Main
 --      shutdown mat
     end
 
-  calculate_threshold (nrows, ncols, percent: Integer;
+  calculate_threshold (nelts, percent: Integer;
                        a_sep_max: separate Int_Array;
                        a_sep_hist: separate Int_Array): Integer
     local
@@ -142,7 +144,7 @@ module Main
           threshold := a_sep_max.item(0)
         end
 
-      count := (nrows * ncols * percent) // 100
+      count := (nelts * nelts * percent) // 100
 
       prefixsum := 0
 

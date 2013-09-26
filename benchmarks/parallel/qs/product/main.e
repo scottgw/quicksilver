@@ -1,6 +1,7 @@
 import Array
 import Product_Worker
 import Real_Array
+import Real_Math
 import Real_Matrix
 import Prelude
 
@@ -35,14 +36,6 @@ module Main
       create matrix.make (nelts, nelts)
       create result_vector.make (nelts)
       
---      -- FIXME: fill the vector and matrix
---      from i := 0
---      until i >= nelts
---      loop
---        result_vector.put (i, 0.0)
---        i := i + 1
---      end
-      
       -- Create worker vector
       create workers.make (n)
 
@@ -71,10 +64,9 @@ module Main
       from i := 0
       until i >= n
       loop
-        time := time + fetch_from_worker (workers.item(i), nelts, result_vector)
+        time := {Real_Math}.max(time, fetch_from_worker (workers.item(i), nelts, result_vector))
         i := i + 1
       end
-      time := time / {Prelude}.int_to_real(n)
       {Prelude}.print_err({Prelude}.real_to_str(time))
       {Prelude}.print_err("%N")
       {Prelude}.exit_with (0)
