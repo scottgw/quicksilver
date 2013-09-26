@@ -64,11 +64,19 @@ product(Matrix, Vector) ->
     io:format(standard_error, "~p~n", [Time/(Cores*1000000)]),
     Answer.
 
-read_vector(Nelts) ->
-    lists:duplicate(Nelts, 0).
+read_vector(0, Acc) ->
+    Acc;
+read_vector(Nelts, Acc) ->
+    read_vector(Nelts - 1, [0 | Acc]).
 
-read_matrix(Nelts) ->
-    lists:duplicate(Nelts, lists:duplicate(Nelts, 0)).
+read_vector(Nelts) ->
+    read_vector(Nelts, []).
+
+read_matrix(0, _N, Acc) -> Acc;
+read_matrix(Nelts, N, Acc) ->
+    read_matrix(Nelts - 1, N, [read_vector(N) | Acc]).
+
+read_matrix(Nelts) -> read_matrix(Nelts, Nelts, []).
 
 run(Nelts) ->
     Matrix = read_matrix(Nelts),

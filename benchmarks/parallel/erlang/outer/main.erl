@@ -67,7 +67,11 @@ outer(Nelts, Points) ->
     io:format(standard_error, "~p~n", [(Time + TotalTime)/(2*Cores*1000000)]),
     {Matrix, Vector}.
 
-read_vector_of_points(Nelts) -> lists:duplicate(Nelts, {0, 0}).
+read_vector_of_points(Nelts) -> read_vector_of_points(Nelts, []).
+
+read_vector_of_points(0, Acc) -> Acc;
+read_vector_of_points(Nelts, Acc) ->
+    read_vector_of_points(Nelts - 1, [{0, 0} | Acc]).
 
 main() ->
     {ok, [[NeltsStr]]} = init:get_argument(nelts),
