@@ -211,17 +211,17 @@ winnow(Cores, Pids, Nelts) ->
 
     T1 = now(),
     Stride = length(Sorted) div Nelts,
-    Final = drop_nth(Stride, Sorted),
+    Final = drop_nth(Stride, Sorted, Nelts, []),
+    io:format("winnow dropnth: ~p~n", [length(Final)]),
     T2 = now(),
 
     {TotalTime + timer:now_diff(T2, T1), Final}.
 
-drop_nth(Stride, List) ->
-    if
-        length(List) < Stride -> [];
-        true -> {[{_, Pos} | _], Rest} = lists:split(Stride, List),
-                [Pos | drop_nth(Stride, Rest)]
-    end.
+
+drop_nth(_Stride, _List, 0, Acc) -> lists:reverse(Acc);
+drop_nth(Stride, List, Nelts, Acc) ->
+    {[{_, Pos} | _], Rest} = lists:split(Stride, List),
+    drop_nth(Stride, Rest, Nelts - 1, [Pos | Acc] ).
 
 %%%%%%%%%%%
 %% Outer %%
@@ -348,10 +348,13 @@ chain_master(Cores, Nelts, Seed, Percent, WinnowNelts) ->
                    {Pid, final_result, Result, Time} -> {Result, Time}
                end || Pid <- Pids],
     {Results, Times} = lists:unzip(ResultsTimes),
-    TotalTime = lists:sum(Times)/4 + WinnowTime + ThreshTime,
+
+    TotalTime = lists:sum(Times)/Cores + WinnowTime + ThreshTime,
     FlatResults = lists:concat(Results),
     io:format("num results: ~p~n", [length (FlatResults)]),
+    io:format("master time: ~p~n", [(WinnowTime + ThreshTime) / 1000000]),
     io:format("compute time: ~p~n", [TotalTime / 1000000]),
+    io:format(standard_error, "~p~n", [TotalTime / 1000000]),
     ok.
 
 
