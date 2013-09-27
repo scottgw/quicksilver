@@ -62,7 +62,7 @@ adapt_key(Key) ->
 
 chunk_hist(Parent, Chunk) ->
     T1 = now(),
-
+    io:foramt("Worker: chunk_hist size ~p~n", [length(Chunk)]),
     {MaxTime, Max} =
         timer:tc(
           fun() -> lists:foldl(
@@ -185,7 +185,7 @@ sort_merge(Xs, Ys) ->
 
 chunk(Points, RowStart, S, L, Acc) ->
     if
-        L > S*2 ->
+        L > S*2 - 1->
             {X, Rest} = lists:split(S, Points),
             chunk (Rest, RowStart + S, S, L - S, [{RowStart, X}|Acc]);
         true -> [{RowStart, Points} | Acc]
