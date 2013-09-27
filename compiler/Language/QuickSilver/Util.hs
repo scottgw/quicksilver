@@ -163,7 +163,7 @@ makeGenericStub (AnyRefType name) =
           , _consts     = []
           , _invnts     = []
           }
-
+makeGenericStub t = error $ "makeGenericStub: cannot make stub from " ++ show t
 -- * Routine level utilities
 
 -- | Construct a map from a routine's arguments.
@@ -242,6 +242,10 @@ isBasic t = case t of
               Int16Type -> True
               Int32Type -> True
               Int64Type -> True
+              Natural8Type -> True
+              Natural16Type -> True
+              Natural32Type -> True
+              Natural64Type -> True
               CharType -> True
               DoubleType -> True
               _ -> False
@@ -283,7 +287,11 @@ isIntegerType t =
     case t of
       AnyIntType -> True
       Int8Type -> True
+      Int32Type -> True
       Int64Type -> True
+      Natural8Type -> True
+      Natural32Type -> True
+      Natural64Type -> True
       _ -> False
 
 -- | Natural number type test.
@@ -326,6 +334,10 @@ classTypeName t = error $ "Non-class type " ++ show t
 -- | The default integer type.
 intType :: Typ
 intType = Int64Type
+
+-- | The default natural type.
+natType :: Typ
+natType = Natural64Type
 
 -- | The default boolean type.
 boolType :: Typ

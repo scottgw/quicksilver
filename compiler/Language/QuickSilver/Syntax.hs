@@ -214,6 +214,10 @@ data Typ = ClassType ClassName [Typ]
          | DoubleType
          | CharType
          | ProcessorType
+         | Natural8Type
+         | Natural16Type
+         | Natural32Type
+         | Natural64Type
          | AnyRefType Text
          | Sep (Maybe Proc) [Proc] Typ
          | VoidType
@@ -234,6 +238,10 @@ instance Hashable Typ where
       Int64Type -> 9
       AnyRefType _ -> 10
       ProcessorType -> 11
+      Natural8Type -> 12
+      Natural16Type -> 13
+      Natural32Type -> 14
+      Natural64Type -> 15
       Sep _ _ name -> hashWithSalt salt name
       ClassType name _ -> hashWithSalt salt name
 
@@ -268,6 +276,10 @@ instance Show Typ where
     show Int32Type     = "Integer_32"
     show Int64Type     = "Integer_64"
     show ProcessorType = "<Processor>"
+    show Natural8Type      = "Natural_8"
+    show Natural16Type     = "Natural_16"
+    show Natural32Type     = "Natural_32"
+    show Natural64Type     = "Natural_64"
     show CharType      = "Character_8"
     show DoubleType    = "Real_64"
     show BoolType      = "Boolean"
