@@ -185,7 +185,7 @@ sort_merge(Xs, Ys) ->
 
 chunk(Points, RowStart, S, L, Acc) ->
     if
-        L > S ->
+        L > S*2 ->
             {X, Rest} = lists:split(S, Points),
             chunk (Rest, RowStart + S, S, L - S, [{RowStart, X}|Acc]);
         true -> [{RowStart, Points} | Acc]
@@ -252,6 +252,7 @@ outer_worker ({RowStart, Rows}, Points) ->
 
 outer(Pids, Points) ->
     PointChunks = core_chunk(Points, length(Pids)),
+    io:format("-------------------------- ~p ~p~n", [length(PointChunks), length(Pids)]),
     PointPids = lists:zip(Pids, PointChunks),
     [Pid ! {outer_start, Chunk, Points} || {Pid, Chunk} <- PointPids ].
 
@@ -371,6 +372,8 @@ main() ->
     Seed = list_to_integer(SeedStr),
     Percent = list_to_integer(PercentStr),
     WinnowNelts = list_to_integer(WinnowNeltStr),
+
+    io:format("cores: ~p~n", [Cores]),
 
     {Time, _Result} =
         timer:tc(
