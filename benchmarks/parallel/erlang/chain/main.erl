@@ -62,7 +62,7 @@ adapt_key(Key) ->
 
 chunk_hist(Parent, Chunk) ->
     T1 = now(),
-    io:foramt("Worker: chunk_hist size ~p~n", [length(Chunk)]),
+    io:format("Worker: chunk_hist size ~p~n", [length(Chunk)]),
     {MaxTime, Max} =
         timer:tc(
           fun() -> lists:foldl(
