@@ -56,7 +56,7 @@ setupRoutines pcMap (ClassInfo cls _t) =
           do let name = fullNameStr (view className cls) (routineName rtn)
              debug $ concat [ "Adding routine prototype ", Text.unpack name ]
              fType <- featDeclType rtn
-
+             debug $ concat [ "Added routine decl ", Text.unpack name ]
              -- External routines should also declare the external
              -- thing they bind to as a function. The type of that
              -- function matches the type of the outer declaration,

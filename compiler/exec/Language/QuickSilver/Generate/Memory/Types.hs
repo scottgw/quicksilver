@@ -36,6 +36,10 @@ typeOf e t =
       Int16Type -> int16TypeM
       Int32Type -> int32TypeM
       Int64Type -> int64TypeM
+      Natural8Type -> int8TypeM
+      Natural16Type -> int16TypeM
+      Natural32Type -> int32TypeM
+      Natural64Type -> int64TypeM
       BoolType -> int1TypeM
       DoubleType -> doubleType
       CharType -> int8TypeM

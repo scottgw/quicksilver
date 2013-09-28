@@ -60,10 +60,14 @@ getProc v =
 
 castType :: Typ -> Value -> Build Value
 castType Int8Type v =
-    do debug "castType: to int8 start"
-       i8 <- int8TypeM
-       trunc v i8 "castType: to int8"
+  do debug "castType: to int8 start"
+     i8 <- int8TypeM
+     trunc v i8 "castType: to int8"
 castType Int64Type v = return v
+castType Natural32Type v =
+  do debug "castType: to int32 start"
+     i32 <- int32TypeM
+     trunc v i32 "castType: to int32"
     -- do v' <- load' v
     --    debugDump v'
     --    i64 <- int64TypeM
