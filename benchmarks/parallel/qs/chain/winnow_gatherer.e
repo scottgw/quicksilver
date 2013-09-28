@@ -39,7 +39,10 @@ create make
 
       merged_pt: Winnow_Value_Point
       other_pt: Winnow_Value_Point
+
+      time: Real
     do
+      time := {Prelude}.get_time()
       {Prelude}.print("Winnow_Gatherer: starting fetch%N")
       other_points := copy_points_from_worker(worker)
       {Prelude}.print("Winnow_Gatherer: starting merge%N")
@@ -80,6 +83,12 @@ create make
 
       end
       {Prelude}.print("Winnow_Gatherer: finished merge%N")
+
+      time := {Prelude}.get_time() - time
+      {Prelude}.print("Winnow_Gatherer: time - ")
+      {Prelude}.print({Prelude}.real_to_str(time))
+      {Prelude}.print("%N")
+
       num_merged := num_merged + 1
       merged := new_merged
     end
