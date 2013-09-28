@@ -147,7 +147,7 @@ create make
             from j := 0
             until j >= ncols
             loop
-              local_mat.put(j, i, source.item(j, i))
+              local_mat.put(j, i - start, source.item(j, i))
               j := j + 1
             end
             i := i + 1
