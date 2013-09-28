@@ -36,6 +36,9 @@ module Main
 
       -- Result of product stage
       result_vector: Real_Array
+
+      -- Timing
+      time: Real
     do
       nelts := 10000
       s := 0
@@ -45,6 +48,8 @@ module Main
       num_workers := {Prelude}.get_int_env("LIBQS_EXECS")
       create workers.make (num_workers)
 
+
+      time := {Prelude}.get_time()
       {Prelude}.print("Master: starting randmat%N")
       from
         start := 0
@@ -116,7 +121,12 @@ module Main
 
       {Prelude}.print("Master: calculating thresh%N")
       thresh := calc_threshold(nelts, percent, sep_max, sep_hist)
+      time := {Prelude}.get_time() - time
+      {Prelude}.print("Master: time - thresh ")
+      {Prelude}.print({Prelude}.real_to_str(time))
+      {Prelude}.print("%N")
       {Prelude}.print("Master: resuming thresh%N")
+      time := {Prelude}.get_time()
 
       from
         i := 0
@@ -145,6 +155,11 @@ module Main
           end
         i := i + 1
       end      
+      thresh := calc_threshold(nelts, percent, sep_max, sep_hist)
+      time := {Prelude}.get_time() - time
+      {Prelude}.print("Master: time - winnow ")
+      {Prelude}.print({Prelude}.real_to_str(time))
+      {Prelude}.print("%N")
 
 
       -- For outer
