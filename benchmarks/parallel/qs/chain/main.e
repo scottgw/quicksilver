@@ -160,7 +160,7 @@ module Main
       {Prelude}.print("Master: time - winnow ")
       {Prelude}.print({Prelude}.real_to_str(time))
       {Prelude}.print("%N")
-
+      time := {Prelude}.get_time()
 
       -- For outer
       {Prelude}.print("Master: starting outer%N")
@@ -194,6 +194,12 @@ module Main
       create result_vector.make(winnow_nelts)
       {Prelude}.print("Master: starting product fetch%N")
       fetch_product(workers, result_vector)
+
+      time := {Prelude}.get_time() - time
+      {Prelude}.print("Master: time - outer/product ")
+      {Prelude}.print({Prelude}.real_to_str(time))
+      {Prelude}.print("%N")
+
       {Prelude}.print("Master: exit%N")
       {Prelude}.exit_with(0)
     end
