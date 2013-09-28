@@ -56,6 +56,15 @@ module Prelude
     external "int_to_real"
     end
 
+  int_to_nat32(i: Integer): Natural_32
+    external "int_to_nat32"
+    end
+
+  nat32_to_int(n: Natural_32): Integer
+    external "nat32_to_int"
+    end
+
+
   int_to_str(i: Integer): String
     local
       str: String

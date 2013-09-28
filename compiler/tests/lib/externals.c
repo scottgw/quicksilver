@@ -162,6 +162,23 @@ int_to_real(int64_t i)
   return (double)i;
 }
 
+
+uint32_t
+int_to_nat32(int64_t i)
+{
+  return (uint32_t)i;
+}
+
+
+
+int64_t
+nat32_to_int(uint32_t i)
+{
+  return (int64_t)i;
+}
+
+
+
 /**********/
 /* String */
 /**********/
