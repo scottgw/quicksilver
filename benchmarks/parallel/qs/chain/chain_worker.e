@@ -323,8 +323,12 @@ create make
         end
 
         
-      separate shared_outer_vector shared_outer_count
+      separate shared_outer_count
         require shared_outer_count.item(0) = winnow_nelts
+	do
+        end
+
+      separate shared_outer_vector
         do
           from i := 0
           until i >= winnow_nelts
