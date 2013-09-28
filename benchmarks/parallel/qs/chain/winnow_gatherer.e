@@ -42,6 +42,7 @@ create make
     do
       {Prelude}.print("Winnow_Gatherer: starting fetch%N")
       other_points := copy_points_from_worker(worker)
+      {Prelude}.print("Winnow_Gatherer: starting merge%N")
       from
         new_merged_i := 0
         merged_i := 0
@@ -91,8 +92,13 @@ create make
       x, y, v: Integer
       sep_points: separate Array [Winnow_Value_Point]
     do
+      {Prelude}.print("Winnow_Gatherer: locking other worker%N")
+      if worker = Void then
+        {Prelude}.print("Winnow_Gatherer: void worker%N")
+      end
       separate worker
         do
+          {Prelude}.print("Winnow_Gatherer: copy copy%N")
           create other_points.make(worker.val_points.count)
           from
             other_i := 0

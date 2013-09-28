@@ -28,7 +28,7 @@ module Main
       thresh: Integer
       
       -- Result of winnow stage:
-      winnow_gatherer: separate Winnow_Gatherer
+      winnow_gatherer: Winnow_Gatherer
 
       -- Results of outer stage:
       shared_outer_vector: separate Real_Array
@@ -53,7 +53,7 @@ module Main
       loop
         height := (nelts - start) // (num_workers - i)
 
-        create worker.make (start, height, nelts, s, winnow_nelts)
+        create worker.make (num_workers, start, height, nelts, s, winnow_nelts)
         separate worker
           do
             worker.start_randmat()
@@ -99,6 +99,7 @@ module Main
         i := i + 1
       end
       {Prelude}.print("Master: waiting to finish thresh%N")
+
       -- Wait until all workers are done with their thresholds
       from
         i := 0
@@ -132,17 +133,30 @@ module Main
 
       -- For winnow
       {Prelude}.print("Master: starting winnow gather%N")
-      create winnow_gatherer.make(winnow_nelts)
-      fetch_winnow(workers, winnow_gatherer)
+      fetch_winnow(workers)
+
+      -- Sync them all up
+      from i := 0
+      until i >= workers.count
+      loop
+        separate worker
+          do
+            worker.start
+          end
+        i := i + 1
+      end      
+
 
       -- For outer
       {Prelude}.print("Master: starting outer%N")
       create shared_outer_vector.make(winnow_nelts)
       create shared_outer_count.make(1)
+
       separate shared_outer_count
         do
           shared_outer_count.put(0, 0)
         end
+
       from
         start := 0
         i := 0
@@ -153,7 +167,6 @@ module Main
         separate worker
           do
             worker.start_outer(start, height,
-                               winnow_gatherer,
                                shared_outer_vector,
                                shared_outer_count)
           end
@@ -208,31 +221,62 @@ module Main
     end
 
     -- Set the gatherer to receive data from each worker.
-  fetch_winnow(workers: Array[separate Chain_Worker];
-               winnow_gatherer: separate Winnow_Gatherer)
+  fetch_winnow(workers: Array [separate Chain_Worker])
     local
       i: Integer
-      worker: separate Chain_Worker
+      stride: Integer
+      left, right: separate Chain_Worker
+      gather: separate Winnow_Gatherer
     do
       from
-        i := 0
+        stride := 1
       until
-        i >= workers.count
+        stride = workers.count
       loop
-        worker := workers.item (i)
-        separate winnow_gatherer
-          do
-            winnow_gatherer.fetch(worker)
-          end
-        i := i + 1
-      end
+        from
+          i := 0
+        until
+          i >= workers.count
+        loop
+          left := workers.item (i)
+          right := workers.item (i + stride)
 
-      separate winnow_gatherer
-        require winnow_gatherer.num_merged = workers.count
-          do
-            {Prelude}.print("Winnow_Gatherer: done, chunking%N")
-            winnow_gatherer.chunk()
-          end
+          separate left
+            do
+              left.merge_with (right)
+            end
+
+          i := i + stride*2
+         end
+
+         stride := stride * 2
+       end
+       {Prelude}.print("Master: finished dispatching merge operations%N")
+       -- All merging operations have now been dispatched
+
+       left := workers.item (0)
+       separate left
+         do
+           gather := left.gather
+           left.chunk()
+         end
+
+       {Prelude}.print("Master: fetched top merge%N")
+
+       from
+         i := 1
+       until
+         i >= workers.count
+       loop
+         left := workers.item (i)
+         separate left
+           do
+             left.chunk_from (gather)
+           end
+         i := i + 1
+       end
+
+       -- All workers should now have all the winnowed points
     end
 
   fetch_product(workers: Array[separate Chain_Worker];

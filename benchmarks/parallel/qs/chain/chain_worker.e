@@ -20,17 +20,23 @@ create make
   seed: Natural_32
   winnow_nelts: Integer
 
+  num_workers: Integer
+
   time: Real
 
-  make (a_start: Integer;
+  make (a_num_workers: Integer;
+        a_start: Integer;
         a_height: Integer;
         a_nelts: Integer;
         a_seed: Integer;
         a_winnow_nelts: Integer
        )
     do
+      num_workers := a_num_workers
+
       start := a_start
       final := start + a_height
+
       nelts := a_nelts
       seed := {Prelude}.int_to_nat32(a_seed)
       winnow_nelts := a_winnow_nelts
@@ -177,7 +183,6 @@ create make
       value_point: Winnow_Value_Point
       val_pt_idx: Integer
     do
-      {Prelude}.print("Worker: starting winnow%N")
       l_time := {Prelude}.get_time()
       create val_points.make(mask_count)
 
@@ -187,7 +192,6 @@ create make
       until
         i >= final
       loop
-
         from j := 0
         until j >= nelts
         loop
@@ -202,13 +206,54 @@ create make
       end
 
       val_points := {Winnow_Sort}.sort_val_points(val_points)
-      
+
+      create gather.make(winnow_nelts)
+      gather.merged := val_points
+
       time := time + {Prelude}.get_time() - l_time
-      {Prelude}.print("Worker: finished winnow ")
-      {Prelude}.print({Prelude}.int_to_str(val_points.count))
-      {Prelude}.print(" ")
-      {Prelude}.print({Prelude}.int_to_str(val_pt_idx))
-      {Prelude}.print("%N")
+    end
+
+  gather: Winnow_Gatherer
+
+  merge_with (other: separate Chain_Worker)
+    do
+      create gather.make(winnow_nelts)
+      gather.merged := val_points
+      gather.fetch (other)
+      val_points := gather.merged
+      {Prelude}.print("Worker: merge_with done%N")
+    end
+
+  chunk()
+    do
+      {Prelude}.print("Worker: chunk%N")
+      gather.chunk()
+      x_points := gather.x_points
+      y_points := gather.y_points
+    end
+
+  chunk_from(winnow_gatherer: separate Winnow_Gatherer)
+    local
+      i: Integer
+    do
+      {Prelude}.print("Worker: chunk from other%N")
+      create x_points.make(winnow_nelts)
+      create y_points.make(winnow_nelts)
+
+      separate winnow_gatherer
+        do
+          from
+            i := 0
+          until
+            i >= winnow_nelts
+          loop
+            x_points.put(i, winnow_gatherer.x_points.item(i))
+            y_points.put(i, winnow_gatherer.y_points.item(i))
+            i := i + 1
+          end
+        end
+
+      {Prelude}.print("Worker: chunk from other finish%N")
     end
 
   -- Outer section
@@ -217,53 +262,17 @@ create make
 
   start_outer(a_start: Integer;
               a_height: Integer;
-              winnow_gatherer: separate Winnow_Gatherer;
               a_shared_outer_vector: separate Real_Array;
               a_shared_outer_count: separate Int_Array
              )
     local
       i: Integer
-      xs: separate Int_Array
-      ys: separate Int_Array
     do
       {Prelude}.print("Worker: starting outer%N")
       start := a_start
       final := start + a_height
       shared_outer_vector := a_shared_outer_vector
       shared_outer_count := a_shared_outer_count
-
-      create x_points.make(winnow_nelts)
-      create y_points.make(winnow_nelts)
-
-      separate winnow_gatherer
-        do
-          xs := winnow_gatherer.x_points
-          ys := winnow_gatherer.y_points
-        end
-
-      separate xs
-        do
-          from
-            i := 0
-          until
-            i >= winnow_nelts
-          loop
-            x_points.put(i, xs.item(i))
-            i := i + 1
-          end
-        end
-
-      separate ys
-        do
-          from
-            i := 0
-          until
-            i >= winnow_nelts
-          loop
-            y_points.put(i, ys.item(i))
-            i := i + 1
-          end
-      end
 
       calc_outer()
       calc_product()
