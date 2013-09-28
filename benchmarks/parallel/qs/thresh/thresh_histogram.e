@@ -39,8 +39,8 @@ create make
       sep_hist := a_sep_hist
 
       source := a_source
-      create local_mat.make (ncols, final - start)
-      create mask.make (ncols, final - start)
+      create local_mat.make (final - start, ncols)
+      create mask.make (final - start, ncols)
     end
 
   -- Histogram calculation

@@ -39,7 +39,7 @@ create make
       create x_points.make (nelts)
       create y_points.make (nelts)
 
-      create matrix.make (nelts, final - start)
+      create matrix.make (final - start, nelts)
       create vector.make (final - start)
     end
 

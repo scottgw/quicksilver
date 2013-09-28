@@ -31,9 +31,9 @@ module Main
       worker_height: Integer
       workers: Array[separate Randmat_Worker]
     do
-      nrows := 10000
-      ncols := 10000
-      s := 8
+      nrows := 10
+      ncols := 10
+      s := 0
       num_workers := {Prelude}.get_int_env("LIBQS_EXECS")
 
       create matrix.make (nrows, ncols)
@@ -116,6 +116,8 @@ module Main
           end
         i := i + 1
       end
+
+      {Prelude}.print(matrix.to_string())
       worker_time := worker_time / {Prelude}.int_to_real(workers.count)
       {Prelude}.print_err({Prelude}.real_to_str(worker_time))
       {Prelude}.print_err("%N")

@@ -195,6 +195,9 @@ module Main
           until not(i >= 0 and prefixsum <= count)
           loop
             h := a_sep_hist.item (i)
+            {Prelude}.print("Master: thresh_calc ")
+            {Prelude}.print_int(h)
+            {Prelude}.print("%N")
             prefixsum := prefixsum + h
             threshold := i;
             i := i - 1

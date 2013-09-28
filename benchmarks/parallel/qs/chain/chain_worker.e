@@ -17,7 +17,7 @@ create make
   final: Integer
 
   nelts: Integer
-  seed: Integer
+  seed: Natural_32
   winnow_nelts: Integer
 
   time: Real
@@ -32,7 +32,7 @@ create make
       start := a_start
       final := start + a_height
       nelts := a_nelts
-      seed := a_seed
+      seed := {Prelude}.int_to_nat32(a_seed)
       winnow_nelts := a_winnow_nelts
 
       create val_points.make(0)
@@ -44,12 +44,12 @@ create make
 
   start_randmat()
     local
-      s, lcg_a, lcg_c, rand_max: Integer
+      s, lcg_a, lcg_c, rand_max: Natural_32
       i, j: Integer
       l_time: Real
     do
       l_time := {Prelude}.get_time()
-      create randmat_matrix.make(nelts, final - start)
+      create randmat_matrix.make(final - start, nelts)
       lcg_a := 1664525
       lcg_c := 1013904223
       rand_max := 100
@@ -57,16 +57,17 @@ create make
       from i := start
       until i >= final
       loop
-        s := seed + i
+        s := seed + {Prelude}.int_to_nat32 (i)
         from j := 0
         until j >= nelts
         loop
           s := lcg_a * s + lcg_c
-          randmat_matrix.put(j, i - start, s \\ rand_max)
+          randmat_matrix.put(j, i - start, {Prelude}.nat32_to_int(s \\ rand_max))
           j := j + 1
         end
         i := i + 1
       end
+      -- {Prelude}.print(randmat_matrix.to_string())
       time := time + {Prelude}.get_time() - l_time
     end
 
@@ -107,13 +108,12 @@ create make
       end
       time := time + {Prelude}.get_time() - l_time
 
-      {Prelude}.print("Worker: finished thresh%N")
       -- Merge hist and max
       separate a_sep_max
         do
           a_sep_max.put(0, {Prelude}.int_max(a_sep_max.item(0), max))
         end
-      {Prelude}.print("Worker: merging max")
+
       separate a_sep_hist
         do
           from i := 0
@@ -124,7 +124,6 @@ create make
             i := i + 1
           end      
         end
-      {Prelude}.print("Worker: merging histogram")
     end
 
   mask_matrix: Int_Matrix
@@ -138,7 +137,7 @@ create make
       l_time: Real
     do
       l_time := {Prelude}.get_time()
-      create mask_matrix.make(nelts, final - start)
+      create mask_matrix.make(final - start, nelts)
       mask_count := 0
 
       from
@@ -232,22 +231,16 @@ create make
       final := start + a_height
       shared_outer_vector := a_shared_outer_vector
       shared_outer_count := a_shared_outer_count
-      {Prelude}.print("Worker: outer height ")
-      {Prelude}.print_int(a_height)
-      {Prelude}.print("%N")
-      
-      {Prelude}.print("Worker: creating points%N")
+
       create x_points.make(winnow_nelts)
       create y_points.make(winnow_nelts)
 
-      {Prelude}.print("Worker: gettings point array refs%N")
       separate winnow_gatherer
         do
           xs := winnow_gatherer.x_points
           ys := winnow_gatherer.y_points
         end
 
-      {Prelude}.print("Worker: starting outer gather xs%N")
       separate xs
         do
           from
@@ -260,7 +253,6 @@ create make
           end
         end
 
-      {Prelude}.print("Worker: starting outer gather ys%N")
       separate ys
         do
           from
@@ -291,7 +283,7 @@ create make
       l_time: Real
     do
       l_time := {Prelude}.get_time()
-      create outer_matrix.make(winnow_nelts, final - start)
+      create outer_matrix.make(final - start, winnow_nelts)
       create outer_vector.make(winnow_nelts)
       {Prelude}.print("Worker: starting outer calculation%N")
       from i := start

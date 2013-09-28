@@ -34,7 +34,7 @@ create make
       sep_vector := a_sep_vector
 
       create prod_vector.make (final - start)
-      create matrix.make (nelts, final - start)
+      create matrix.make (final - start, nelts)
       create vector.make (nelts)
     end
 

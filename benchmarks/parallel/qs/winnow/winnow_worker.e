@@ -28,8 +28,8 @@ create make
       final := a_final
       ncols := a_ncols
 
-      create mask.make (ncols, final - start)
-      create local_mat.make (ncols, final - start)
+      create mask.make (final - start, ncols)
+      create local_mat.make (final - start, ncols)
 
       sep_mask := a_sep_mask
       sep_matrix := a_sep_matrix
