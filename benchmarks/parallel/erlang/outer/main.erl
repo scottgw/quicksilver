@@ -50,7 +50,7 @@ outer(Nelts, Points) ->
     Cores = erlang:system_info(schedulers_online),
 
     io:format("generating chunks~n"),
-    PointChunks = core_chunk(Points, 2*Cores),
+    PointChunks = core_chunk(Points, Cores),
 
     io:format("calculating rows~n"),
     Pids = [spawn(fun() -> calc_rows(Parent, Nelts, PointChunk, Points) end)
@@ -64,7 +64,7 @@ outer(Nelts, Points) ->
     io:format("calculating vector~n"),
     {Time, Vector} =
         timer:tc(fun() -> [distance ({0,0}, A) || A <- Points] end),
-    io:format(standard_error, "~p~n", [(Time + TotalTime)/(2*Cores*1000000)]),
+    io:format(standard_error, "~p~n", [(Time + TotalTime)/(Cores*1000000)]),
     {Matrix, Vector}.
 
 read_vector_of_points(Nelts) -> read_vector_of_points(Nelts, []).
