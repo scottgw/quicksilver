@@ -3,7 +3,7 @@
 main: main.beam
 
 main.beam: main.erl
-	erlc +native +"{hipe,[o3]}"  $< -o $@
+	erlc -smp  $< -o $@
 
 clean:
 	@rm -f main.beam

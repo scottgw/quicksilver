@@ -11,7 +11,7 @@ test: main.beam
 	echo "2 5 9" | erl -noshell -s main main is_bench -s init stop
 
 main.beam: main.erl
-	erlc +native +"{hipe,[o3]}"  $< -o $@
+	erlc -smp  $< -o $@
 
 clean:
 	@rm -f main.beam
