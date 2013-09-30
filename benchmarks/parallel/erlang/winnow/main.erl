@@ -17,30 +17,32 @@
 row_process(_RowNo, _ColNo, [], [], Acc) -> Acc;
 row_process(RowNo, ColNo, [X|Xs], [M|Ms], Acc) ->
     Y = if
-            M == 1 -> [{X, {RowNo, ColNo}} | Acc];
+            M =:= 1 -> [{X, {RowNo, ColNo}} | Acc];
             true -> Acc
         end,
     row_process(RowNo, ColNo + 1, Xs, Ms, Y).
 
 chunk_process_acc(_, [], [], Acc) -> Acc;
 chunk_process_acc(RowStart, [MatrixRow|MatChunk], [MaskRow|MaskChunk], Acc) ->
-    R = row_process(RowStart, 0, MatrixRow, MaskRow, []),
-    chunk_process_acc(RowStart + 1, MatChunk, MaskChunk, [R|Acc]).
+    R = row_process(RowStart, 0, MatrixRow, MaskRow, Acc),
+    chunk_process_acc(RowStart + 1, MatChunk, MaskChunk, R).
     
-
-chunk_process(MatrixChunk, MaskChunk, RowStart) ->
+chunk_process(Parent, MatrixChunk, MaskChunk, RowStart) ->
+    receive start -> ok end,
     T1 = now(),
     Chunk = chunk_process_acc(RowStart, MatrixChunk, MaskChunk, []),
-    Together = lists:concat(Chunk),
-    Sorted = lists:sort(Together),
+    T11 = now(),
+    io:format("Chunk time: ~p ~p ~p ~p ~p~n",
+              [RowStart,
+               length(MatrixChunk),
+               length(MaskChunk),
+               length(Chunk),
+               timer:now_diff(T11, T1)]),
+    Sorted = lists:sort(Chunk),
     T2 = now(),
     Time = timer:now_diff(T2, T1)/1000000,
 
-    receive
-        {gatherer, Pid} -> Pid
-    end,
-
-    Pid ! {self(), Sorted, Time}.
+    Parent ! {Sorted, Time}.
 
 sort_merge(Xs, [], Acc) ->
     lists:reverse(Acc) ++ Xs;
@@ -70,30 +72,44 @@ core_chunk(Matrix, Cores) ->
 winnow(Cores, Matrix, Mask, Nelts) ->
     ChunkMatrix = core_chunk(Matrix, Cores),
     ChunkMask = core_chunk(Mask, Cores),
-    ChunkZips = lists:zip(ChunkMatrix, ChunkMask),  
+    Parent = self(),
+    {Starts, _} = lists:mapfoldl(fun(Chunk, Acc) -> {Acc, Acc + length(Chunk)} end,
+                            0, ChunkMatrix),
+
+    ChunkZips = lists:zip3(Starts, ChunkMatrix, ChunkMask),
 
     io:format("row process~n"),
-    {Pids, _RowStart} 
-        = lists:foldl(
-            fun({MatrixChunk, MaskChunk}, {Pids, RowStart}) ->
-                    %% io:format("~p~n",[now()]),
-                    Pid = spawn(
-                            fun() -> chunk_process (MatrixChunk,
-                                                    MaskChunk,
-                                                    RowStart)
-                            end),
-                    {[Pid|Pids], RowStart + length(MatrixChunk)}
-            end,
-            {[],0},
-            ChunkZips),
+    Pids = [spawn(
+              fun() -> chunk_process (Parent,
+                                      MatrixChunk,
+                                      MaskChunk,
+                                      RowStart)
+              end) || {RowStart, MatrixChunk, MaskChunk} <- ChunkZips],
+              
+    %% {Pids, _RowStart} 
+    %%     = lists:foldl(
+    %%         fun({MatrixChunk, MaskChunk}, {Pids, RowStart}) ->
+    %%                 %% io:format("~p~n",[now()]),
+    %%                 Pid = spawn(
+    %%                         fun() -> chunk_process (Parent,
+    %%                                                 MatrixChunk,
+    %%                                                 MaskChunk,
+    %%                                                 RowStart)
+    %%                         end),
+    %%                 {[Pid|Pids], RowStart + length(MatrixChunk)}
+    %%         end,
+    %%         {[],0},
+    %%         ChunkZips),
+
+
+    [Pid ! start || Pid <- Pids],
 
     %% Merging sorted lists from workers, collecting times.
     {Sorted, TotalTime} =
         lists:foldl(
-          fun(Pid, {Sorted, TotalTime}) ->
-                  Pid ! {gatherer, self()},
+          fun(_Pid, {Sorted, TotalTime}) ->
                   receive
-                      {Pid, List, Time} -> {List, Time}
+                      {List, Time} -> {List, Time}
                   end,
                   {SortTime, Merged} =
                       timer:tc(fun() -> sort_merge(Sorted, List) end),
@@ -104,10 +120,8 @@ winnow(Cores, Matrix, Mask, Nelts) ->
 
     T1 = now(),
     Stride = length(Sorted) div Nelts,
-    io:format("pruning~n"),
     Final = drop_nth(Stride, Sorted),
     T2 = now(),
-
     io:format(standard_error, "~p~n", [TotalTime + 
                                            timer:now_diff(T2, T1)/1000000]),
     Final.
@@ -122,14 +136,19 @@ drop_nth(Stride, List) ->
 read_vector(_, 0) -> [];
 read_vector(Nrows, Ncols) -> 
     Val = if 
-              (Nrows * Ncols) rem (Ncols + 1) == 1 -> 1;
+              (Nrows * Ncols) rem (Ncols + 1) =:= 1 -> 1;
               true -> 0
           end,
     [ Val | read_vector(Nrows, Ncols - 1)].
 
+read_mask(0, _) -> [];
+read_mask(Nrows, Ncols) -> 
+    [read_vector(Nrows, Ncols) | read_mask(Nrows - 1, Ncols)].
+
+
 read_matrix(0, _) -> [];
 read_matrix(Nrows, Ncols) -> 
-    [read_vector(Nrows, Ncols) | read_matrix(Nrows - 1, Ncols)].
+    [lists:duplicate(Ncols, 0) | read_matrix(Nrows - 1, Ncols)].
 
 main() ->          
     {ok, [[OrigNeltsStr]]} = init:get_argument(orignelts),
@@ -140,7 +159,9 @@ main() ->
     Nelts = list_to_integer(NeltsStr),
 
     Matrix = read_matrix(N, N),
-    Mask = read_matrix(N, N),
+    Mask = read_mask(N, N),
+    %% io:format("~p~n", [Matrix]),
+    %% io:format("~p~n", [Mask]),
     {Time, _Val} = timer:tc(fun() -> winnow(Cores, Matrix, Mask, Nelts) end),
     io:format(standard_error, "~p~n", [Time/1000000]),
     ok.
