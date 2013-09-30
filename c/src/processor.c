@@ -45,6 +45,8 @@ notify_available(processor_t proc)
   proc->processing_wait = false;
 }
 
+#ifndef DISABLE_QOQ
+
 static
 void
 proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
@@ -60,9 +62,6 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
         }
       else if (closure_is_end(clos))
         {
-          // The end of a private queue decrements the ref_count again.
-          // This should have been incremented initially when the private
-          // queue was bound to this processor.
           notify_available(proc);
           free(clos);
           break;
@@ -108,6 +107,68 @@ proc_loop(processor_t proc)
         }
     }
 }
+
+
+
+#else
+
+// Returns true if the processor continue, false
+// if it should shutdown.
+static
+bool
+proc_duty_loop(processor_t proc)
+{
+  while (true)
+    {
+      closure_t clos = NULL;
+      qoq_dequeue_wait(proc->qoq, (void**) &proc, &proc->stask);
+
+      if (clos == NULL)
+        {
+          notify_available(proc);
+          break;
+        }
+      else if (closure_is_end(clos))
+        {
+          return false;
+        }
+      else if (closure_is_sync(clos))
+        {
+          processor_t client = (processor_t) clos->fn;
+          while (client->stask.task->state != TASK_WAITING);
+          proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
+
+          stask_switch(&proc->stask, &client->stask);
+          /* proc_wake(client, proc->executor); */
+        }
+      else
+        {
+          closure_apply(clos, NULL);
+          closure_free(clos);
+        }
+    }
+  return true;
+}
+
+static
+void
+proc_loop(processor_t proc)
+{
+  stask_step_previous(&proc->stask);
+
+  while (true)
+    {
+      proc_maybe_yield(proc);
+      if (proc_duty_loop(proc))
+        {
+          return;
+        }
+    }
+}
+
+
+
+#endif
 
 priv_queue_t
 proc_get_queue(processor_t proc, processor_t supplier_proc)

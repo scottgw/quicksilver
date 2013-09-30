@@ -1,4 +1,4 @@
-lib_LTLIBRARIES = libqs.la
+lib_LTLIBRARIES = libqs.la libqs_noqoq.la
 
 libqs_la_SOURCES = \
 	bounded_queue.c \
@@ -53,6 +53,12 @@ libqs_la_CXXFLAGS = -std=c++11 $(FLAGS) $(DEPS_CFLAGS)
 libqs_la_LIBADD =
 
 
+# trying to have separate noqoq version.
+libqs_noqoq_la_SOURCES = ${libqs_la_SOURCES}
+libqs_noqoq_la_CFLAGS = ${libqs_la_CFLAGS} -DDISABLE_QOQ
+libqs_noqoq_la_CXXFLAGS = ${libqs_la_CXXFLAGS} -DDISABLE_QOQ
+libqs_noqoq_la_LIBADD =
+
 # systemtap related directives
 if ENABLE_SYSTEMTAP
 probes.h: probes.d
@@ -61,6 +67,7 @@ probes.h: probes.d
 probes.o: probes.d
 	$(DTRACE) -G -C -s $< -o $@
 libqs_la_LIBADD += probes.o
+libqs_noqoq_la_LIBADD += probes.o
 endif
 
 # TODO: add dependencies for (?) LIBS=rt qs lfds :libffi.so.6 tbb
