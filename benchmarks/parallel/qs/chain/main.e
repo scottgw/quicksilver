@@ -149,13 +149,13 @@ module Main
       from i := 0
       until i >= workers.count
       loop
+        worker := workers.item (i)
         separate worker
           do
             worker.start
           end
         i := i + 1
       end      
-      thresh := calc_threshold(nelts, percent, sep_max, sep_hist)
       time := {Prelude}.get_time() - time
       {Prelude}.print("Master: time - winnow ")
       {Prelude}.print({Prelude}.real_to_str(time))
@@ -230,9 +230,11 @@ module Main
           loop
             h := a_sep_hist.item (i)
             {Prelude}.print("Master: thresh_calc ")
+            {Prelude}.print_int(i)
+            {Prelude}.print(" ")
             {Prelude}.print_int(h)
             {Prelude}.print("%N")
-            prefixsum := prefixsum + h
+             prefixsum := prefixsum + h
             threshold := i;
             i := i - 1
           end

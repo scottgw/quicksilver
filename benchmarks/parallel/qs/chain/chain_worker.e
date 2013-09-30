@@ -5,13 +5,13 @@ import Real_Array
 import Real_Math
 import Real_Matrix
 import Winnow_Gatherer
-import Winnow_Value_Point
+import Winnow_Value_Points
 
 class Chain_Worker
 
 create make
 
-  val_points: Array[Winnow_Value_Point]
+  val_points: Winnow_Value_Points
   product: Real_Array
   start: Integer
   final: Integer
@@ -41,8 +41,6 @@ create make
       seed := {Prelude}.int_to_nat32(a_seed)
       winnow_nelts := a_winnow_nelts
 
-      create val_points.make(0)
-      
       time := 0.0
     end
 
@@ -180,7 +178,6 @@ create make
     local
       i, j: Integer
       l_time: Real
-      value_point: Winnow_Value_Point
       val_pt_idx: Integer
     do
       l_time := {Prelude}.get_time()
@@ -196,8 +193,9 @@ create make
         until j >= nelts
         loop
           if mask_matrix.item(j, i - start) = 1 then
-            create value_point.make(randmat_matrix.item(j, i - start), j, i)
-            val_points.put (val_pt_idx, value_point)
+            val_points.put_v (val_pt_idx, randmat_matrix.item (j, i - start))
+            val_points.put_x (val_pt_idx, j)
+            val_points.put_y (val_pt_idx, i)
             val_pt_idx := val_pt_idx + 1            
           end
           j := j + 1
@@ -228,8 +226,7 @@ create make
     do
       {Prelude}.print("Worker: chunk%N")
       gather.chunk()
-      x_points := gather.x_points
-      y_points := gather.y_points
+      chunked_points := gather.chunked_points
     end
 
   chunk_from(winnow_gatherer: separate Winnow_Gatherer)
@@ -237,8 +234,7 @@ create make
       i: Integer
     do
       {Prelude}.print("Worker: chunk from other%N")
-      create x_points.make(winnow_nelts)
-      create y_points.make(winnow_nelts)
+      create chunked_points.make(winnow_nelts)
 
       separate winnow_gatherer
         do
@@ -247,8 +243,8 @@ create make
           until
             i >= winnow_nelts
           loop
-            x_points.put(i, winnow_gatherer.x_points.item(i))
-            y_points.put(i, winnow_gatherer.y_points.item(i))
+            chunked_points.put(i, 0, winnow_gatherer.chunked_points.item_x (i),
+                                     winnow_gatherer.chunked_points.item_y (i))
             i := i + 1
           end
         end
@@ -257,8 +253,7 @@ create make
     end
 
   -- Outer section
-  x_points: Int_Array
-  y_points: Int_Array
+  chunked_points: Winnow_Value_Points
 
   start_outer(a_start: Integer;
               a_height: Integer;
@@ -299,15 +294,15 @@ create make
       until i >= final
       loop
         nmax := -1.0
-        x1 := x_points.item(i - start)
-        y1 := y_points.item(i - start)
+        x1 := chunked_points.item_x (i - start)
+        y1 := chunked_points.item_y (i - start)
 
         from j := 0
         until j >= winnow_nelts
         loop
           if i /= j then
-            x2 := x_points.item(j)
-            y2 := y_points.item(j)
+            x2 := chunked_points.item_x (j)
+            y2 := chunked_points.item_y (j)
             d := distance (x1, y1, x2, y2)
             outer_matrix.put (j, i - start, d)
             nmax := {Real_Math}.max (nmax, d)

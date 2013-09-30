@@ -1,2 +1,2 @@
 #!/bin/bash
-LIBQS_EXECS=$5 ./main
+LD_PRELOAD=$HOME/local/lib/libtcmalloc.so LIBQS_EXECS=$5 ./main

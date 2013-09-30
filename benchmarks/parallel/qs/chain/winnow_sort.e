@@ -1,10 +1,9 @@
-import Array
-import Winnow_Value_Point
+import Winnow_Value_Points
 import Prelude
 
 module Winnow_Sort
 
-  sort_val_points (points: Array[Winnow_Value_Point]): Array [Winnow_Value_Point]
+  sort_val_points (points: Winnow_Value_Points): Winnow_Value_Points
     do
       {Prelude}.print({Prelude}.int_to_str(points.count))
       {Prelude}.print("%N")
@@ -12,9 +11,9 @@ module Winnow_Sort
       sort_range(points, 0, points.count)
     end
 
-  sort_range(points: Array[Winnow_Value_Point];
+  sort_range(points: Winnow_Value_Points;
              start: Integer; final: Integer
-             ): Array [Winnow_Value_Point]
+             ): Winnow_Value_Points
     local
       part: Integer
     do
@@ -29,16 +28,15 @@ module Winnow_Sort
       end
     end
 
-  cmp_pt(p1: Winnow_Value_Point;
-         p2: Winnow_Value_Point): Boolean
+  cmp_pt(idx1, idx2: Integer; a1, a2: Winnow_Value_Points): Boolean
     do
-      if p1.value <= p2.value then
+      if a1.item_v (idx1) <= a2.item_v (idx2) then
         Result := True
-      elseif p1.value = p2.value then
-        if p1.x <= p2.x then
+      elseif a1.item_v (idx1) = a2.item_v (idx2) then
+        if a1.item_x (idx1) <= a2.item_x (idx2) then
           Result := True
-        elseif p1.x = p2.x then
-          Result := p1.y <= p2.y
+        elseif a1.item_x (idx1) = a2.item_x (idx2) then
+          Result := a1.item_y (idx1) <= a2.item_y (idx2)
         else
           Result := False
         end
@@ -47,41 +45,33 @@ module Winnow_Sort
       end
     end
 
-  partition (points: Array[Winnow_Value_Point];
+  partition (points: Winnow_Value_Points;
              start: Integer;
              final: Integer
              ): Integer
     local
       i: Integer
-      piv_pt: Winnow_Value_Point
-      left_pt: Winnow_Value_Point
-      right_pt: Winnow_Value_Point
       left: Integer
       right: Integer
       pivot_idx: Integer
     do
       pivot_idx := start + (final - start) // 2
-      piv_pt := points.item(pivot_idx)
 
       from
         left := start
         right := final - 1
       until left >= right
       loop
-        left_pt := points.item (left)
-        right_pt := points.item (right)
-
-        if (not cmp_pt(left_pt, piv_pt)) and
-           cmp_pt(piv_pt, right_pt) then
-          points.put (left, right_pt)
-          points.put (right, left_pt)
+        if (not cmp_pt(left, pivot_idx, points, points)) and
+           cmp_pt(pivot_idx, right, points, points) then
+          points.swap (left, right)
         end
 
-        if cmp_pt(left_pt, piv_pt) then
+        if cmp_pt(left, pivot_idx, points, points) then
           left := left + 1
         end
 
-        if not cmp_pt(right_pt, piv_pt) then
+        if not cmp_pt(right, pivot_idx, points, points) then
           right := right - 1
         end
       end

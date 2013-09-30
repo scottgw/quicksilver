@@ -2,17 +2,16 @@ import Array
 import Chain_Worker
 import Int_Array
 import Winnow_Sort
-import Winnow_Value_Point
+import Winnow_Value_Points
 
 class Winnow_Gatherer
 
 create make
 
   winnow_nelts: Integer
-  x_points: Int_Array
-  y_points: Int_Array
+  chunked_points: Winnow_Value_Points
 
-  merged: Array [Winnow_Value_Point]
+  merged: Winnow_Value_Points
   num_merged: Integer
 
   make(a_winnow_nelts: Integer)
@@ -33,12 +32,9 @@ create make
       new_merged_i: Integer
       merged_i: Integer
 
-      other_points: Array [Winnow_Value_Point]
-      new_merged: Array [Winnow_Value_Point]
+      other_points: Winnow_Value_Points
+      new_merged: Winnow_Value_Points
       val_end: Integer
-
-      merged_pt: Winnow_Value_Point
-      other_pt: Winnow_Value_Point
 
       time: Real
     do
@@ -54,28 +50,20 @@ create make
       until
         new_merged_i >= new_merged.count
       loop
-        if merged_i < merged.count then
-          merged_pt := merged.item(merged_i)
-        end
-        
-        if other_i < other_points.count then
-          other_pt := other_points.item(other_i)
-        end
-
         if merged_i < merged.count and 
-          other_i < other_points.count then
-          if {Winnow_Sort}.cmp_pt(merged_pt, other_pt) then
-            new_merged.put (new_merged_i, merged_pt)
+           other_i < other_points.count then
+          if {Winnow_Sort}.cmp_pt(merged_i, other_i, merged, other_points) then
+            new_merged.put_from_other (new_merged_i, merged, merged_i)
             merged_i := merged_i + 1
           else
-            new_merged.put (new_merged_i, other_pt)
+            new_merged.put_from_other (new_merged_i, other_points, other_i)
             other_i := other_i + 1
           end
         elseif merged_i < merged.count then
-          new_merged.put(new_merged_i, merged_pt)
+          new_merged.put_from_other (new_merged_i, merged, merged_i)
           merged_i := merged_i + 1
         else
-          new_merged.put(new_merged_i, other_pt)
+          new_merged.put_from_other (new_merged_i, other_points, other_i)
           other_i := other_i + 1
         end
         
@@ -93,13 +81,12 @@ create make
       merged := new_merged
     end
 
-  copy_points_from_worker(worker: separate Chain_Worker): Array [Winnow_Value_Point]
+  copy_points_from_worker(worker: separate Chain_Worker): Winnow_Value_Points
     local
       other_i: Integer
-      other_points: Array [Winnow_Value_Point]
-      other_pt: Winnow_Value_Point
+      other_points: Winnow_Value_Points
       x, y, v: Integer
-      sep_points: separate Array [Winnow_Value_Point]
+      sep_points: separate Winnow_Value_Points
     do
       {Prelude}.print("Winnow_Gatherer: locking other worker%N")
       if worker = Void then
@@ -114,11 +101,10 @@ create make
           until
             other_i >= other_points.count
           loop
-            v := worker.val_points.item (other_i).value
-            x := worker.val_points.item (other_i).x
-            y := worker.val_points.item (other_i).y
-            create other_pt.make (v, x, y)
-            other_points.put(other_i, other_pt)
+            v := worker.val_points.item_v (other_i)
+            x := worker.val_points.item_x (other_i)
+            y := worker.val_points.item_y (other_i)
+            other_points.put (other_i, v, x, y)
             other_i := other_i + 1
           end
         end
@@ -129,10 +115,8 @@ create make
     local
       chunk: Integer
       i: Integer
-      pt: Winnow_Value_Point
     do
-      create x_points.make(winnow_nelts)
-      create y_points.make(winnow_nelts)
+      create chunked_points.make(winnow_nelts)
 
       -- Take every nth element from the sorted list to store.
       chunk := merged.count // winnow_nelts
@@ -146,9 +130,7 @@ create make
       until
         i >= winnow_nelts
       loop
-        pt := merged.item(i*chunk)
-        x_points.put(i, pt.x)
-        y_points.put(i, pt.y)
+        chunked_points.put_from_other (i, merged, i * chunk)
         i := i + 1
       end
       {Prelude}.print("Winnow_Gatherer: finished chunking ")
