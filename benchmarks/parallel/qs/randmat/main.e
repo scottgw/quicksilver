@@ -60,7 +60,7 @@ module Main
         i := i + 1
       end
 
-      fetch_results(workers, ncols, matrix)
+      fetch_all(workers, ncols, matrix)
        
       {Prelude}.exit_with(0)
 --      from i := 0 
@@ -70,50 +70,18 @@ module Main
 --        i := i + 1
 --      end
     end
-  fetch_results(workers: Array[separate Randmat_Worker];
+  fetch_all(workers: Array[separate Randmat_Worker];
                 ncols: Integer;
                 matrix: Int_Matrix)
     local
       i: Integer
-      ii: Integer
-      jj: Integer
-      iend: Integer
-      worker: separate Randmat_Worker
-      worker_start: Integer
-      worker_height: Integer
-      worker_matrix: separate Int_Matrix
       worker_time: Real
     do
       worker_time := 0.0      
       from i := 0
       until i >= workers.count
       loop
-        worker := workers.item(i)
-        separate worker
-          require worker.done
-          do
-            worker_start := worker.start
-            worker_height := worker.height
-            worker_matrix := worker.matrix
-            worker_time := worker_time + worker.time
-          end
-
-        separate worker_matrix
-          do
-            from
-              ii := worker_start
-              iend := ii + worker_height
-            until ii >= iend
-            loop
-              from jj := 0
-              until jj >= ncols
-              loop
-                matrix.put (jj, ii, worker_matrix.item (jj, ii - worker_start))
-                jj := jj + 1
-              end
-              ii := ii + 1
-            end
-          end
+        worker_time := worker_time + fetch_one(workers.item(i), ncols, matrix)
         i := i + 1
       end
 
@@ -122,4 +90,43 @@ module Main
       {Prelude}.print_err({Prelude}.real_to_str(worker_time))
       {Prelude}.print_err("%N")
    end
+
+  fetch_one (worker: separate Randmat_Worker;
+             ncols: Integer;
+             matrix: Int_Matrix): Real
+    local
+      i: Integer
+      j: Integer
+      iend: Integer
+      worker_start: Integer
+      worker_height: Integer
+      worker_matrix: separate Int_Matrix
+      worker_time: Real
+   do
+      separate worker
+        require worker.done
+        do
+          worker_start := worker.start
+          worker_height := worker.height
+          worker_matrix := worker.matrix
+          Result := worker.time
+        end
+
+      separate worker_matrix
+        do
+          from
+            i := worker_start
+            iend := i + worker_height
+          until i >= iend
+          loop
+            from j := 0
+            until j >= ncols
+            loop
+              matrix.put (j, i, worker_matrix.item (j, i - worker_start))
+              j := j + 1
+            end
+            i := i + 1
+          end
+        end
+    end
 end

@@ -93,29 +93,7 @@ module Main
       until i >= n
       loop
         worker := workers.item(i)
-        separate worker
-          do
-            worker_mask := worker.mask
-            start := worker.start
-            iend := worker.final
-            worker_time := {Real_Math}.max(worker.time, worker_time)
-          end
-
-        separate worker_mask
-          do
-            from
-               ii := start
-            until ii >= iend
-            loop
-              from jj := 0
-              until jj >= nelts
-              loop
-                result_mask.put (jj, ii, worker_mask.item(jj, ii - start))
-                jj := jj + 1
-              end
-              ii := ii + 1
-            end
-          end
+        worker_time := fetch_one (worker, worker_time, nelts, result_mask)
         shutdown worker
         i := i + 1
       end
@@ -128,6 +106,39 @@ module Main
 --      shutdown sep_max
 --      shutdown mat
     end
+
+  fetch_one (worker: separate Thresh_Histogram;
+             worker_time: Real;
+             nelts: Integer;
+             result_mask: Int_Matrix): Real
+    local
+      start, iend, ii, jj: Integer
+      worker_mask: separate Int_Matrix
+    do
+      separate worker
+        do
+          worker_mask := worker.mask
+          start := worker.start
+          iend := worker.final
+          Result := {Real_Math}.max(worker.time, worker_time)
+        end
+
+      separate worker_mask
+        do
+          from
+             ii := start
+          until ii >= iend
+          loop
+            from jj := 0
+            until jj >= nelts
+            loop
+              result_mask.put (jj, ii, worker_mask.item(jj, ii - start))
+              jj := jj + 1
+            end
+            ii := ii + 1
+          end
+        end
+    end 
 
   calculate_threshold (nelts, percent: Integer;
                        a_sep_max: separate Int_Array;
