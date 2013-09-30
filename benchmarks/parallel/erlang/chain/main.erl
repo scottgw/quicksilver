@@ -67,7 +67,7 @@ chunk_hist(Parent, Chunk) ->
         timer:tc(
           fun() -> lists:foldl(
                      fun(Row, MaxAcc1) ->
-                             M = lists:foldl(fun(X, MaxAcc2) ->
+                             lists:foldl(fun(X, MaxAcc2) ->
                                                      case get(X) of
                                                          undefined -> put(X, 1);
                                                          V -> put(X, V + 1)
@@ -75,8 +75,7 @@ chunk_hist(Parent, Chunk) ->
                                                      max(MaxAcc2, X)
                                              end,
                                              MaxAcc1,
-                                             Row),
-                             max(MaxAcc1, M)
+                                             Row)
                      end,
                      0,
                      Chunk) end),
