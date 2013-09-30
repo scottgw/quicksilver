@@ -112,6 +112,19 @@ proc_loop(processor_t proc)
 
 #else
 
+void
+proc_lock(processor_t proc, processor_t client)
+{
+  task_mutex_lock(proc->mutex, &client->stask);
+}
+
+void
+proc_unlock(processor_t proc, processor_t client)
+{
+  task_mutex_unlock(proc->mutex, &client->stask);
+}
+
+
 // Returns true if the processor continue, false
 // if it should shutdown.
 static

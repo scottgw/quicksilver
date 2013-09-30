@@ -199,7 +199,7 @@ priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
   priv_queue_resume_supplier(pq, client);
   pq->last_was_func = false;
-  proc_unlock(pq->supplier_proc);
+  proc_unlock(pq->supplier_proc, client);
 }
 
 bool

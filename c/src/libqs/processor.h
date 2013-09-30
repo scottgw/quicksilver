@@ -101,9 +101,10 @@ proc_lock(processor_t proc, processor_t client);
   Unlock this processor.
 
   \param !proc this processor
+  \param !proc the client processor
 */
 void
-proc_unlock(processor_t proc);
+proc_unlock(processor_t proc, processor_t client);
 #endif
 
 /*!
