@@ -53,7 +53,7 @@ randmat_acc (Workers, Remaining, Start, N, S, Acc) ->
     randmat_acc (Workers - 1, NewRemaining, NewStart, N, S, [Pid | Acc]).
 
 
-randmat(W, N, S) -> randmat_acc (W, N, 0, N, S, []).
+randmat(W, N, S) -> join (randmat_acc (W, N, 0, N, S, [])).
 
 join_acc ([], Acc) -> Acc;
 join_acc ([P|Pids], Acc) ->
@@ -66,9 +66,7 @@ join_acc ([P|Pids], Acc) ->
 join (Pids) ->
     {Results, Times} = lists:unzip(join_acc(Pids, [])),
     TotalTime = lists:sum(Times),
-    io:format(standard_error, "~p~n", [TotalTime/4]).
-
-randmat(N, S) -> join (randmat (4, N, S)).
+    io:format(standard_error, "~p~n", [TotalTime/length(Pids)]).
 
 main() ->
     init:get_argument(gather),
@@ -81,5 +79,5 @@ main() ->
     N = list_to_integer(NStr),
     S = list_to_integer(SStr),
 
-    {Time, _Val} = timer:tc(fun() -> randmat(N, S) end),
+    {Time, _Val} = timer:tc(fun() -> randmat(Cores, N, S) end),
     io:format(standard_error, "~p~n", [Time/1000000]).
