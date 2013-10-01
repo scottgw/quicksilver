@@ -33,9 +33,6 @@ struct processor
   /*! Underlying task */
   struct sched_task stask;
 
-  /*! Queue of queues which the processor will take requests from. */
-  qoq_t qoq; 
-
   /*! Processor availability flag */
   bool available;
 
@@ -53,6 +50,15 @@ struct processor
 
   /*! Cache of private queues for suppliers that this processor has accessed. */
   GHashTable *privq_cache;
+
+  #ifdef DISABLE_QOQ
+  /*! Lock for the main queue/ */
+  task_mutex_t qoq_mutex;
+  spsc_queue_t qoq;
+  #else
+  /*! Queue of queues which the processor will take requests from. */
+  qoq_t qoq;
+  #endif
 };
 
 /*!

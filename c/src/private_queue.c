@@ -11,9 +11,9 @@
 #include "internal/task.h"
 #include "internal/task_mutex.h"
 #include "internal/task_condition.h"
+#include "internal/spsc_queue.h"
 
 #ifndef DISABLE_QOQ
-#include "internal/spsc_queue.h"
 priv_queue_t
 priv_queue_new(processor_t proc)
 {
@@ -199,6 +199,7 @@ priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
   priv_queue_resume_supplier(pq, client);
   pq->last_was_func = false;
+  spsc_enqueue_wait(pq->supplier_proc->qoq, NULL, &client->stask);
   proc_unlock(pq->supplier_proc, client);
 }
 
@@ -211,7 +212,7 @@ priv_queue_last_was_func(priv_queue_t pq)
 void
 priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 {
-  qoq_enqueue_wait(pq->supplier_proc->qoq, clos, &wait_proc->stask);
+  spsc_enqueue_wait(pq->supplier_proc->qoq, clos, &wait_proc->stask);
   priv_queue_resume_supplier(pq, wait_proc);
   pq->last_was_func = false;
 }
@@ -226,7 +227,7 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
   pq->last = NULL;
 
   assert (client->stask.task->state == TASK_RUNNING);
-  qoq_enqueue_wait(pq->supplier_proc->qoq, sync_clos, &client->stask);
+  spsc_enqueue_wait(pq->supplier_proc->qoq, sync_clos, &client->stask);
 
   task_set_state(client->stask.task, TASK_TRANSITION_TO_WAITING);
   stask_yield_to_executor(&client->stask);
@@ -245,11 +246,12 @@ priv_queue_sync(priv_queue_t pq, processor_t client)
       closure_new_sync(&sync_clos, client);
       pq->last = NULL;
 
-      qoq_enqueue_wait(pq->supplier_proc->qoq, &sync_clos, &client->stask);
+      spsc_enqueue_wait(pq->supplier_proc->qoq, &sync_clos, &client->stask);
 
       task_set_state(client->stask.task, TASK_TRANSITION_TO_WAITING);
       stask_yield_to_executor(&client->stask);
     }
+
   pq->last_was_func = true;
 }
 #endif
