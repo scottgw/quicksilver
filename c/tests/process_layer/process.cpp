@@ -39,11 +39,13 @@ worker(processor_t proc, processor_t shared)
   void ***args;
   clos_type_t *arg_types;
   priv_queue_t q = NULL;
+
+  printf("worker running\n");
+
   assert(proc->stask.executor != NULL);
   for (int i = 0; i < num_iters; i++)
     { 
       q = proc_get_queue(proc, shared);
-
       closure_t clos =
         closure_new((void*)action,
                     closure_void_type(),
@@ -60,8 +62,7 @@ worker(processor_t proc, processor_t shared)
       priv_queue_unlock(q, proc);
     }
 
-  priv_queue_shutdown(q, proc);
-
+  printf("worker done\n");
   if( __sync_add_and_fetch(&num_finished, 1) == num_each)
     {
       proc_shutdown(shared, proc);
@@ -83,6 +84,8 @@ root_create(processor_t proc)
       void ***args;
       clos_type_t *arg_types;
  
+      printf("creating worker\n");
+
       closure_t clos =
         closure_new((void*)worker,
                     closure_void_type(),
@@ -99,11 +102,8 @@ root_create(processor_t proc)
       priv_queue_lock(q, proc);
       priv_queue_routine(q, clos, proc);
       priv_queue_unlock(q, proc);
-
-      priv_queue_shutdown(q, proc);
       proc_shutdown(worker_proc, proc);
     }
-  proc_deref_priv_queues(proc);
 }
 
 void
@@ -149,13 +149,11 @@ wait_worker(processor_t proc, processor_t shared, uint64_t flag)
       int val;
       closure_t clos;
       q = proc_get_queue (proc, shared);
-      assert(proc->stask.executor != NULL);
-      priv_queue_lock(q, proc);
-      assert(proc->stask.executor != NULL);
-      priv_queue_sync(q, proc);
-      assert(proc->stask.executor != NULL);
 
+      priv_queue_lock(q, proc);
+      priv_queue_sync(q, proc);
       priv_queue_set_in_wait(q);
+
       val = x;
 
       while (val % 2 != flag)
@@ -168,8 +166,8 @@ wait_worker(processor_t proc, processor_t shared, uint64_t flag)
 
           priv_queue_lock(q, proc);
           priv_queue_sync(q, proc);
+          priv_queue_set_in_wait(q);
 
-	  priv_queue_set_in_wait(q);
           val = x;
         }
 
@@ -188,8 +186,6 @@ wait_worker(processor_t proc, processor_t shared, uint64_t flag)
       priv_queue_routine(q, clos, proc);
       priv_queue_unlock(q, proc);
     }
-
-  priv_queue_shutdown(q, proc);
 
   if( __sync_add_and_fetch(&num_finished, 1) == num_each)
     {
@@ -232,11 +228,8 @@ root_wait(processor_t proc)
       priv_queue_routine(q, clos, proc);
       priv_queue_unlock(q, proc);
 
-      priv_queue_shutdown(q, proc);
-
       proc_shutdown(worker_proc, proc);
     }
-  proc_deref_priv_queues(proc);  
 }
 
 

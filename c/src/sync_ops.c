@@ -342,6 +342,7 @@ static
 void
 stick_thread_to_core(pthread_t thread, int core_id) {
    int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+   core_id = core_id % num_cores;
    assert (core_id < num_cores);
 
    cpu_set_t cpuset;

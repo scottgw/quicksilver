@@ -3,15 +3,50 @@
 # exit on the first error
 set -e
 
+
+OPTIND=1
+QOQ=YES
+LIFT=YES
+HASOUTPUT=NO
+OUTPUT_FILE=${1%.*}
+
+
+while getopts "qlo:" opt; do
+    case "$opt" in
+        q)
+            QOQ=NO
+            ;;
+        l)
+            LIFT=NO
+            ;;
+        o)
+            OUTPUT_FILE=$OPTARG
+            ;;
+    esac
+done
+
+shift $((OPTIND-1))
+
 BCFILE=${1%.*}.bc
 OBCFILE=${1%.*}.obc
 OBJFILE=${1%.*}.o
-ASFILE=${1%.*}.s
+
+LIFT_SYNC="-load=$HOME/tmp/llvm-3.3.src/Release+Asserts/lib/libLLVMQs.so" 
+OPT_ARGS="-O2 -std-link-opts -std-compile-opts\
+   -vectorize-loops -vectorize-slp -vectorize-slp-aggressive"
+
+if [ "$LIFT" = "YES" ]; then
+    OPT_ARGS="${LIFT_SYNC} -lift-sync "$OPT_ARGS
+fi
+
+PKG_LIBS=`pkg-config libqs --libs`
+
+if [ "$QOQ" = "NO" ]; then
+    PKG_LIBS=${PKG_LIBS//qs/qs_noqoq}
+fi
 
 qs $1 -m
 llvm-link ${QS_LIB_PATH}/stdlib.bc ${BCFILE} ${@:2} |\
-  opt -load=$HOME/tmp/llvm-3.3.src/Release+Asserts/lib/libLLVMQs.so -lift-sync -O2 -std-link-opts -std-compile-opts -vectorize-loops -vectorize-slp -vectorize-slp-aggressive -o ${OBCFILE}
-  llc -filetype=obj ${OBCFILE} -o  ${OBJFILE}
-#gcc ${OBJFILE} -L/home/scott/local/lib -lqs -lrt -l:libffi.so.6 -ltbb -lglib-2.0 -lstdc++ -lm -o ${1%.*}
-# gcc -S ${ASFILE}
-gcc -flto -march=native ${OBJFILE} `pkg-config libqs --libs` -lstdc++ -lm -o ${1%.*}
+  opt ${OPT_ARGS} -o ${OBCFILE}
+llc -filetype=obj ${OBCFILE} -o  ${OBJFILE}
+gcc -flto -march=native ${OBJFILE} ${PKG_LIBS} -lstdc++ -lm -o ${OUTPUT_FILE}

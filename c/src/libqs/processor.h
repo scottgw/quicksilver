@@ -33,9 +33,6 @@ struct processor
   /*! Underlying task */
   struct sched_task stask;
 
-  /*! Queue of queues which the processor will take requests from. */
-  qoq_t qoq; 
-
   /*! Processor availability flag */
   bool available;
 
@@ -53,6 +50,15 @@ struct processor
 
   /*! Cache of private queues for suppliers that this processor has accessed. */
   GHashTable *privq_cache;
+
+  #ifdef DISABLE_QOQ
+  /*! Lock for the main queue/ */
+  task_mutex_t qoq_mutex;
+  spsc_queue_t qoq;
+  #else
+  /*! Queue of queues which the processor will take requests from. */
+  qoq_t qoq;
+  #endif
 };
 
 /*!
@@ -87,6 +93,25 @@ proc_new_from_other(processor_t other_proc);
 processor_t
 proc_new_root(sync_data_t sync_data, void (*root)(processor_t));
 
+#ifdef DISABLE_QOQ
+/*!
+  Lock this processor on behalf of the client processor.
+
+  \param !proc this processor
+  \param !proc the client processor
+*/
+void
+proc_lock(processor_t proc, processor_t client);
+
+/*!
+  Unlock this processor.
+
+  \param !proc this processor
+  \param !proc the client processor
+*/
+void
+proc_unlock(processor_t proc, processor_t client);
+#endif
 
 /*!
   Request a the private queue for the given supplier.

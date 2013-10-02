@@ -43,8 +43,10 @@ priv_queue_lock(priv_queue_t q, processor_t wait_proc);
 void
 priv_queue_unlock(priv_queue_t q, processor_t proc);
 
+#ifndef DISABLE_QOQ
 closure_t
 priv_dequeue(priv_queue_t q, processor_t proc);
+#endif
 
 void
 priv_queue_routine(priv_queue_t q, closure_t clos, processor_t wait_proc);
