@@ -12,7 +12,11 @@ SRCS=$(filter-out main.e,$(ALL_SRCS))
 BC_OBJS=$(SRCS:.e=.ebc)
 
 main: main.e $(BC_OBJS)
-	qsc $< $(BC_OBJS)
+	qsc -o $@ $< $(BC_OBJS)
+
+main_nolift: main.e $(BC_OBJS)
+	qsc -l -o $@ $< $(BC_OBJS)
+
 
 .e.ebc:
 	qs $< -o $@
