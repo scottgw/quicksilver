@@ -7,14 +7,20 @@ set -e
 OPTIND=1
 QOQ=YES
 LIFT=YES
+HASOUTPUT=NO
+OUTPUT_FILE=${1%.*}
 
-while getopts "ql" opt; do
+
+while getopts "qlo:" opt; do
     case "$opt" in
         q)
             QOQ=NO
             ;;
         l)
             LIFT=NO
+            ;;
+        o)
+            OUTPUT_FILE=$OPTARG
             ;;
     esac
 done
@@ -39,10 +45,8 @@ if [ "$QOQ" = "NO" ]; then
     PKG_LIBS=${PKG_LIBS//qs/qs_noqoq}
 fi
 
-echo $PKG_LIBS
-
 qs $1 -m
 llvm-link ${QS_LIB_PATH}/stdlib.bc ${BCFILE} ${@:2} |\
   opt ${OPT_ARGS} -o ${OBCFILE}
 llc -filetype=obj ${OBCFILE} -o  ${OBJFILE}
-gcc -flto -march=native ${OBJFILE} ${PKG_LIBS} -lstdc++ -lm -o ${1%.*}
+gcc -flto -march=native ${OBJFILE} ${PKG_LIBS} -lstdc++ -lm -o ${OUTPUT_FILE}
