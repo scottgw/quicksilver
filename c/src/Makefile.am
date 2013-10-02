@@ -21,7 +21,6 @@ libqs_la_SOURCES = \
 	notifier.c \
 	private_queue.c \
 	processor.c \
-	probes.h \
 	qoq.c \
 	queue_impl.cpp \
 	sched_task.c \
@@ -33,7 +32,14 @@ libqs_la_SOURCES = \
 	trace.h \
 	ws_deque.c
 
-BUILT_SOURCES = probes.h config.h
+BUILT_SOURCES = config.h
+
+if ENABLE_SYSTEMTAP
+libqs_la_SOURCES += probes.h
+BUILT_SOURCES += probes.h
+endif
+
+
 
 # we use pkginclude because it'll put these in a separate directory
 # undef the $(includedir).
@@ -49,7 +55,7 @@ pkginclude_HEADERS = \
 FLAGS = -pthread -U_FORTIFY_SOURCE -DENABLE_LOG \
 	-Wall -Wno-unused-value -Wno-unused-variable -Werror -march=native
 libqs_la_CFLAGS = -std=gnu99 $(FLAGS) $(DEPS_CFLAGS)
-libqs_la_CXXFLAGS = -std=c++11 $(FLAGS) $(DEPS_CFLAGS)
+libqs_la_CXXFLAGS = -std=c++0x $(FLAGS) $(DEPS_CFLAGS)
 libqs_la_LIBADD =
 
 
