@@ -9,26 +9,29 @@ csv_file = paste(run_type, '_results.csv', sep="")
 pdf_file = paste(run_type, '.pdf', sep="")
 
 results = read.csv(csv_file)
-
-tasks = unique(results$Task)
-langs = unique(results$Language)
-
 results$CommTime = results$TotalTime - results$CompTime
+
+non_time_names = setdiff (names(results), c("TotalTime", "CompTime", "CommTime"))
+
+print (non_time_names)
+
 ## Aggregate all the timing columns by the median value.
+# Task + Language + Threads,
 results =
   aggregate(
-    cbind(TotalTime, CompTime, CommTime)  ~ Task + Language + Threads,
+    cbind(TotalTime, CompTime, CommTime) ~ . ,
     data=results,
     FUN=median)
-## print(names(results))
+
+print(names(results))
 
 split_comm_time = function (df)
 {
   ## drop the total time column
   split_df = subset(df, select = -c(TotalTime))
-
+  
   ## melt them so that we get the comp and comm times as a column 
-  split_df = melt(split_df, id=(c("Language", "Task", "Threads")))
+  split_df = melt(split_df, id=(non_time_names)) # c("Language", "Task", "Threads")))
 
   ## rename them because melt has given them bad names
   names(split_df)[names(split_df) == 'variable'] = 'TimeType'
@@ -56,7 +59,6 @@ parallel_summary_graph = function (df)
   return (p)
 }
 
-
 parallel_speedup_graph = function (df)
 {
   singleCore = df[df$Threads == 1,]
@@ -83,14 +85,26 @@ parallel_speedup_graph = function (df)
   ggsave('parallel_computation_speedup.pdf', p, width=9) 
 }
 
+variant_graph = function (df) {
+  m = max(df$Threads)
+  p <- ggplot(df, aes(x=Variant, y=Time, fill=TimeType))
+  p <- p + geom_bar(stat="identity", colour="black")
+  p <- p + scale_fill_brewer()
+  p <- p + facet_wrap(~ Task, scales="free_y")
+
+  return (p)
+}
 
 if (run_type == 'concurrent') {
   p = concurrent_graph(results)
-} else {
+} else if (run_type == 'parallel') {
   splits = split_comm_time(results)
   parallel_speedup_graph(results)
 
   p = parallel_summary_graph(splits)
+} else if (run_type == 'variant') {
+  splits = split_comm_time(results)
+  p = variant_graph(splits)
 }
 
 ggsave(pdf_file, p, width=9)
@@ -99,8 +113,14 @@ geom_mean = function (x) {
   return (exp(mean(log(x))))
 }
 
-print ("Geometric means (total):")
-print (tapply(results$TotalTime, results$Language, geom_mean))
-
-print ("Geometric mean (comp):")
-print (tapply(results$CompTime, results$Language, geom_mean))
+if (run_type != 'variant'){
+  print ("Geometric means (total):")
+  print (tapply(results$TotalTime, results$Language, geom_mean))
+  print ("Geometric mean (comp):")
+  print (tapply(results$CompTime, results$Language, geom_mean))
+} else {
+  print ("Geometric means (total):")
+  print (tapply(results$TotalTime, results$Variant, geom_mean))
+  print ("Geometric mean (comp):")
+  print (tapply(results$CompTime, results$Variant, geom_mean))
+}

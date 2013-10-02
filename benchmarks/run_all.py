@@ -39,33 +39,33 @@ def make_variant_command(variant, num_workers):
 
 
 # Run the qs benchmarks with/without the different optimizations
-def run_variants (results, sort, task, workers):
+def run_variant (results, sort, task, workers):
     variants = ['norm', 'nolift', 'noqoq']
     lang = 'qs'
 
     os.chdir (os.path.join(sort, lang, task))
 
     for variant in variants:
-        t1 = time.time ()
 
-        proc = Popen (make_variant_command (variant, workers),
-                      stdout=PIPE, stderr=PIPE, 
-                      shell=True)
+        t1 = time.time ()
+        cmd = make_variant_command (variant, workers)
+        proc = Popen (cmd, stdout=PIPE, stderr=PIPE, shell=True)
         (out,err) = proc.communicate ()
-        os.chdir (os.path.join ('..', '..', '..'))
         t2 = time.time ()
 
         tdiff = t2 - t1
         if len(err) > 0:
             lines = string.split(err.strip(),'\n')
             computation_time_str = lines[-1]
-            compdiff = float(computation_time_str)            
+            compdiff = float(computation_time_str)          
         else:
             compdiff = tdiff
 
         data = [task, variant, tdiff, compdiff]
         results.append(data)
         print (data)
+
+    os.chdir (os.path.join ('..', '..', '..'))
 
 def core_list():
     i = 1
@@ -132,7 +132,7 @@ def main():
         for task in tasks[sort]:
             for lang in langs:
                 for workers in worker_range:
-                    for i in range(0, 5):
+                    for i in range(0, 1):
                         if lang == 'qs':
                             run_variant (variant_results, sort, task, workers)
                         run(results, sort, task, lang, workers)
@@ -144,7 +144,7 @@ def main():
                 perfwriter.writerow(result)
 
 
-    with open('variants.csv', 'wb') as csv_file:
+    with open('variant_results.csv', 'wb') as csv_file:
         perfwriter = csv.writer(csv_file, quoting=csv.QUOTE_MINIMAL)
         perfwriter.writerow(variant_headings)
         for variant_result in variant_results:
