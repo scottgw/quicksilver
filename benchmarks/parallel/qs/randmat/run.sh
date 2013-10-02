@@ -1,2 +1,1 @@
-#!/bin/bash
-LIBQS_EXECS=$3 ./main
+../../../run.sh
