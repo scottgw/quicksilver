@@ -2,6 +2,10 @@
 
 export QS_LIB_PATH = ../../../../compiler/tests/lib
 
+.PHONY: all
+
+all: main main_nolift main_noqoq main_noliftqoq
+
 # all files, including main.e
 ALL_SRCS=$(wildcard *.e)
 
@@ -17,9 +21,14 @@ main: main.e $(BC_OBJS)
 main_nolift: main.e $(BC_OBJS)
 	qsc -l -o $@ $< $(BC_OBJS)
 
+main_noqoq: main.e $(BC_OBJS)
+	qsc -q -o $@ $< $(BC_OBJS)
+
+main_noliftqoq: main.e $(BC_OBJS)
+	qsc -l -q -o $@ $< $(BC_OBJS)
 
 .e.ebc:
 	qs $< -o $@
 
 clean:
-	@rm -f *.ebc *.bc main
+	@rm -f *.ebc *.bc main main_nolift main_noqoq main_noliftqoq
