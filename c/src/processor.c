@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <ucontext.h>
 #include <assert.h>
-
 #include "libqs/types.h"
 #include "libqs/processor.h"
 #include "libqs/notifier.h"
@@ -10,7 +9,6 @@
 #include "libqs/private_queue.h"
 #include "libqs/sync_ops.h"
 #include "libqs/sched_task.h"
-
 #include "internal/qoq.h"
 #include "internal/bounded_queue.h"
 #include "internal/debug_log.h"
@@ -18,7 +16,7 @@
 #include "internal/task.h"
 #include "internal/task_mutex.h"
 #include "internal/task_condition.h"
-
+#include "internal/spsc_queue.h"
 
 static
 void
@@ -34,16 +32,18 @@ notify_available(processor_t proc)
   //
   // This is designed to prevent wait conditions from waking up other
   // wait conditions.
-  if (!proc->processing_wait)
-    {
+  /* if (!proc->processing_wait) */
+  /*   { */
       task_mutex_lock(proc->mutex, &proc->stask);
       proc->last_waiter = NULL;
       task_condition_signal_all(proc->cv, &proc->stask);
       task_mutex_unlock(proc->mutex, &proc->stask);
-    }
+  /*   } */
 
-  proc->processing_wait = false;
+  /* proc->processing_wait = false; */
 }
+
+#ifndef DISABLE_QOQ
 
 static
 void
@@ -60,9 +60,6 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
         }
       else if (closure_is_end(clos))
         {
-          // The end of a private queue decrements the ref_count again.
-          // This should have been incremented initially when the private
-          // queue was bound to this processor.
           notify_available(proc);
           free(clos);
           break;
@@ -109,6 +106,94 @@ proc_loop(processor_t proc)
     }
 }
 
+void
+proc_shutdown(processor_t proc, processor_t wait_proc)
+{
+  /* priv_queue_t shutdown_q = priv_queue_new(wait_proc); */
+  /* shutdown_q->shutdown = true; */
+
+  qoq_enqueue_wait(proc->qoq, NULL, &wait_proc->stask);
+}
+
+
+#else
+
+void
+proc_lock(processor_t proc, processor_t client)
+{
+  task_mutex_lock(proc->qoq_mutex, &client->stask);
+}
+
+void
+proc_unlock(processor_t proc, processor_t client)
+{
+  task_mutex_unlock(proc->qoq_mutex, &client->stask);
+}
+
+
+// Returns true if the processor continue, false
+// if it should shutdown.
+static
+bool
+proc_duty_loop(processor_t proc)
+{
+  while (true)
+    {
+      closure_t clos = NULL;
+      spsc_dequeue_wait(proc->qoq, (void**) &clos, &proc->stask);
+
+      if (clos == NULL)
+        {
+          // unlock signal (not used here?)
+          /* assert (false && "proc_duty_loop: no notify"); */
+          notify_available(proc);
+          return true;
+        }
+      else if (closure_is_end(clos))
+        {
+          closure_free (clos);
+          return false;
+        }
+      else if (closure_is_sync(clos))
+        {
+          processor_t client = (processor_t) clos->fn;
+          while (client->stask.task->state != TASK_WAITING);
+          proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
+
+          stask_switch(&proc->stask, &client->stask);
+          /* proc_wake(client, proc->executor); */
+        }
+      else
+        {
+          closure_apply(clos, NULL);
+          closure_free(clos);
+        }
+    }
+}
+
+static
+void
+proc_loop(processor_t proc)
+{
+  stask_step_previous(&proc->stask);
+
+  while (proc_duty_loop(proc))
+    {
+      notify_available(proc);
+      proc_maybe_yield(proc);
+    }
+}
+
+
+void
+proc_shutdown(processor_t proc, processor_t wait_proc)
+{
+  closure_t clos_end = closure_new_end();
+  spsc_enqueue_wait(proc->qoq, clos_end, &wait_proc->stask);
+}
+
+#endif
+
 priv_queue_t
 proc_get_queue(processor_t proc, processor_t supplier_proc)
 {
@@ -138,16 +223,16 @@ proc_maybe_yield(processor_t proc)
 }
 
 void
-proc_wait_for_available(processor_t waitee, processor_t waiter)
+proc_wait_for_available(processor_t proc, processor_t client)
 {
-  task_mutex_lock(waitee->mutex, &waiter->stask);
-  waitee->last_waiter = waiter;
+  task_mutex_lock(proc->mutex, &client->stask);
+  proc->last_waiter = client;
 
-  while (waitee->last_waiter == waiter)
+  while (proc->last_waiter == client)
     {
-      task_condition_wait(waitee->cv, waitee->mutex, &waiter->stask);
+      task_condition_wait(proc->cv, proc->mutex, &client->stask);
     }
-  task_mutex_unlock(waitee->mutex, &waiter->stask);
+  task_mutex_unlock(proc->mutex, &client->stask);
 }
 
 void
@@ -163,12 +248,19 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 {
   processor_t proc = (processor_t) malloc(sizeof(struct processor));
 
+  #ifdef DISABLE_QOQ
+  proc->qoq = spsc_new(2048);
+  proc->qoq_mutex = task_mutex_new();
+  #else
   proc->qoq = qoq_new(2048);
+  #endif
+
   stask_init(&proc->stask, sync_data, true);
 
   proc->available = true;
   proc->mutex = task_mutex_new();
   proc->cv = task_condition_new();
+
 
   proc->processing_wait = false;
 
@@ -200,20 +292,17 @@ proc_new_root(sync_data_t sync_data, void (*root)(processor_t))
 }
 
 void
-proc_shutdown(processor_t proc, processor_t wait_proc)
-{
-  /* priv_queue_t shutdown_q = priv_queue_new(wait_proc); */
-  /* shutdown_q->shutdown = true; */
-
-  qoq_enqueue_wait(proc->qoq, NULL, &wait_proc->stask);
-}
-
-void
 proc_free(processor_t proc)
 {
   task_condition_free(proc->cv);
   task_mutex_free(proc->mutex);
+  #ifdef DISABLE_QOQ
+  spsc_free(proc->qoq);
+  task_mutex_free(proc->qoq_mutex);
+  #else
   qoq_free(proc->qoq);
+  #endif
+
   g_hash_table_destroy(proc->privq_cache);
 
   free (proc);
