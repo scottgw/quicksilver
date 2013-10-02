@@ -3,11 +3,13 @@ import os
 import string
 import time
 import csv
+import multiprocessing
 from subprocess import Popen, call, PIPE
 
-langs=['cxx', 'haskell', 'go', 'qs'] # , 'erlang']
-
+langs=['cxx', 'haskell', 'go', 'qs', 'erlang']
+# langs=['erlang']
 tasks={'concurrent': ['condition', 'mutex', 'prodcons', 'threadring', 'chameneos'],
+       # 'parallel': ['randmat', 'thresh', 'winnow', 'outer', 'product', 'chain']
        'parallel': ['randmat', 'thresh', 'winnow', 'outer', 'product', 'chain']
        }
 
@@ -24,7 +26,56 @@ inputs= {'mutex': '20000 32',
          'chain': '10000 0 1 10000'}
 
 def make_command(lang, task, num_workers):
+    
     return './run.sh ' + inputs[task] + ' ' + str(num_workers)
+
+def make_variant_command(variant, num_workers):
+    flags = {'norm': '',
+             'nolift': '-l ',
+             'noqoq': '-q '}
+
+    return './run.sh ' + flags[variant] + str(num_workers)
+
+
+
+# Run the qs benchmarks with/without the different optimizations
+def run_variants (results, sort, task, workers):
+    variants = ['norm', 'nolift', 'noqoq']
+    lang = 'qs'
+
+    os.chdir (os.path.join(sort, lang, task))
+
+    for variant in variants:
+        t1 = time.time ()
+
+        proc = Popen (make_variant_command (variant, workers),
+                      stdout=PIPE, stderr=PIPE, 
+                      shell=True)
+        (out,err) = proc.communicate ()
+        os.chdir (os.path.join ('..', '..', '..'))
+        t2 = time.time ()
+
+        tdiff = t2 - t1
+        if len(err) > 0:
+            lines = string.split(err.strip(),'\n')
+            computation_time_str = lines[-1]
+            compdiff = float(computation_time_str)            
+        else:
+            compdiff = tdiff
+
+        data = [task, variant, tdiff, compdiff]
+        results.append(data)
+        print (data)
+
+def core_list():
+    i = 1
+    cores = []
+
+    while i <= multiprocessing.cpu_count():
+        cores.append(i)
+        i = i * 2
+
+    return cores
 
 def run(results, sort, task, lang, num_workers):
     t1 = time.time ()
@@ -68,17 +119,22 @@ def run(results, sort, task, lang, num_workers):
 
 def main():
     headings = ['Task', 'Language', 'Threads', 'TotalTime', 'CompTime']
+    variant_headings = ['Task', 'Variant', 'TotalTime', 'CompTime']
+    variant_results = []
     for sort in ['concurrent', 'parallel']:
         results = []
-        if sort == 'parallel':
-            worker_range = [1, 2, 4]
-        else:
+        
+        if sort == 'concurrent':
             worker_range = [4]
+        else:
+            worker_range = core_list()
 
         for task in tasks[sort]:
             for lang in langs:
                 for workers in worker_range:
-                    for i in range(0, 3):
+                    for i in range(0, 5):
+                        if lang == 'qs':
+                            run_variant (variant_results, sort, task, workers)
                         run(results, sort, task, lang, workers)
 
         with open(sort + '_results.csv', 'wb') as csv_file:
@@ -86,6 +142,14 @@ def main():
             perfwriter.writerow(headings)
             for result in results:
                 perfwriter.writerow(result)
+
+
+    with open('variants.csv', 'wb') as csv_file:
+        perfwriter = csv.writer(csv_file, quoting=csv.QUOTE_MINIMAL)
+        perfwriter.writerow(variant_headings)
+        for variant_result in variant_results:
+            perfwriter.writerow(variant_result)
+
 
 if __name__ == "__main__":
     main()
