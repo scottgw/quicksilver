@@ -4,18 +4,14 @@
 set -e
 
 OPTIND=1
-QOQ=YES
-LIFT=YES
 MAIN=main
 
-while getopts "qlo:" opt; do
+while getopts "ql" opt; do
     case "$opt" in
         q)
-            QOQ=NO
             MAIN="${MAIN}_noqoq"
             ;;
         l)
-            LIFT=NO
             MAIN="${MAIN}_nolift"
             ;;
     esac
