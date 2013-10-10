@@ -220,13 +220,18 @@ create make
       gather.fetch (other)
       val_points := gather.merged
       {Prelude}.print("Worker: merge_with done%N")
+      time := time + gather.time
     end
 
   chunk()
+    local
+      l_time: Real
     do
       {Prelude}.print("Worker: chunk%N")
+      l_time := {Prelude}.get_time()
       gather.chunk()
       chunked_points := gather.chunked_points
+      time := time + {Prelude}.get_time() - l_time
     end
 
   chunk_from(winnow_gatherer: separate Winnow_Gatherer)
@@ -315,6 +320,8 @@ create make
         i := i + 1
       end
 
+      time := time + {Prelude}.get_time() - l_time
+
       separate shared_outer_vector shared_outer_count
         do
           from i := start
@@ -341,8 +348,6 @@ create make
             i := i + 1
           end
         end
-        
-      time := time + {Prelude}.get_time() - l_time
     end
 
   distance (x1, y1, x2, y2: Integer): Real
