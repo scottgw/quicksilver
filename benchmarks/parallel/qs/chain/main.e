@@ -193,13 +193,14 @@ module Main
       -- For product
       create result_vector.make(winnow_nelts)
       {Prelude}.print("Master: starting product fetch%N")
-      fetch_product(workers, result_vector)
+      worker_times := fetch_product(workers, result_vector)
 
       time := {Prelude}.get_time() - time
       {Prelude}.print("Master: time - outer/product ")
       {Prelude}.print({Prelude}.real_to_str(time))
       {Prelude}.print("%N")
-
+      {Prelude}.print_err({Prelude}.real_to_str(worker_times/{Prelude}.int_to_real(n)))
+      {Prelude}.print_err("%N")
       {Prelude}.print("Master: exit%N")
       {Prelude}.exit_with(0)
     end
@@ -303,15 +304,17 @@ module Main
     end
 
   fetch_product(workers: Array[separate Chain_Worker];
-                vector: Real_Array)
+                vector: Real_Array): Real
     local
       i: Integer
       j: Integer
+      time: Real
       start: Integer
       final: Integer
       worker: separate Chain_Worker
       worker_vector: separate Real_Array
     do
+      time := 0.0
       from
         i := 0
       until
@@ -323,6 +326,7 @@ module Main
             worker_vector := worker.product
             start := worker.start
             final := worker.final
+	    time := time + worker.time
           end
 
         separate worker_vector
@@ -339,5 +343,6 @@ module Main
           end
         i := i + 1
       end
+      Result := time
     end
 end    
