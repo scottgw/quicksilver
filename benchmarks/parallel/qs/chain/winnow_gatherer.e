@@ -14,6 +14,8 @@ create make
   merged: Winnow_Value_Points
   num_merged: Integer
 
+  time: Real
+
   make(a_winnow_nelts: Integer)
     do
       winnow_nelts := a_winnow_nelts
@@ -35,14 +37,13 @@ create make
       other_points: Winnow_Value_Points
       new_merged: Winnow_Value_Points
       val_end: Integer
-
-      time: Real
     do
-      time := {Prelude}.get_time()
+
       {Prelude}.print("Winnow_Gatherer: starting fetch%N")
       other_points := copy_points_from_worker(worker)
       {Prelude}.print("Winnow_Gatherer: starting merge%N")
       from
+        time := {Prelude}.get_time()
         new_merged_i := 0
         merged_i := 0
         other_i := 0

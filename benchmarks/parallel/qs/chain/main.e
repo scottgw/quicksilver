@@ -39,6 +39,7 @@ module Main
 
       -- Timing
       time: Real
+      worker_times: Real
     do
       nelts := 10000
       s := 0
@@ -142,6 +143,7 @@ module Main
       end
 
       -- For winnow
+      worker_times := {Prelude}.get_time()
       {Prelude}.print("Master: starting winnow gather%N")
       fetch_winnow(workers)
 
@@ -155,7 +157,8 @@ module Main
             worker.start
           end
         i := i + 1
-      end      
+      end
+      worker_times := {Prelude}.get_time() - worker_times
       time := {Prelude}.get_time() - time
       {Prelude}.print("Master: time - winnow ")
       {Prelude}.print({Prelude}.real_to_str(time))
@@ -193,13 +196,14 @@ module Main
       -- For product
       create result_vector.make(winnow_nelts)
       {Prelude}.print("Master: starting product fetch%N")
-      worker_times := fetch_product(workers, result_vector)
+      worker_times := ( 
+         fetch_product(workers, result_vector))/{Prelude}.int_to_real(num_workers)
 
       time := {Prelude}.get_time() - time
       {Prelude}.print("Master: time - outer/product ")
       {Prelude}.print({Prelude}.real_to_str(time))
       {Prelude}.print("%N")
-      {Prelude}.print_err({Prelude}.real_to_str(worker_times/{Prelude}.int_to_real(n)))
+      {Prelude}.print_err({Prelude}.real_to_str(worker_times))
       {Prelude}.print_err("%N")
       {Prelude}.print("Master: exit%N")
       {Prelude}.exit_with(0)
