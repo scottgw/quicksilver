@@ -33,9 +33,7 @@ checkBinOp op e1 e2
     | isBoolOp = tagPos (T.BinOpExpr op e1 e2 BoolType)
     | otherwise = err
     where
-      err = throwError $ concat ["checkBinOp: no infix operation for: "
-                                , show (op, t1, t2)
-                                ]
+      err = throwErrorPos (MissingInfix (show op) t1 t2)
 
       isEqOp   = op `elem` (map (flip RelOp NoType) [Eq, Neq])
       isNumOp  = op `elem` [Add, Sub, Mul, Div, Rem, Quot]
@@ -90,8 +88,7 @@ typeOfExpr :: (Data body, Typeable body)
            => Expr -> TypingBody body TExpr
 typeOfExpr e = setPosition (position e) 
                (catchError (expr (contents e))
-                           (\str -> throwError $ 
-                                    str ++ " at " ++ show (position e)))
+                           (throwError . ErrorWithPos (position e)))
 
 typeOfExprIs :: (Data body, Typeable body)
                 => Typ -> Expr -> TypingBody body TExpr
@@ -115,8 +112,7 @@ expr (StaticCall typ name args) = do
   flatClas <- getFlat' typ
   case findAbsRoutine flatClas name of
     Nothing -> 
-      throwError (show typ ++ ": does not contain static call " ++ 
-                  Text.unpack name)
+      throwErrorPos (MissingCall typ (Text.unpack name))
     Just feat-> do
       args' <- mapM typeOfExpr args
       let argTypes = map declType (routineArgs feat)
@@ -157,7 +153,7 @@ expr (QualCall trg name args) = do
   args' <- mapM typeOfExpr args
 
   when (isBasic targetType)
-       (throwError "Qualified call on basic type")
+       (throwErrorPos BasicQualCall)
 
   -- instantiated class 
   instClass  <- resolveIFace targetType
@@ -169,11 +165,7 @@ expr (QualCall trg name args) = do
           do let resType = declType $ attrDecl a
              access <- tagPos $ T.Access trg' name resType
              castResult trg' access resType resType
-        Nothing -> throwError $
-                   concat ["expr.QualCall: ", show trg, ": "
-                          , Text.unpack name, show args'
-                          , show (map (routineName) $ view routines instClass)
-                          ]
+        Nothing -> throwErrorPos (MissingCall targetType (Text.unpack name))
     Just rout -> do
       origClass <- getFlat' targetType
        
@@ -192,7 +184,7 @@ expr (CreateExpr typ name args) = do
   flatCls <- getFlat' typ
   
   case findAbsRoutine flatCls name of
-    Nothing -> throwError $ "expr:CreateExpr no procedure " ++ Text.unpack name
+    Nothing -> throwErrorPos (MissingCall typ (Text.unpack name))
     Just feat -> do
       -- typecheck and cast the arguments if they come from a generic class
       args'   <- mapM typeOfExpr args
@@ -203,8 +195,7 @@ expr (Lookup targ args) = do
   targ' <- typeOfExpr targ
   cls <- getFlat' (T.texpr targ')
   case findOperator cls "[]" (length args) of
-    Nothing -> throwError $ 
-      "expr.BinOp.Lookup: [] not found in " ++ show (T.texpr targ')
+    Nothing -> throwError (MissingCall (T.texpr targ') "[]")
     Just feat -> expr $ QualCall targ (routineName feat) args
 
 expr (VarOrCall s) =
@@ -214,8 +205,7 @@ expr (VarOrCall s) =
        Nothing ->
          do currEi <- current <$> ask
             case currEi of
-              Left _ -> throwError $
-                        "TypeCheck.Expr.expr: var or attribute not found: " ++ Text.unpack s
+              Left t -> throwErrorPos (MissingCall t (Text.unpack s))
               Right currType ->
                 do curr <- tagPos (T.CurrentVar currType)
                    currCls <- getFlat' (T.texpr curr)
@@ -224,11 +214,9 @@ expr (VarOrCall s) =
                        do let resType = declType $ attrDecl a
                           access <- tagPos $ T.Access curr s resType
                           castResult curr access resType resType
-                     Nothing ->
-                       throwError $
-                         "TypeCheck.Expr.expr: var or attribute not found: " ++ Text.unpack s
+                     Nothing -> throwErrorPos (MissingCall currType (Text.unpack s))
 
-expr t = throwError ("TypeCheck.Expr.expr: " ++ show t)
+expr t = throwErrorPos (MiscError ("TypeCheck.Expr.expr: " ++ show t))
 
 -- | Based on target and result type cast the result to separate
 -- or to the appropriate generic
@@ -255,7 +243,7 @@ argsConform args formArgs
     | length args == length formArgs =
         zipWithM checkArg args formArgs
     | otherwise = 
-        throwError $ "Argument types differ: " ++ show (args, formArgs)
+        throwErrorPos (ArgNumDiffer (length formArgs) (length args))
     where
       checkArg e typ 
           | eType == typ = return e
@@ -268,6 +256,6 @@ argsConform args formArgs
           | not (isBasic eType || isSeparate eType) && isSeparate typ
               = tagPos (T.CurrSep e)
           | otherwise =
-              throwError $ "Argument type doesn't match: " ++ show (e, typ)
+              throwErrorPos (TypeMismatch typ eType)
           where
             eType = T.texpr e

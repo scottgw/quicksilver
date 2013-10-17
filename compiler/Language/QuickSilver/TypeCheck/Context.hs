@@ -39,10 +39,30 @@ data FlatMap body expr =
           , _featPart :: Map (Typ, Text) (AbsRoutine body expr)
           }
 
+data TypeError
+  = MiscError String
+  | IdentNotFound String
+  | MissingCall Typ String
+  | MissingInfix String Typ Typ
+  | BasicQualCall
+  | ArgNumDiffer Int Int
+  | TypeMismatch { teExpected :: Typ
+                 , teActual :: Typ
+                 }
+  | CurrentInModule
+  | SeparateBlockArg
+  | SeparateShutdown
+  | CreateNoType
+  | ErrorWithPos SourcePos TypeError
+  deriving Show
+
+instance Error TypeError where
+  strMsg = MiscError
+
 makeLenses ''FlatMap
 
-type TypeError = ErrorT String Identity
-type FlatLookup body expr = StateT (FlatMap body expr) TypeError
+type TypeErrorM = ErrorT TypeError Identity
+type FlatLookup body expr = StateT (FlatMap body expr) TypeErrorM
 type TypingBodyExpr body expr = 
   ReaderT (TypeContext body expr) (FlatLookup body expr)
 type TypingBody body = TypingBodyExpr body Expr
@@ -67,7 +87,7 @@ setPosition :: SourcePos -> TypingBody body a -> TypingBody body a
 setPosition !p = local (\ !c -> c {pos = p})
 
 idErrorRead :: TypingBodyExpr body expr a -> 
-               TypeContext body expr -> Either String a
+               TypeContext body expr -> Either TypeError a
 idErrorRead ctx = 
   runIdentity . runErrorT . fmap fst . flip runStateT (FlatMap Map.empty Map.empty) . runReaderT ctx
 
@@ -101,26 +121,25 @@ getFlat' !t =
        Just c -> return c
        Nothing -> error $ "getFlat': couldn't find " ++ show t
 
-guardThrow :: Bool -> String -> TypingBody body ()
+guardThrow :: Bool -> TypeError -> TypingBody body ()
 guardThrow False = throwErrorPos
 guardThrow True  = const (return ())
 
-maybeThrow :: Maybe a -> String -> TypingBody body a
+maybeThrow :: Maybe a -> TypeError -> TypingBody body a
 maybeThrow (Just v) = const (return v)
 maybeThrow Nothing  = throwErrorPos
 
-throwErrorPos :: String -> TypingBodyExpr body expr a
+throwErrorPos :: TypeError -> TypingBodyExpr body expr a
 throwErrorPos e = do
   p <- currentPos
-  throwError (e ++ " @ " ++ show p)
+  throwError (ErrorWithPos p e)
 
 currentM :: TypingBody body TExpr
 currentM = do
   currentTypeEi <- current <$> ask
   case currentTypeEi of
     Right t -> tagPos (T.CurrentVar t)
-    Left _t ->
-      throwError "Asking for Current object in module"
+    Left _t -> throwErrorPos CurrentInModule
 
 mkClassCtx :: Typ -> [AbsClas body expr] -> TypeContext body expr
 mkClassCtx currType cs = mkCtx (Right currType) cs
@@ -154,7 +173,7 @@ typeOfVar' str
          case mV of
            Just v -> return v
            Nothing -> 
-               throwErrorPos (concat ["Variable not found: ", Text.unpack str, " ctx: ", show m])
+               throwErrorPos (IdentNotFound $ Text.unpack str)
 
 addDeclsToMap :: [Decl] -> Map Text Typ -> Map Text Typ
 addDeclsToMap = Map.union . declsToMap

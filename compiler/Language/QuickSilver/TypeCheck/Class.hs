@@ -32,7 +32,7 @@ routineEnv f m = local (addDecls (routineArgs f) . setResult f) m
 runTyping :: [AbsClas ctxBody expr']
              -> AbsClas body expr
              -> TypingBodyExpr ctxBody expr' a
-             -> Either String a
+             -> Either TypeError a
 runTyping cs curr m =
   idErrorRead m (mkCtx (maybeCurrType curr) cs)
 
@@ -43,7 +43,7 @@ maybeCurrType cls
 clasM :: (Data ctxBody, Typeable ctxBody)
          => [AbsClas ctxBody Expr] 
          -> AbsClas (RoutineBody Expr) Expr 
-         -> Either String TClass
+         -> Either TypeError TClass
 clasM cs c = runTyping cs c (clas c routineWithBody)
 
 clas :: (Data body, Typeable body, Data ctxBody, Typeable ctxBody)
@@ -69,13 +69,13 @@ clas c rtnBodyCheck =
         check lenss f = mapMOf traverse f (view lenss c)
 
 typeInterfaces :: [ClasInterface] -> 
-                  IO (Either String [AbsClas EmptyBody T.TExpr])
+                  IO (Either TypeError [AbsClas EmptyBody T.TExpr])
 typeInterfaces inters = 
   let 
     go :: ClasInterface -> IO (AbsClas EmptyBody T.TExpr)
     go i = do print (view className i)
               case runTyping inters i (interface i) of
-                Left s -> error s
+                Left err -> error (show err)
                 Right i' -> return i'
   in do inters' <- mapM go inters
         return (Right inters')
@@ -87,7 +87,7 @@ interface :: (Data ctxBody, Typeable ctxBody)
 interface curr = clas curr return
 
 typedPre :: [ClasInterface] -> ClasInterface 
-            -> Text -> Either String (Contract T.TExpr)
+            -> Text -> Either TypeError (Contract T.TExpr)
 typedPre cis classInt name = idErrorRead go (mkCtx (maybeCurrType classInt) cis)
   where Just rout = findAbsRoutine classInt name 
         go = routineEnv rout
@@ -171,9 +171,7 @@ uStmt (Assign var e) = do
          then tagPos (T.Cast varType e') 
          else if T.texpr e' == T.texpr var' 
               then return e'
-              else
-                throwError $ "Assignment: source and target don't match" ++
-                             show (varType, eType)
+              else throwErrorPos (TypeMismatch varType eType)
   return $ inheritPos (Assign var') e''
 
 uStmt (If cond body elseIfs elsePart) = do
@@ -193,7 +191,7 @@ uStmt (Shutdown e) =
   do e' <- typeOfExpr e
      case T.texpr e' of
        Sep _ _ _ -> tagPos (Shutdown e')
-       _ -> throwError "Shutdown can be only applied to separate types"
+       _ -> throwErrorPos SeparateShutdown
 
 uStmt (Separate args clauses body) =
   do args' <- mapM typeOfExpr args
@@ -203,8 +201,7 @@ uStmt (Separate args clauses body) =
              T.Var _ _ -> True
              T.Access _ _ _ -> True
              _ -> False
-     mapM_ (\e -> guardThrow (varOrAccess e)
-                  "Separate didn't contain var or access expression") args'
+     mapM_ (\e -> guardThrow (varOrAccess e) SeparateBlockArg) args'
      body' <- stmt body
      tagPos (Separate args' clauses' body')
 
@@ -227,10 +224,12 @@ uStmt (Create typeMb vr fName args) = do
                 _ -> error $ "uStmt: create only on casts or calls " ++ show call
   let T.Call trg _ tArgs res = contents call'
   let ClassType _ _ = T.texpr trg
-  guardThrow (res == NoType) 
-                 "There must be no return type for create"
-  guardThrow (maybe True (T.texpr trg ==) typeMb) -- FIXME: This should be inherits
-                 "Target type doesn't match dynamic type"
+  guardThrow (res == NoType) CreateNoType
+  case typeMb of
+    Nothing -> return ()
+    Just typ ->
+      guardThrow (T.texpr trg == typ) -- FIXME: This should be inherits
+                 (TypeMismatch (T.texpr trg) typ)
   tagPos (Create typeMb trg fName tArgs)
 
 uStmt BuiltIn = tagPos BuiltIn
