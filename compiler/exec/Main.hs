@@ -66,7 +66,7 @@ compile outFile debug genMain runMain cls = do
       Right envs ->
           when debug (putStrLn "Type checking") >>
           case clasM envs cls of
-            Left  e -> putStrLn "TypeChecking Error:" >> error e
+            Left  e -> putStrLn ("TypeChecking Error:" ++ show e)
             Right c -> 
                 if not runMain
                 then compileIO debug outFile' genMain c

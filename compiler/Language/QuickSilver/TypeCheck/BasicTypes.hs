@@ -28,12 +28,12 @@ numericCanBe _ _ = False
 --     (t == ClassType "INTEGER_32" [] || t == ClassType "NATURAL_32" []) = True
 --   | otherwise = False
 
-guardTypePred :: (Typ -> Bool) -> String -> Typ -> TypingBody body Typ
-guardTypePred p s t = guardThrow (p t) s >> return t
+guardTypePred :: (Typ -> Bool) -> TypeError -> Typ -> TypingBody body Typ
+guardTypePred p e t = guardThrow (p t) e >> return t
 
 guardTypeIs typ expr = 
   let exprType = T.texpr expr
   in guardTypePred (== typ) 
-                   ("require " ++ show typ ++ " actual " ++ show exprType)
+                   (TypeMismatch typ exprType)
                    (T.texpr expr)
 
