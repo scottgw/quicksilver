@@ -19,6 +19,7 @@ import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
 import           Language.QuickSilver.TypeCheck.TypedExpr (TStmt, TClass)
 import           Language.QuickSilver.TypeCheck.Context
 import           Language.QuickSilver.TypeCheck.Expr
+import           Language.QuickSilver.TypeCheck.TypeError
 
 routineStmt :: (Data body, Typeable body)
          => RoutineBody Expr -> TypingBody body TStmt

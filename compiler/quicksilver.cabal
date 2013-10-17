@@ -96,6 +96,7 @@ Library
                        Language.QuickSilver.Util
                        Language.QuickSilver.Parser
                        Language.QuickSilver.Parser.Lex
+                       Language.QuickSilver.TypeCheck.TypeError
                        Language.QuickSilver.TypeCheck.Class
                        Language.QuickSilver.TypeCheck.TypedExpr
   

@@ -7,6 +7,7 @@ import           Language.QuickSilver.Syntax as S
 import           Language.QuickSilver.Util
 import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
 import           Language.QuickSilver.TypeCheck.Context
+import           Language.QuickSilver.TypeCheck.TypeError
 
 numericCanBe (T.LitInt 0 _t) t =
   isIntegerType t || isNaturalType t || isRealType t

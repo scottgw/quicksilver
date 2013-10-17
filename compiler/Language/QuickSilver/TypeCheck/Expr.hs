@@ -21,6 +21,7 @@ import           Language.QuickSilver.Position
 import           Language.QuickSilver.Util
 import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
 import           Language.QuickSilver.TypeCheck.TypedExpr (TExpr)
+import           Language.QuickSilver.TypeCheck.TypeError
 import           Language.QuickSilver.TypeCheck.BasicTypes
 import           Language.QuickSilver.TypeCheck.Context
 import           Language.QuickSilver.TypeCheck.Generic

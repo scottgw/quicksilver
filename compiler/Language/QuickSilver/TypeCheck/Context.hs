@@ -21,6 +21,7 @@ import           Language.QuickSilver.Syntax
 import           Language.QuickSilver.Position
 import           Language.QuickSilver.Util
 
+import           Language.QuickSilver.TypeCheck.TypeError
 import qualified Language.QuickSilver.TypeCheck.TypedExpr as T
 import           Language.QuickSilver.TypeCheck.TypedExpr (TExpr)
 
@@ -38,26 +39,6 @@ data FlatMap body expr =
   FlatMap { _flatPart :: Map Typ (AbsClas body expr)
           , _featPart :: Map (Typ, Text) (AbsRoutine body expr)
           }
-
-data TypeError
-  = MiscError String
-  | IdentNotFound String
-  | MissingCall Typ String
-  | MissingInfix String Typ Typ
-  | BasicQualCall
-  | ArgNumDiffer Int Int
-  | TypeMismatch { teExpected :: Typ
-                 , teActual :: Typ
-                 }
-  | CurrentInModule
-  | SeparateBlockArg
-  | SeparateShutdown
-  | CreateNoType
-  | ErrorWithPos SourcePos TypeError
-  deriving Show
-
-instance Error TypeError where
-  strMsg = MiscError
 
 makeLenses ''FlatMap
 

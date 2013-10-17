@@ -14,6 +14,7 @@ import Language.QuickSilver.Syntax
 import Language.QuickSilver.Parser (parseClassFile)
 
 import Language.QuickSilver.TypeCheck.Class
+import Language.QuickSilver.TypeCheck.TypeError
 
 import Language.QuickSilver.Generate.DepGen
 import Language.QuickSilver.Generate.CompilePipeline (compileIO)
@@ -66,8 +67,21 @@ compile outFile debug genMain runMain cls = do
       Right envs ->
           when debug (putStrLn "Type checking") >>
           case clasM envs cls of
-            Left  e -> putStrLn ("TypeChecking Error:" ++ show e)
+            Left  e -> displayError e
             Right c -> 
                 if not runMain
                 then compileIO debug outFile' genMain c
                 else return ()
+
+displayError :: TypeError -> IO ()
+displayError err =
+  let
+    compressPos (ErrorWithPos p e) = ErrorWithPos p (discardPos e)
+    compressPos e = e
+
+    discardPos (ErrorWithPos _ e) = discardPos e
+    discardPos e = e
+
+    err' = compressPos err
+  in
+   do putStrLn ("type error: " ++ show err')
