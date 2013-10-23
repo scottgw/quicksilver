@@ -88,7 +88,9 @@ module Language.QuickSilver.Generate.LLVM.Simple
 
       -- ** Values
     , isConstant
-
+    , setGC
+    , getGC
+      
       -- ** Basic blocks
     , BasicBlock
     , getInsertBlock
@@ -358,6 +360,12 @@ getInsertBlock = withBuilder0 W.getInsertBlock
 -- Values
 isConstant :: LLVM m => Value -> m Bool
 isConstant v = liftIO (W.isConstant v)
+
+setGC :: LLVM m => Value -> Text -> m ()
+setGC v txt = liftIO (W.setGC v (Text.unpack txt))
+
+getGC :: LLVM m => Value -> m Text
+getGC v = Text.pack <$> liftIO (W.getGC v)
 
 add, fadd, sub, fsub, orr, andd, mul, fmul, fdiv, sdiv, srem, urem :: 
    LLVM m => Value -> Value -> String -> m Value

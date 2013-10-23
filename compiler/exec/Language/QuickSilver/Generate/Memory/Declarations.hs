@@ -65,11 +65,12 @@ setupRoutines pcMap (ClassInfo cls _t) =
                        EmptyExternal extern _ ->
                            void (addFunction extern fType)
                        _ -> return ()
-             fPtr <- addFunction name fType
+             llvmFeatVal <- addFunction name fType
+             setGC llvmFeatVal "qsgc"
              debug $ concat [ "Added routine prototype "
-                            , Text.unpack name ," @ ", show fPtr
+                            , Text.unpack name ," @ ", show llvmFeatVal
                             ]
-             return fPtr
+             return llvmFeatVal
 
 setClasType :: ClassEnv -> ClassInfo -> Build ClassInfo
 setClasType pcMap (ClassInfo cls (Left t)) =
@@ -117,12 +118,15 @@ modRoutineArgs go ci rout =
 
 -- Creation routines
 mkCreateFunc :: ClasInterface -> RoutineI -> Build ()
-mkCreateFunc c f = featDeclType f' >>= addFunction crName >> return ()
-    where crName = featureAsCreate (view className c) (routineName f)
-          f' = f {routineName = crName
-                 ,routineResult = ClassType (view className c) [ClassType "G" []]
-                 ,routineArgs = tail (routineArgs f)
-                 }
+mkCreateFunc c f =
+  do llvmFeatType <- featDeclType f'
+     llvmFeatVal <- addFunction crName llvmFeatType
+     setGC llvmFeatVal "qsgc"
+  where crName = featureAsCreate (view className c) (routineName f)
+        f' = f { routineName = crName
+               , routineResult = ClassType (view className c) [ClassType "G" []]
+               , routineArgs = tail (routineArgs f)
+               }
 
 featureAsCreate :: Text -> Text -> Text
 featureAsCreate cName fName = Text.concat ["__", cName, fName, "_create"]

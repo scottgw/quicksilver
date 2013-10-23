@@ -10,7 +10,6 @@ LIFT=YES
 HASOUTPUT=NO
 OUTPUT_FILE=${1%.*}
 
-
 while getopts "qlo:" opt; do
     case "$opt" in
         q)
@@ -30,8 +29,10 @@ shift $((OPTIND-1))
 BCFILE=${1%.*}.bc
 OBCFILE=${1%.*}.obc
 OBJFILE=${1%.*}.o
+ASMFILE=${1%.*}.s
 
-LIFT_SYNC="-load=$HOME/tmp/llvm-3.3.src/Release+Asserts/lib/libLLVMQs.so" 
+LIFT_SYNC="-load=$HOME/tmp/llvm-3.3.src/Release+Asserts/lib/libLLVMQs.so"
+GC_PLUGIN="-load=$HOME/tmp/llvm-3.3.src/Release+Asserts/lib/QsGC.so"
 OPT_ARGS="-O2 -std-link-opts -std-compile-opts\
    -vectorize-loops -vectorize-slp -vectorize-slp-aggressive"
 
@@ -48,5 +49,6 @@ fi
 qs $1 -m
 llvm-link ${QS_LIB_PATH}/stdlib.bc ${BCFILE} ${@:2} |\
   opt ${OPT_ARGS} -o ${OBCFILE}
-llc -filetype=obj ${OBCFILE} -o  ${OBJFILE}
+llc ${OBCFILE} ${GC_PLUGIN} -o ${ASMFILE}
+gcc ${ASMFILE} -c
 gcc -flto -march=native ${OBJFILE} ${PKG_LIBS} -lstdc++ -lm -o ${OUTPUT_FILE}
