@@ -9,14 +9,15 @@
 #include <vector>
 
 extern "C"
-void f(char*);
+void f(int*);
 
 stack_map_t stk_map;
 
 int main (int argc, char** argv)
 {
   char c = 'a';
-  f(&c);
+  int i = 42;
+  f(&i);
   printf("done %c\n", c);
   return 0;
 }
@@ -28,7 +29,7 @@ void fakegc()
   unw_cursor_t cursor;
   unw_word_t ip, sp;
   unw_context_t uc;
-  std::shared_ptr<root_info_t> root_info_ptr;
+  root_info_t root_info_ptr;
 
   unw_getcontext(&uc);
   unw_init_local(&cursor, &uc);
@@ -41,11 +42,11 @@ void fakegc()
 
       if (stk_map.find_root_info((void*)ip, root_info_ptr))
         {
-          for(auto it : *root_info_ptr)
+          for(auto it : root_info_ptr)
             {
-              char *cptr = *((char**)sp - it);
+              int *cptr = *((int**)sp - it);
               printf("x=%p\n", cptr);
-              printf("c=%c\n", *cptr);
+              printf("i=%d\n", *cptr);
               *cptr = *cptr + 1;
             }
         }

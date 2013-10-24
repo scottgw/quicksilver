@@ -106,7 +106,8 @@ static
 void
 merge_func_table(stack_map_t &stack_map, func_table_t ftable)
 {
-  auto root_info_ptr = std::make_shared<root_info_t>(root_info_t());
+  root_info_t *root_info = new root_info_t();
+  std::unique_ptr<root_info_t> root_info_ptr (root_info);
 
   for (int i = 0; i < ftable.live_root_count; i++)
     {
@@ -117,13 +118,14 @@ merge_func_table(stack_map_t &stack_map, func_table_t ftable)
 
   for (int i = 0; i < ftable.num_safe_points; i++)
     {
-      stack_map[ftable.safe_points[i]] = root_info_ptr;
+      stack_map.root_infos.push_back(std::move(root_info_ptr));
+      stack_map[ftable.safe_points[i]] = root_info;
     }
 
   free_func_table(ftable);
 }
 
-stack_map_t::stack_map_t()
+stack_map_t::stack_map_t() : root_infos ()
 {
   int func_count = stack_map_count();
   char* p = stack_map_top();

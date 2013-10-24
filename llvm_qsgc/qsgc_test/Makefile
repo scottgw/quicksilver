@@ -9,7 +9,7 @@ sample.s: sample.ll
 	llvm-as < $< | llc -load=/home/scott/tmp/llvm-3.3.src/Release+Asserts/lib/QsGC.so -o $@
 
 main: main.o stack_map.o sample.o
-	g++ ${LIBS} $^ -o $@
+	g++ ${LIBS} -g $^ -o $@
 
 %.o: %.cpp
 	g++ ${CXX_FLAGS} -c $<
