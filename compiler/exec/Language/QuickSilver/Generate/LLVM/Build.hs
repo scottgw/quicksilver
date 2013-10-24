@@ -217,6 +217,9 @@ int64TypeM = intType 64
 pointer0 :: Type -> Type
 pointer0 = (`W.pointerType` 0)
 
+ptr :: Build Type
+ptr = pointer0 <$> int8TypeM
+
 gepInt :: LLVM m => Value -> [Int] -> m Value
 gepInt v is = do
   i32 <- int32TypeM

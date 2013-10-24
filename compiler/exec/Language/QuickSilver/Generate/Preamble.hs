@@ -36,12 +36,10 @@ preamble clas = do
         env classEnv =
           setCurrent (clasInterface $ untype clas) . setClassEnv classEnv
 
-ptr :: Build Type
-ptr = pointer0 <$> int8TypeM
-
 constDecls :: [(Text, Build Type)]
 constDecls = 
     [ ("llvm.sqrt.f64", funcType' doubleType [doubleType])
+    , ("llvm.gcroot", funcType' voidType [ pointer0 <$> ptr, ptr])
     , ("GC_init",       funcType' voidType [])   
     , ("GC_malloc",     funcType' ptr [int64TypeM])
     , ("qs_init",     funcType' ptr [])
