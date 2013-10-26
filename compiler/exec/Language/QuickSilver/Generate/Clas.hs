@@ -58,6 +58,14 @@ genMain clas = do
   notifier <- "notifier_spawn" <#> [syncData]
   "notifier_join" <#> [notifier]
 
+  metaArgPtr <- alloca i64T "metaArg"
+  i42 <- int 42
+  meta1 <- mdNode [metaArgPtr]
+  meta2 <- mdNode [i42, i42]
+  setMetadata notifier Dbg meta2
+  addNamedMetadataOperand "moota" meta2
+  "llvm.dbg.declare" <#> [meta1, meta2]
+
   "sync_data_join_executors" <#> [syncData]
   "sync_data_free" <#> [syncData]
 

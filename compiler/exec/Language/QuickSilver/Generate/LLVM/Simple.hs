@@ -90,7 +90,7 @@ module Language.QuickSilver.Generate.LLVM.Simple
     , isConstant
     , setGC
     , getGC
-      
+
       -- ** Basic blocks
     , BasicBlock
     , getInsertBlock
@@ -129,6 +129,13 @@ module Language.QuickSilver.Generate.LLVM.Simple
     , getParam
     , setFunctionCallConv
     , setInstructionCallConv
+
+      -- ** Metadata
+    , mdNode
+    , mdString
+    , setMetadata
+    , addNamedMetadataOperand
+    , MetadataKind(..)
     ) where
 
 import           Control.Applicative
@@ -143,8 +150,11 @@ import           LLVM.Wrapper.Core ( Builder, Context, Module
                                    , CallingConvention, FPPredicate
                                    , IntPredicate
                                    , Linkage
+                                   , MetadataKind
+
                                    , constInt, constReal, constPtrToInt
                                    , constBitCast
+                                   , mdString
                                    )
 import           LLVM.FFI.Core (Visibility)
 
@@ -456,6 +466,18 @@ arrayType t int  = W.arrayType t (fromIntegral int)
 functionType :: Type -> [Type] -> Bool -> Type
 functionType = W.functionType
 
+
+-- ** Metadata
+mdNode :: LLVM m => [Value] -> m Value
+mdNode = liftIO . W.mdNode
+
+setMetadata :: LLVM m => Value -> MetadataKind -> Value -> m ()
+setMetadata val metaKind meta = liftIO $ W.setMetadata val metaKind meta
+
+addNamedMetadataOperand :: LLVM m => Text -> Value -> m ()
+addNamedMetadataOperand txt val =
+  do m <- askModule
+     liftIO $ W.addNamedMetadataOperand m (Text.unpack txt) val
 
 {-
 building lifters, just in case

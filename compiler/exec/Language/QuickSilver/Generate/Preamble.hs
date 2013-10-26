@@ -56,7 +56,17 @@ constDecls =
     , ("llvm.eh.exception", funcType' ptr [])
     , ("llvm.eh.selector.i64",  funcTypeVar' int64TypeM [ptr, ptr])
     , ("llvm.eh.typeid.for", funcType' int32TypeM [ptr])
+
+    , ("llvm.dbg.declare", funcType' voidType [metadataTypeM, metadataTypeM])
+    , ("llvm.dbg.value"
+      ,funcType' voidType [metadataTypeM, int64TypeM, metadataTypeM])
     ]
+
+metadataTypeM :: Build Type
+metadataTypeM =
+  do i0 <- int 0
+     n <- mdNode [i0]
+     typeOfVal n
 
 addConstDecls :: Build (Map Text Value)
 addConstDecls = fromList `fmap` mapM addDecl constDecls
