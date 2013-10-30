@@ -3,7 +3,7 @@ import Prelude
 
 module Winnow_Sort
 
-  sort_val_points (points: Winnow_Value_Points): Winnow_Value_Points
+  sort_val_points (points: Winnow_Value_Points)
     do
       {Prelude}.print({Prelude}.int_to_str(points.count))
       {Prelude}.print("%N")

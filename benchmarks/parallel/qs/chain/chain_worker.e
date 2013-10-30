@@ -203,7 +203,7 @@ create make
         i := i + 1
       end
 
-      val_points := {Winnow_Sort}.sort_val_points(val_points)
+      {Winnow_Sort}.sort_val_points(val_points)
 
       create gather.make(winnow_nelts)
       gather.merged := val_points
