@@ -8,7 +8,8 @@ TESTS = task_layer_test\
 	executor_test\
 	mutex_test \
 	process_test \
-	condvar_test
+	condvar_test \
+	stack_walk
 
 task_layer_test_SOURCES = task_layer/task_layer.cpp
 mpscq_test_SOURCES = data_layer/mpscq.cpp
@@ -21,12 +22,13 @@ executor_test_SOURCES = sched_layer/executor.cpp
 mutex_test_SOURCES = sync_layer/mutex.cpp
 condvar_test_SOURCES = sync_layer/condvar.cpp
 process_test_SOURCES = process_layer/process.cpp
+stack_walk_SOURCES = unwind/stack_walk.cpp
 
 LDADD=$(top_builddir)/src/libqs.la
 AM_CXXFLAGS = `pkg-config glib-2.0 --libs --cflags` \
 	`gtest-config --libs` \
 	-pthread \
-	-lffi -ltbb \
+	-lffi -ltbb -lunwind -lunwind-x86_64 \
 	-I../../src
 
 check_PROGRAMS = ${TESTS}
