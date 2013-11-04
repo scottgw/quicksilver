@@ -31,6 +31,7 @@ data TypeContext body expr = TypeContext {
       interfaces :: Map ClassName (AbsClas body expr),
       current    :: Either Typ Typ,
       result     :: Typ,
+      separates  :: [TExpr],
       variables  :: Map Text Typ,
       pos        :: SourcePos
     }
@@ -136,6 +137,7 @@ mkCtx currTypEi cs =
     , current = currTypEi
     , result = error "mkCtx: no Result"
     , variables = Map.empty -- attrMap c
+    , separates = []
     , pos = error "mkCtx: no position"
     }
 
@@ -161,6 +163,16 @@ addDeclsToMap = Map.union . declsToMap
 
 addDecls :: [Decl] -> TypeContext body expr -> TypeContext body expr
 addDecls ds ctx = ctx {variables = addDeclsToMap ds (variables ctx)}
+
+addSeparates :: [TExpr] -> TypeContext body expr -> TypeContext body expr
+addSeparates seps ctx =
+    ctx { separates = separates ctx ++ seps }
+
+hasSeparates :: [TExpr] -> TypingBodyExpr body expr Bool
+hasSeparates tes =
+  do seps <- separates <$> ask
+     let allInSeps = all (`elem` seps) tes
+     return allInSeps
 
 setResult :: AbsRoutine body' expr -> 
              TypeContext body expr -> TypeContext body expr

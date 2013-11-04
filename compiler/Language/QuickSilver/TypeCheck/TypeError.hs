@@ -17,6 +17,7 @@ data TypeError
   | CurrentInModule
   | SeparateBlockArg
   | SeparateShutdown
+  | PassiveBlockReserve
   | CreateNoType
   | ErrorWithPos SourcePos TypeError
   deriving Show

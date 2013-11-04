@@ -1,4 +1,5 @@
-all: array_test odd_even_test separate_test http_test socket_test helloworld
+all: array_test odd_even_test separate_test http_test socket_test helloworld \
+	passive1
 
 array_test: array_test.e c.ebc lib/stdlib.bc
 	qsc $< c.ebc
@@ -7,6 +8,9 @@ odd_even_test: odd_even_test.e data.ebc incr.ebc lib/stdlib.bc
 	qsc $< data.ebc incr.ebc
 
 separate_test: separate_test.e c.ebc lib/stdlib.bc	
+	qsc $< c.ebc
+
+passive1: passive1.e c.ebc lib/stdlib.bc
 	qsc $< c.ebc
 
 %.ebc: %.e

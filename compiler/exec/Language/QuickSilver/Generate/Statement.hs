@@ -165,7 +165,18 @@ genStmt (Separate args clauses body) =
      local (updateQueues (zip args privQs))
            (genStmt (contents body))
      unlockQueues privQs
-  
+
+genStmt (Passive args body) =
+  do currProc <- getCurrProc
+     -- this requires that it exist inside a separate block where the
+     -- args are already reserved, otherwise the queues won't be in the map
+     let sendSync arg =
+           do privQ <- getQueueFor arg
+              "priv_queue_sync" <#> [privQ, currProc]             
+     mapM_ sendSync args
+     local (addPassives args) (genStmt (contents body))
+     
+
 genStmt (Create _typeMb var fName args) =
   case texpr var of
     Sep _ _ t ->

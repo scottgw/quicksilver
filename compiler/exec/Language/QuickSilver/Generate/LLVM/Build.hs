@@ -40,6 +40,7 @@ data BuildState =
     { bsEnv      :: Env
     , bsRoutine  :: RoutineI
     , bsQueues   :: [(TExpr, Value)]
+    , bsPassives :: [TExpr]
     , bsCurrent  :: ClasInterface
     , bsClassEnv :: ClassEnv
     , bsTypeEnv  :: Map Text Type -- For special types like processor.
@@ -59,6 +60,7 @@ runBuild debg moduleName m = do
         BuildState { bsCurrent  = error "Current class not set"
                    , bsRoutine  = error "Current routine not set"
                    , bsQueues   = []
+                   , bsPassives = []
                    , bsEnv      = Map.empty
                    , bsClassEnv = Map.empty
                    , bsTypeEnv  = Map.empty
@@ -180,6 +182,12 @@ lookupClasLType = fmap rtClassStruct . lookupClassEnv
 lookupClas :: ClassName -> Build ClasInterface
 lookupClas  = fmap rtClass . lookupClassEnv
 
+addPassives :: [TExpr] -> BuildState -> BuildState
+addPassives tes bs =
+    bs {bsPassives = bsPassives bs ++ tes }
+
+isPassive :: TExpr -> Build Bool
+isPassive t = (t `elem`) <$> (bsPassives <$> ask)
 
 call' :: Text -> [Value] -> Build Value
 call' s args = do

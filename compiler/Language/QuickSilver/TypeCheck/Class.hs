@@ -203,8 +203,15 @@ uStmt (Separate args clauses body) =
              T.Access _ _ _ -> True
              _ -> False
      mapM_ (\e -> guardThrow (varOrAccess e) SeparateBlockArg) args'
-     body' <- stmt body
+     body' <- local (addSeparates args') (stmt body)
      tagPos (Separate args' clauses' body')
+
+uStmt (Passive args body) =
+  do args' <- mapM typeOfExpr args
+     hasAllArgs <- hasSeparates args'
+     guardThrow hasAllArgs PassiveBlockReserve
+     body' <- stmt body
+     tagPos (Passive args' body')
 
 uStmt (Loop setup invs cond body var) = do
   setup' <- stmt setup

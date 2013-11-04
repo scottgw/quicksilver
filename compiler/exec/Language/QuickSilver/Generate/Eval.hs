@@ -9,6 +9,7 @@ module Language.QuickSilver.Generate.Eval
        , accessLoc
        , getCurrProc
        , getProc
+       , getQueueFor
        , true
        , int
        , (<#>)
@@ -292,14 +293,18 @@ evalUnPos (Access trg attr typ) = do
   debug "access: have location"
   if isSeparate trgType
     then
-      do privQ <- getQueueFor trg
-         currProc <- getCurrProc
-         "priv_queue_sync" <#> [privQ, currProc]
-         result <- load' attrLoc
-         trgProc <- getProc trg'
-         if not (isBasic typ || isSeparate typ)
-           then wrapSepResult trgProc typ result
-           else return result
+      do isPass <- isPassive trg
+         if not isPass 
+          then
+            do privQ <- getQueueFor trg
+               currProc <- getCurrProc
+               "priv_queue_sync" <#> [privQ, currProc]
+               result <- load' attrLoc
+               trgProc <- getProc trg'
+               if not (isBasic typ || isSeparate typ)
+                 then wrapSepResult trgProc typ result
+                 else return result
+          else load' attrLoc
     else load' attrLoc
 
 evalUnPos (InheritProc _ e) = eval e
@@ -379,22 +384,36 @@ separateCall trg fName args retType =
      (trgProcRef, nonSepTrgRef) <- splitSepRef trg'
      trgProc <- load' trgProcRef
      nonSepTrg <- load' nonSepTrgRef
+
+     -- The base type doesn't have the right type when we extract it from
+     -- the combined separate type, so we have to cast it to its proper type.
+     let Sep _ _ baseType = texpr trg
+     baseTypeL <- typeOfM baseType
+     castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
+
      privQ <- getQueueFor trg
+     currProc <- getCurrProc
+     isPass <- isPassive trg
 
      if retType == NoType
        then
-         do closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
-            debug "sepCall: calling underlying function"
-            currProc <- getCurrProc
-            "priv_queue_routine" <#> [privQ, closure, currProc]
+           if isPass
+           then debug "passive call" >> call f (trgProc:castedNonSepTrg:args') 
+           else
+             do closure <- prepareClosure retType trg f args trgProc nonSepTrg args'
+                debug "sepCall: calling underlying function"
+                "priv_queue_routine" <#> [privQ, closure, currProc]
        else
-         do currProc <- getCurrProc
-            "priv_queue_sync" <#> [privQ, currProc]
+         do -- Passive processors mean we've already done the sync
+            -- at the beginning of the passive block.
+            if isPass
+              then debug "passive query"
+              else
+                do "priv_queue_sync" <#> [privQ, currProc]
+                   return ()
 
             debug "building direct call"
-            let Sep _ _ baseType = texpr trg
-            baseTypeL <- typeOfM baseType
-            castedNonSepTrg <- bitcast nonSepTrg baseTypeL ""
+
             resultVal <- call f (trgProc : castedNonSepTrg : args')
 
             if not (isBasic retType || isSeparate retType)
