@@ -153,6 +153,7 @@ tokenMap =
    ,("like", TokLike)
    ,("detachable", TokDetachable) 
    ,("separate", TokSeparate)
+   ,("passive", TokPassive)
    ,("shutdown", TokShutdown)
    ,("frozen", TokFrozen)
    ,("expanded", TokExpanded)
@@ -272,6 +273,7 @@ data Token
     | TokLike
     | TokDetachable 
     | TokSeparate
+    | TokPassive
     | TokShutdown
     | TokFrozen
     | TokExpanded
