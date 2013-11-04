@@ -23,13 +23,44 @@ void
 io_mgr_free(io_mgr_t mgr);
 
 /*!
-  Ask the IO manager to suspend a schedulable task until
-  the file descriptor is has data ready to read.
+  Ask the IO manager to register the file descriptor for reading.
+  This uses edge-triggered events so this should be done only after
+  the fd is returning, for example, EAGAIN.
 
   \param mgr the IO manager
-  \param stask the schedulable task to awake when ready
+  \param stask schedulable task associated with this read
   \param fd the file descriptor to watch
-  \return 0 if data is ready to be read, another value if an error occurred.
+  \return 0 if data fd was added successfully,
+    another value if an error occurred.
  */
 int
-io_wait_fd(io_mgr_t mgr, sched_task_t stask, int fd);
+io_add_read_fd(io_mgr_t mgr, sched_task_t stask, int fd);
+
+
+/*!
+  Ask the IO manager to register the file descriptor for writing.
+  This uses edge-triggered events so this should be done only after
+  the fd is returning, for example, EAGAIN.
+
+  \param mgr the IO manager
+  \param stask schedulable task associated with this write
+  \param fd the file descriptor to watch
+  \return 0 if data fd was added successfully,
+    another value if an error occurred.
+ */
+int
+io_add_write_fd(io_mgr_t mgr, sched_task_t stask, int fd);
+
+
+/*!
+  Put a schedulable task to sleep until a file descriptor is available
+  for reading.
+
+  \param mgr the IO manager
+  \param stask schedulable task that is waiting to read
+  \param fd the file descriptor to watch
+  \return 0 if data fd was added successfully,
+    another value if an error occurred.
+ */
+void
+io_wait_read_fd(io_mgr_t mgr, sched_task_t stask, int fd);
