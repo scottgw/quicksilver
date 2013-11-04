@@ -23,6 +23,7 @@ bareStmt = do
                  , retry
                  , create
                  , separate
+                 , passive
                  , ifStmt
                  , inspect
                  , loop
@@ -51,6 +52,15 @@ separate =
      ss <- attachTokenPos block
      keyword TokEnd
      return (Separate args clauses ss)
+
+passive =
+  do keyword TokPassive
+     args <- many expr
+     keyword TokDo
+     ss <- attachTokenPos block
+     keyword TokEnd
+     return (Passive args ss)
+                   
 
 retry = do
   keyword TokRetry

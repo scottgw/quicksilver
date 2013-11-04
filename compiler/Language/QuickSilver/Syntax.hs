@@ -299,6 +299,7 @@ data AbsStmt a = Assign a a
                | Shutdown a
                | CallStmt a
                | Separate [a] [Clause a] (PosAbsStmt a)
+               | Passive [a] (PosAbsStmt a)
                | Retry
                | Inspect a [([a], PosAbsStmt a)] (Maybe (PosAbsStmt a))
                | Check [Clause a]
@@ -335,6 +336,10 @@ instance Show a => Show (AbsStmt a) where
     show (Separate names clauses body) =
       unlines [ "separate: " ++ show names
               , "require: " ++ show clauses
+              , show body
+              ]
+    show (Passive names body) =
+      unlines [ "passive: " ++ show names
               , show body
               ]
     show (Create t trg fName args) = 
