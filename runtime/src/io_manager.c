@@ -2,8 +2,10 @@
 #include "libqs/sync_ops.h"
 #include "internal/task.h"
 #include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/epoll.h>
 #include <unistd.h>
 
@@ -12,9 +14,10 @@
 
 struct io_mgr
 {
-  bool alive;
+  volatile bool alive;
   int epoll_fd;
   sync_data_t sync_data;
+  pthread_t thread;
 };
 
 io_mgr_t
@@ -40,6 +43,13 @@ io_mgr_free(io_mgr_t io_mgr)
 }
 
 void
+io_mgr_set_done(io_mgr_t io_mgr)
+{
+  io_mgr->alive = false;
+}
+
+static
+void*
 io_mgr_loop(io_mgr_t io_mgr)
 {
   struct epoll_event events[MAX_EVENTS];
@@ -62,6 +72,19 @@ io_mgr_loop(io_mgr_t io_mgr)
           fprintf(stderr, "io_mgr_loop, error in epoll_wait %d\n", errno);
         }
     }
+  return NULL;
+}
+
+void
+io_mgr_spawn(io_mgr_t io_mgr)
+{
+  pthread_create(&io_mgr->thread, NULL, (void* (*)(void*))io_mgr_loop, io_mgr);
+}
+
+void
+io_mgr_join(io_mgr_t io_mgr)
+{
+  pthread_join(io_mgr->thread, NULL);
 }
 
 static
@@ -92,7 +115,7 @@ io_add_fd(io_mgr_t mgr, sched_task_t stask, int flags, int fd)
               break;
             }
         default:
-          fprintf(stderr, "io_add_fd: error %d\n", errno);
+          fprintf(stderr, "io_add_fd: error %s\n", strerror(errno));
           break;
         }
     }
