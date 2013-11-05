@@ -53,15 +53,13 @@ send_func(sched_task_t stask)
   client.sin_addr.s_addr = inet_addr("127.0.0.1");
   client.sin_port = htons(7777);
   
-  int conn_s =
-    connect(client_sfd, (struct sockaddr*)&client, sizeof(struct sockaddr_in));
-
-  if (conn_s != 0)
-    {
-      printf("cannot connect\n");
-      close(client_sfd);
-      exit(1);
-    }
+  while
+    (connect(client_sfd, (struct sockaddr*)&client, sizeof(struct sockaddr_in)) != 0);
+    // {
+    //   printf("cannot connect %s\n", strerror(errno));
+    //   close(client_sfd);
+    //   exit(1);
+    // }
 
   set_nonblocking(client_sfd);
 
