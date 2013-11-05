@@ -89,7 +89,7 @@ io_mgr_join(io_mgr_t io_mgr)
 
 static
 int
-io_add_fd(io_mgr_t mgr, sched_task_t stask, int flags, int fd)
+io_mgr_add_fd(io_mgr_t mgr, sched_task_t stask, int flags, int fd)
 {
   struct epoll_event ev;
   int code;
@@ -115,7 +115,7 @@ io_add_fd(io_mgr_t mgr, sched_task_t stask, int flags, int fd)
               break;
             }
         default:
-          fprintf(stderr, "io_add_fd: error %s\n", strerror(errno));
+          fprintf(stderr, "io_mgr_add_fd: error %s\n", strerror(errno));
           break;
         }
     }
@@ -123,36 +123,150 @@ io_add_fd(io_mgr_t mgr, sched_task_t stask, int flags, int fd)
   return code;
 }
 
-int
-io_add_read_fd(io_mgr_t mgr, sched_task_t stask, int fd)
-{
-  return io_add_fd(mgr, stask, EPOLLIN | EPOLLET, fd);
-}
-
-
-int
-io_add_write_fd(io_mgr_t mgr, sched_task_t stask, int fd)
-{
-  return io_add_fd(mgr, stask, EPOLLOUT | EPOLLET, fd);
-}
-
 static
 void
-io_wait_fd(io_mgr_t mgr, sched_task_t stask, int fd)
+io_mgr_wait_fd(io_mgr_t mgr, sched_task_t stask, int fd)
 {
   task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
   stask_yield_to_executor(stask);
 }
 
 void
-io_wait_read_fd(io_mgr_t mgr, sched_task_t stask, int fd)
+io_mgr_wait_read_fd(io_mgr_t mgr, sched_task_t stask, int fd)
 {
-  io_wait_fd(mgr, stask, fd);
+  io_mgr_wait_fd(mgr, stask, fd);
+}
+
+void
+io_mgr_wait_write_fd(io_mgr_t mgr, sched_task_t stask, int fd)
+{
+  io_mgr_wait_fd(mgr, stask, fd);
+}
+
+int
+io_mgr_add_read_fd(io_mgr_t mgr, sched_task_t stask, int fd)
+{
+  return io_mgr_add_fd(mgr, stask, EPOLLIN | EPOLLET, fd);
+}
+
+int
+io_mgr_add_write_fd(io_mgr_t mgr, sched_task_t stask, int fd)
+{
+  return io_mgr_add_fd(mgr, stask, EPOLLOUT | EPOLLET, fd);
 }
 
 
-void
-io_wait_write_fd(io_mgr_t mgr, sched_task_t stask, int fd)
+// Perform one non EAGAIN read.
+static
+ssize_t
+io_mgr_read1(io_mgr_t io_mgr,
+             sched_task_t stask,
+             int fd, void* buf, size_t nbyte)
 {
-  io_wait_fd(mgr, stask, fd);
+  ssize_t read_bytes = read (fd, buf, nbyte);
+
+  if (read_bytes == -1)
+    {
+      switch (errno)
+        {
+        case EAGAIN:
+          printf("Read would block!\n");
+          io_mgr_add_read_fd(io_mgr, stask, fd);
+          read_bytes = read (fd, buf, nbyte);
+          io_mgr_wait_read_fd(io_mgr, stask, fd);
+
+          if (read_bytes == -1)
+            {
+              // We didn't read anything before we waited so lets read now
+              read_bytes = read (fd, buf, nbyte);
+            }
+
+          break;
+        default:
+          printf("io_mgr_read: problem with read\n");
+          exit(1);
+          break;
+        }
+    }
+  return read_bytes;
+}
+
+ssize_t
+io_mgr_read(io_mgr_t io_mgr,
+            sched_task_t stask,
+            int fd, void* buf, size_t nbyte)
+{
+  ssize_t read_bytes = 0;
+  bool eof = false;
+
+  do
+    {
+      ssize_t last_read_bytes = io_mgr_read1(io_mgr, stask, fd, buf, nbyte);
+      if (last_read_bytes == 0)
+        {
+          eof = true;
+        }
+      read_bytes += last_read_bytes;
+      buf = (char*)buf + last_read_bytes;
+    } while (read_bytes < nbyte && !eof);
+
+  return read_bytes;
+}
+
+
+// Perform one non EAGAIN write.
+static
+ssize_t
+io_mgr_write1(io_mgr_t io_mgr,
+              sched_task_t stask,
+              int fd, void* buf, size_t nbyte)
+{
+  ssize_t written_bytes = write (fd, buf, nbyte);
+
+  if (written_bytes == -1)
+    {
+      switch (errno)
+        {
+        case EAGAIN:
+          printf("Read would block!\n");
+          io_mgr_add_write_fd(io_mgr, stask, fd);
+          written_bytes = write (fd, buf, nbyte);
+          io_mgr_wait_write_fd(io_mgr, stask, fd);
+
+          if (written_bytes == -1)
+            {
+              // We didn't read anything before we waited so lets read now
+              written_bytes = write (fd, buf, nbyte);
+            }
+
+          break;
+        default:
+          printf("io_mgr_read: problem with read\n");
+          exit(1);
+          break;
+        }
+    }
+  return written_bytes;
+}
+
+ssize_t
+io_mgr_write(io_mgr_t io_mgr,
+             sched_task_t stask,
+             int fd, void* buf, size_t nbyte)
+{
+  ssize_t written_bytes = 0;
+  bool eof = false;
+
+  do
+    {
+      ssize_t last_written_bytes = io_mgr_write1(io_mgr, stask, fd, buf, nbyte);
+      if (last_written_bytes == 0)
+        {
+          eof = true;
+        }
+      written_bytes += last_written_bytes;
+      buf = (char*)buf + last_written_bytes;
+    } while (written_bytes < nbyte && !eof);
+
+  return written_bytes;
 }

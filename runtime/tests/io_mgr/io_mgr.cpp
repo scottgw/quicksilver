@@ -52,14 +52,10 @@ send_func(sched_task_t stask)
   client.sin_family = AF_INET;
   client.sin_addr.s_addr = inet_addr("127.0.0.1");
   client.sin_port = htons(7777);
-  
-  while
-    (connect(client_sfd, (struct sockaddr*)&client, sizeof(struct sockaddr_in)) != 0);
-    // {
-    //   printf("cannot connect %s\n", strerror(errno));
-    //   close(client_sfd);
-    //   exit(1);
-    // }
+
+  // Loop as we know the other socket will connect eventually, needs at least 2
+  // executors though.
+  while (connect(client_sfd, (struct sockaddr*)&client, sizeof(client)) != 0);
 
   set_nonblocking(client_sfd);
 
@@ -67,20 +63,8 @@ send_func(sched_task_t stask)
     {
       char str[] = "Hello world\n";
       size_t str_nbytes = sizeof(str);
-
       printf("Client writing to server\n");
-      ssize_t write_nbytes = write(client_sfd, str, str_nbytes);
-
-      if (write_nbytes < 0)
-        {
-          switch (errno)
-            {
-            case EAGAIN:
-              printf("Write would block!\n");
-              io_add_write_fd(io_mgr, stask, client_sfd);
-              io_wait_write_fd(io_mgr, stask, client_sfd);              
-            }
-        }
+      io_mgr_write(io_mgr, stask, client_sfd, str, str_nbytes);
     }
   close(client_sfd);
 }
@@ -89,24 +73,16 @@ static
 void
 read_from_client(sched_task_t stask, int client_sfd)
 {
-  ssize_t client_s = 1;
+  ssize_t client_s;
   char buf[8];
 
   printf("reading from client\n");
 
-  while (client_s != 0)
+  do
     {
-      while ((client_s = read(client_sfd, buf, sizeof(buf))) > 0)
-        {
-          write(STDOUT_FILENO, buf, client_s);
-        }
-
-      if (client_s < 0)
-        {
-          io_add_read_fd(io_mgr, stask, client_sfd);
-          io_wait_read_fd(io_mgr, stask, client_sfd);
-        }
-    }
+      client_s = io_mgr_read(io_mgr, stask, client_sfd, buf, sizeof(buf));
+      write(STDOUT_FILENO, buf, client_s);
+    } while (client_s != 0);
 
   printf("done reading from client\n");
 }
@@ -162,8 +138,8 @@ recv_func(sched_task_t stask)
         {
         case EAGAIN:
           printf("Server would block!\n");
-          io_add_read_fd(io_mgr, stask, serv_sfd);
-          io_wait_read_fd(io_mgr, stask, serv_sfd);
+          io_mgr_add_read_fd(io_mgr, stask, serv_sfd);
+          io_mgr_wait_read_fd(io_mgr, stask, serv_sfd);
           printf("Now has some client\n");
           
           client_sfd = accept(serv_sfd, (struct sockaddr*)&client, &client_len);
