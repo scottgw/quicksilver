@@ -32,6 +32,31 @@ void
 io_mgr_free(io_mgr_t mgr);
 
 /*!
+  Spawn a new thread to run the IO manager main loop.
+
+  \param io_mgr IO manager to use
+*/
+void
+io_mgr_spawn(io_mgr_t io_mgr);
+
+/*!
+  Wait for the IO manager thread to stop (should happen after issuing
+  io_mgr_set_done
+
+  \param io_mgr IO manager thread to wait for
+*/
+void
+io_mgr_join(io_mgr_t io_mgr);
+
+/*!
+  Ask an IO manager thread to stop.
+
+  \param io_mgr IO manager to request to stop
+*/
+void
+io_mgr_set_done(io_mgr_t io_mgr);
+
+/*!
   Read bytes from a file descriptor, blocking if necessary.
 
   \param io_mgr IO manager to use
@@ -59,6 +84,27 @@ io_mgr_write(io_mgr_t io_mgr,
              sched_task_t stask,
              int fd, void* buf, size_t nbyte);
 
+/*!
+  Wait to accept a new connection on a socket file descriptor,
+  blocking until the connection is available.
+  
+  \param io_mgr IO manager to use
+  \param stask schedulable task to block 
+  \param fd the socket file descriptor to wait to accept on
+*/
+int
+io_mgr_accept(io_mgr_t io_mgr, sched_task_t stask, int fd);
+
+/*!
+  Set the file descriptor to be non-blocking. This should be done
+  before using the IO manager "blocking" functions.
+
+  Not an IO manager duty, but this is a convenient module to have this function.
+
+  \param fd the file descriptor to set non-blocking.
+*/
+void
+io_mgr_set_nonblocking(int fd);
 
 /*!
   Ask the IO manager to register the file descriptor for reading.
@@ -115,31 +161,6 @@ io_mgr_wait_read_fd(io_mgr_t mgr, sched_task_t stask, int fd);
  */
 void
 io_mgr_wait_write_fd(io_mgr_t mgr, sched_task_t stask, int fd);
-
-/*!
-  Spawn a new thread to run the IO manager main loop.
-
-  \param io_mgr IO manager to use
-*/
-void
-io_mgr_spawn(io_mgr_t io_mgr);
-
-/*!
-  Wait for the IO manager thread to stop (should happen after issuing
-  io_mgr_set_done
-
-  \param io_mgr IO manager thread to wait for
-*/
-void
-io_mgr_join(io_mgr_t io_mgr);
-
-/*!
-  Ask an IO manager thread to stop.
-
-  \param io_mgr IO manager to request to stop
-*/
-void
-io_mgr_set_done(io_mgr_t io_mgr);
 
 #ifdef __cplusplus
 }

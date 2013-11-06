@@ -1,7 +1,9 @@
+#include "internal/task.h"
 #include "libqs/io_manager.h"
 #include "libqs/sync_ops.h"
-#include "internal/task.h"
 #include <errno.h>
+#include <fcntl.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -94,7 +96,7 @@ io_mgr_add_fd(io_mgr_t mgr, sched_task_t stask, int flags, int fd)
   struct epoll_event ev;
   int code;
 
-  ev.events = flags;
+  ev.events = flags | EPOLLONESHOT;
   ev.data.ptr = stask;
 
   code = epoll_ctl(mgr->epoll_fd, EPOLL_CTL_ADD, fd, &ev);
@@ -172,7 +174,7 @@ io_mgr_read1(io_mgr_t io_mgr,
         case EAGAIN:
           printf("Read would block!\n");
           io_mgr_add_read_fd(io_mgr, stask, fd);
-          read_bytes = read (fd, buf, nbyte);
+          /* read_bytes = read (fd, buf, nbyte); */
           io_mgr_wait_read_fd(io_mgr, stask, fd);
 
           if (read_bytes == -1)
@@ -270,3 +272,69 @@ io_mgr_write(io_mgr_t io_mgr,
 
   return written_bytes;
 }
+
+int
+io_mgr_accept(io_mgr_t io_mgr, sched_task_t stask, int fd)
+{
+  struct sockaddr_in client;
+  memset(&client, 0, sizeof(client));
+  socklen_t client_len = sizeof(struct sockaddr_in);
+
+  int client_sfd = accept(fd, (struct sockaddr*)&client, &client_len);
+
+  if (client_sfd < 0)
+    {
+      switch (errno)
+        {
+        case EAGAIN:
+          printf("io_mgr_accept: EAGAIN\n");
+          io_mgr_add_read_fd(io_mgr, stask, fd);
+          client_sfd = accept(fd, (struct sockaddr*)&client, &client_len);
+
+          if (client_sfd >= 0)
+            {
+              printf("io_mgr_accept: client_sfd %d\n", client_sfd);
+              break;
+            }
+
+          io_mgr_wait_read_fd(io_mgr, stask, fd);
+
+          printf("io_mgr_accept: out of wait\n");
+          if (client_sfd < 0)
+            {
+              printf("io_mgr_accept: didn't accept before wait\n");
+              client_sfd = accept(fd, (struct sockaddr*)&client, &client_len);
+            }
+
+          break;
+        default:
+          printf("Some other status %s\n", strerror(errno));
+          close(fd);
+          exit(1);
+          break;
+        }
+    }
+
+  return client_sfd;
+}
+
+void
+io_mgr_set_nonblocking(int fd)
+{
+  int flags, s;
+
+  flags = fcntl(fd, F_GETFL, 0);
+  if (flags == -1)
+    {
+      printf("cannot get flags\n");
+      exit(1);
+    }
+
+  s = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+  if (s == -1)
+    {
+      printf("cannot set flags\n");
+      exit(1);
+    }
+}
+

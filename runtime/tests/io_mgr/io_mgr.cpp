@@ -16,31 +16,12 @@
 
 io_mgr_t io_mgr;
 
-static
-void
-set_nonblocking(int fd)
-{
-  int flags, s;
-
-  flags = fcntl(fd, F_GETFL, 0);
-  if (flags == -1)
-    {
-      printf("cannot get flags\n");
-      exit(1);
-    }
-
-  s = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-  if (s == -1)
-    {
-      printf("cannot set flags\n");
-      exit(1);
-    }
-}
-
 void
 send_func(sched_task_t stask)
 { 
   int client_sfd = socket(AF_INET, SOCK_STREAM, 0);
+  io_mgr_set_nonblocking(client_sfd);
+
   if (client_sfd == -1)
     {
       printf("cannot create socket\n");
@@ -55,9 +36,13 @@ send_func(sched_task_t stask)
 
   // Loop as we know the other socket will connect eventually, needs at least 2
   // executors though.
-  while (connect(client_sfd, (struct sockaddr*)&client, sizeof(client)) != 0);
+  int conn_s;
+  do
+    {
+      conn_s = connect(client_sfd, (struct sockaddr*)&client, sizeof(client));
+    } while (conn_s == - 1);
 
-  set_nonblocking(client_sfd);
+  printf("send_func: conn_s %d\n", conn_s);
 
   for (int i = 0; i < 20; i++)
     {
@@ -66,7 +51,9 @@ send_func(sched_task_t stask)
       printf("Client writing to server\n");
       io_mgr_write(io_mgr, stask, client_sfd, str, str_nbytes);
     }
+
   close(client_sfd);
+  printf("send_func: done\n");
 }
 
 static
@@ -90,7 +77,10 @@ read_from_client(sched_task_t stask, int client_sfd)
 void
 recv_func(sched_task_t stask)
 {
+  printf("recv_func: start\n");
   int serv_sfd = socket(AF_INET, SOCK_STREAM, 0);
+  io_mgr_set_nonblocking (serv_sfd);
+
   if (serv_sfd == -1)
     {
       printf("cannot create socket\n");
@@ -102,7 +92,8 @@ recv_func(sched_task_t stask)
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = INADDR_ANY;
   server.sin_port = htons(7777);
-  
+
+  printf("recv_func: bind\n");  
   int bind_result =
     bind(serv_sfd, (struct sockaddr*)&server, sizeof(struct sockaddr_in));
 
@@ -113,6 +104,7 @@ recv_func(sched_task_t stask)
       exit(1);
     }
 
+  printf("recv_func: listen\n");  
   if (listen(serv_sfd, 20) != 0)
     {
       printf("cannot listen on socket\n");
@@ -120,42 +112,15 @@ recv_func(sched_task_t stask)
       exit(1);
     }
 
-  set_nonblocking (serv_sfd);
+  printf("recv_func: accept\n");
+  int client_sfd = io_mgr_accept(io_mgr, stask, serv_sfd);
+  io_mgr_set_nonblocking(client_sfd);
 
-  struct sockaddr_in client;
-  memset(&client, 0, sizeof(client));
-  socklen_t client_len = sizeof(struct sockaddr_in);
-  
-  int client_sfd = accept(serv_sfd, (struct sockaddr*)&client, &client_len);
-
-  if (client_sfd > 0)
-    {
-      read_from_client(stask, client_sfd);
-    }
-  else
-    {
-      switch (errno)
-        {
-        case EAGAIN:
-          printf("Server would block!\n");
-          io_mgr_add_read_fd(io_mgr, stask, serv_sfd);
-          io_mgr_wait_read_fd(io_mgr, stask, serv_sfd);
-          printf("Now has some client\n");
-          
-          client_sfd = accept(serv_sfd, (struct sockaddr*)&client, &client_len);
-          read_from_client(stask, client_sfd);
-
-          break;
-        default:
-          printf("Some other status %s\n", strerror(errno));
-          close(serv_sfd);
-          exit(1);
-          break;
-        }
-    }
+  printf("recv_func: read_from_client\n");
+  read_from_client(stask, client_sfd);
 
   close(serv_sfd);
-  io_mgr_set_done(io_mgr);
+  printf("recv_func: done\n");
 }
 
 int main(int argc, char** argv)
@@ -176,6 +141,7 @@ int main(int argc, char** argv)
   sync_data_enqueue_runnable(sync_data, recv_stask);
   
   sync_data_join_executors(sync_data);
+  io_mgr_set_done(io_mgr);
   sync_data_free(sync_data);
   io_mgr_join(io_mgr);
 
