@@ -13,8 +13,8 @@
 
 struct spsc_queue
 {
-  uint32_t max;
-  volatile uint32_t count;
+  int32_t max;
+  volatile int32_t count;
 
   volatile sched_task_t waiter;
 
@@ -66,7 +66,7 @@ spsc_enqueue_wait(spsc_queue_t q, void *data, sched_task_t stask)
       stask_yield_to_executor(stask);
 
       ck_ring_enqueue_spsc(&q->impl, data);
-   }
+    }
   else
     {
       while(!ck_ring_enqueue_spsc(&q->impl, data))

@@ -68,10 +68,10 @@ proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
         {
           processor_t client = (processor_t) clos->fn;
           while (client->stask.task->state != TASK_WAITING);
-          proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
+          /* proc->stask.task->state = TASK_TRANSITION_TO_WAITING; */
 
-          stask_switch(&proc->stask, &client->stask);
-          /* proc_wake(client, proc->executor); */
+          /* stask_switch(&proc->stask, &client->stask); */
+          stask_wake(&client->stask, proc->stask.executor);
         }
       else
         {
@@ -158,10 +158,10 @@ proc_duty_loop(processor_t proc)
         {
           processor_t client = (processor_t) clos->fn;
           while (client->stask.task->state != TASK_WAITING);
-          proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
+          /* proc->stask.task->state = TASK_TRANSITION_TO_WAITING; */
 
-          stask_switch(&proc->stask, &client->stask);
-          /* proc_wake(client, proc->executor); */
+          /* stask_switch(&proc->stask, &client->stask); */
+          stask_wake(&client->stask, proc->stask.executor);
         }
       else
         {

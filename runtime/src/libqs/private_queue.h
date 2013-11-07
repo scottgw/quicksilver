@@ -11,12 +11,7 @@ extern "C" {
 struct priv_queue
 {
   spsc_queue_t q;
-  closure_t last;
-
   processor_t supplier_proc;
-
-  bool last_was_func;
-  bool shutdown;
 
   struct priv_queue *next;
 };
