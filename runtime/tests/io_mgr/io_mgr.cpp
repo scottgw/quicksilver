@@ -42,7 +42,7 @@ send_func(sched_task_t stask)
       conn_s = connect(client_sfd, (struct sockaddr*)&client, sizeof(client));
     } while (conn_s == - 1);
 
-  printf("send_func: conn_s %d\n", conn_s);
+  printf("send_func: client_sfd %d conn_s %d\n", client_sfd, conn_s);
 
   for (int i = 0; i < 20; i++)
     {
@@ -114,6 +114,8 @@ recv_func(sched_task_t stask)
 
   printf("recv_func: accept\n");
   int client_sfd = io_mgr_accept(io_mgr, stask, serv_sfd);
+  printf("recv_func: client_sfd %d\n", client_sfd);
+
   io_mgr_set_nonblocking(client_sfd);
 
   printf("recv_func: read_from_client\n");

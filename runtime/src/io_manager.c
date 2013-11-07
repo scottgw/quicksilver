@@ -59,21 +59,37 @@ io_mgr_loop(io_mgr_t io_mgr)
   while (io_mgr->alive)
     {
       int n = epoll_wait (io_mgr->epoll_fd, events, MAX_EVENTS, EPOLL_TIMEOUT);
+      if (n < 0)
+        {
+          fprintf(stderr, "io_mgr_loop, error in epoll_wait %d\n", errno);
+          exit(1);
+        }
+
       for (int i = 0; i < n; i++)
         {
           struct epoll_event ev = events[i];
           sched_task_t stask = ev.data.ptr;
 
-          // Resume the stask, waiting for it to really become waiting.
-          while (task_get_state(stask->task) != TASK_WAITING);
-          task_set_state(stask->task, TASK_RUNNABLE);
-          sync_data_enqueue_runnable (io_mgr->sync_data, stask);
-        }
-      if (n < 0)
-        {
-          fprintf(stderr, "io_mgr_loop, error in epoll_wait %d\n", errno);
+          // The stask only ever spends a small bound amount of time
+          // transitioning out of IO_UNKNOWN so this should be ok.
+          while (stask->io_status == IO_STATUS_UNKNOWN);
+
+          if (stask->io_status == IO_SATISFIED)
+            {
+              // stask already picked up this event, so we can skip resuming it.
+              continue;
+            }
+          else
+            {
+              // Since the stask is IO_UNSATISFIED it needs to be resumed.
+              // Resume the stask, waiting for it to really become waiting.
+              while (task_get_state(stask->task) != TASK_WAITING);
+              task_set_state(stask->task, TASK_RUNNABLE);
+              sync_data_enqueue_runnable (io_mgr->sync_data, stask);
+            }
         }
     }
+
   return NULL;
 }
 
@@ -118,78 +134,88 @@ io_mgr_add_fd(io_mgr_t mgr, sched_task_t stask, int flags, int fd)
             }
         default:
           fprintf(stderr, "io_mgr_add_fd: error %s\n", strerror(errno));
+          exit(1);
           break;
         }
     }
+
+  stask->io_status = IO_STATUS_UNKNOWN;
 
   return code;
 }
 
 static
 void
+io_mgr_del_fd(io_mgr_t mgr, int fd)
+{
+  if (epoll_ctl(mgr->epoll_fd, EPOLL_CTL_DEL, fd, NULL) != 0)
+    {
+      switch (errno)
+        {
+        case ENOENT:
+          break;
+        default:
+          fprintf(stderr, "io_mgr_del_fd: error %s\n", strerror(errno));
+          exit(1);
+        }
+    }
+}
+
+static
+void
 io_mgr_wait_fd(io_mgr_t mgr, sched_task_t stask, int fd)
 {
+  stask->io_status = IO_UNSATISFIED;
   task_set_state(stask->task, TASK_TRANSITION_TO_WAITING);
   stask_yield_to_executor(stask);
 }
 
-void
-io_mgr_wait_read_fd(io_mgr_t mgr, sched_task_t stask, int fd)
-{
-  io_mgr_wait_fd(mgr, stask, fd);
-}
-
-void
-io_mgr_wait_write_fd(io_mgr_t mgr, sched_task_t stask, int fd)
-{
-  io_mgr_wait_fd(mgr, stask, fd);
-}
-
-int
-io_mgr_add_read_fd(io_mgr_t mgr, sched_task_t stask, int fd)
-{
-  return io_mgr_add_fd(mgr, stask, EPOLLIN | EPOLLET, fd);
-}
-
-int
-io_mgr_add_write_fd(io_mgr_t mgr, sched_task_t stask, int fd)
-{
-  return io_mgr_add_fd(mgr, stask, EPOLLOUT | EPOLLET, fd);
-}
-
-
-// Perform one non EAGAIN read.
+#define IO_PROTOCOL(io_op, epoll_op, cond)                              \
+  {                                                                     \
+    io_op;                                                              \
+    if (cond)                                                           \
+      {                                                                 \
+        switch (errno)                                                  \
+          {                                                             \
+          case EAGAIN:                                                  \
+            printf("Read would block!\n");                              \
+            io_mgr_add_fd(io_mgr, stask, epoll_op, fd);                 \
+            io_op;                                                      \
+            if (cond)                                                   \
+              {                                                         \
+                switch (errno)                                          \
+                  {                                                     \
+                  case EAGAIN:                                          \
+                    io_mgr_wait_fd(io_mgr, stask, fd);                  \
+                    io_op;                                              \
+                    break;                                              \
+                  default:                                              \
+                    fprintf(stderr, "io_protocol: %s\n", strerror(errno)); \
+                    exit(1);                                            \
+                    break;                                              \
+                  }                                                     \
+              }                                                         \
+            break;                                                      \
+          default:                                                      \
+            fprintf(stderr, "io_protocol: %s\n", strerror(errno));      \
+            exit(1);                                                    \
+            break;                                                      \
+          }                                                             \
+      }                                                                 \
+    stask->io_status = IO_SATISFIED;                                    \
+    io_mgr_del_fd (io_mgr, fd);                                         \
+  }                                                                     \
+  
 static
 ssize_t
 io_mgr_read1(io_mgr_t io_mgr,
              sched_task_t stask,
              int fd, void* buf, size_t nbyte)
 {
-  ssize_t read_bytes = read (fd, buf, nbyte);
+  ssize_t read_bytes;
 
-  if (read_bytes == -1)
-    {
-      switch (errno)
-        {
-        case EAGAIN:
-          printf("Read would block!\n");
-          io_mgr_add_read_fd(io_mgr, stask, fd);
-          /* read_bytes = read (fd, buf, nbyte); */
-          io_mgr_wait_read_fd(io_mgr, stask, fd);
+  IO_PROTOCOL(read_bytes = read (fd, buf, nbyte), EPOLLIN, read_bytes == -1);
 
-          if (read_bytes == -1)
-            {
-              // We didn't read anything before we waited so lets read now
-              read_bytes = read (fd, buf, nbyte);
-            }
-
-          break;
-        default:
-          printf("io_mgr_read: problem with read\n");
-          exit(1);
-          break;
-        }
-    }
   return read_bytes;
 }
 
@@ -223,31 +249,10 @@ io_mgr_write1(io_mgr_t io_mgr,
               sched_task_t stask,
               int fd, void* buf, size_t nbyte)
 {
-  ssize_t written_bytes = write (fd, buf, nbyte);
+  ssize_t written_bytes;
 
-  if (written_bytes == -1)
-    {
-      switch (errno)
-        {
-        case EAGAIN:
-          printf("Read would block!\n");
-          io_mgr_add_write_fd(io_mgr, stask, fd);
-          written_bytes = write (fd, buf, nbyte);
-          io_mgr_wait_write_fd(io_mgr, stask, fd);
+  IO_PROTOCOL(written_bytes = write (fd, buf, nbyte), EPOLLIN, written_bytes == -1);
 
-          if (written_bytes == -1)
-            {
-              // We didn't read anything before we waited so lets read now
-              written_bytes = write (fd, buf, nbyte);
-            }
-
-          break;
-        default:
-          printf("io_mgr_read: problem with read\n");
-          exit(1);
-          break;
-        }
-    }
   return written_bytes;
 }
 
@@ -280,40 +285,11 @@ io_mgr_accept(io_mgr_t io_mgr, sched_task_t stask, int fd)
   memset(&client, 0, sizeof(client));
   socklen_t client_len = sizeof(struct sockaddr_in);
 
-  int client_sfd = accept(fd, (struct sockaddr*)&client, &client_len);
+  int client_sfd;
 
-  if (client_sfd < 0)
-    {
-      switch (errno)
-        {
-        case EAGAIN:
-          printf("io_mgr_accept: EAGAIN\n");
-          io_mgr_add_read_fd(io_mgr, stask, fd);
-          client_sfd = accept(fd, (struct sockaddr*)&client, &client_len);
-
-          if (client_sfd >= 0)
-            {
-              printf("io_mgr_accept: client_sfd %d\n", client_sfd);
-              break;
-            }
-
-          io_mgr_wait_read_fd(io_mgr, stask, fd);
-
-          printf("io_mgr_accept: out of wait\n");
-          if (client_sfd < 0)
-            {
-              printf("io_mgr_accept: didn't accept before wait\n");
-              client_sfd = accept(fd, (struct sockaddr*)&client, &client_len);
-            }
-
-          break;
-        default:
-          printf("Some other status %s\n", strerror(errno));
-          close(fd);
-          exit(1);
-          break;
-        }
-    }
+  IO_PROTOCOL(client_sfd = accept(fd, (struct sockaddr*)&client, &client_len),
+              EPOLLIN,
+              client_sfd < 0);
 
   return client_sfd;
 }

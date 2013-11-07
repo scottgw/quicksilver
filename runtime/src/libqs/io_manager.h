@@ -106,61 +106,61 @@ io_mgr_accept(io_mgr_t io_mgr, sched_task_t stask, int fd);
 void
 io_mgr_set_nonblocking(int fd);
 
-/*!
-  Ask the IO manager to register the file descriptor for reading.
-  This uses edge-triggered events so this should be done only after
-  the fd is returning, for example, EAGAIN.
+/* /\*! */
+/*   Ask the IO manager to register the file descriptor for reading. */
+/*   This uses edge-triggered events so this should be done only after */
+/*   the fd is returning, for example, EAGAIN. */
 
-  \param mgr the IO manager
-  \param stask schedulable task associated with this read
-  \param fd the file descriptor to watch
-  \return 0 if data fd was added successfully,
-    another value if an error occurred.
- */
-int
-io_mgr_add_read_fd(io_mgr_t mgr, sched_task_t stask, int fd);
-
-
-/*!
-  Ask the IO manager to register the file descriptor for writing.
-  This uses edge-triggered events so this should be done only after
-  the fd is returning, for example, EAGAIN.
-
-  \param mgr the IO manager
-  \param stask schedulable task associated with this write
-  \param fd the file descriptor to watch
-  \return 0 if data fd was added successfully,
-    another value if an error occurred.
- */
-int
-io_mgr_add_write_fd(io_mgr_t mgr, sched_task_t stask, int fd);
+/*   \param mgr the IO manager */
+/*   \param stask schedulable task associated with this read */
+/*   \param fd the file descriptor to watch */
+/*   \return 0 if data fd was added successfully, */
+/*     another value if an error occurred. */
+/*  *\/ */
+/* int */
+/* io_mgr_add_read_fd(io_mgr_t mgr, sched_task_t stask, int fd); */
 
 
-/*!
-  Put a schedulable task to sleep until a file descriptor is available
-  for reading.
+/* /\*! */
+/*   Ask the IO manager to register the file descriptor for writing. */
+/*   This uses edge-triggered events so this should be done only after */
+/*   the fd is returning, for example, EAGAIN. */
 
-  \param mgr the IO manager
-  \param stask schedulable task that is waiting to read
-  \param fd the file descriptor to watch
-  \return 0 if data fd was added successfully,
-    another value if an error occurred.
- */
-void
-io_mgr_wait_read_fd(io_mgr_t mgr, sched_task_t stask, int fd);
+/*   \param mgr the IO manager */
+/*   \param stask schedulable task associated with this write */
+/*   \param fd the file descriptor to watch */
+/*   \return 0 if data fd was added successfully, */
+/*     another value if an error occurred. */
+/*  *\/ */
+/* int */
+/* io_mgr_add_write_fd(io_mgr_t mgr, sched_task_t stask, int fd); */
 
-/*!
-  Put a schedulable task to sleep until a file descriptor is available
-  for writing.
 
-  \param mgr the IO manager
-  \param stask schedulable task that is waiting to write
-  \param fd the file descriptor to watch
-  \return 0 if data fd was added successfully,
-    another value if an error occurred.
- */
-void
-io_mgr_wait_write_fd(io_mgr_t mgr, sched_task_t stask, int fd);
+/* /\*! */
+/*   Put a schedulable task to sleep until a file descriptor is available */
+/*   for reading. */
+
+/*   \param mgr the IO manager */
+/*   \param stask schedulable task that is waiting to read */
+/*   \param fd the file descriptor to watch */
+/*   \return 0 if data fd was added successfully, */
+/*     another value if an error occurred. */
+/*  *\/ */
+/* void */
+/* io_mgr_wait_read_fd(io_mgr_t mgr, sched_task_t stask, int fd); */
+
+/* /\*! */
+/*   Put a schedulable task to sleep until a file descriptor is available */
+/*   for writing. */
+
+/*   \param mgr the IO manager */
+/*   \param stask schedulable task that is waiting to write */
+/*   \param fd the file descriptor to watch */
+/*   \return 0 if data fd was added successfully, */
+/*     another value if an error occurred. */
+/*  *\/ */
+/* void */
+/* io_mgr_wait_write_fd(io_mgr_t mgr, sched_task_t stask, int fd); */
 
 #ifdef __cplusplus
 }

@@ -7,9 +7,16 @@
 extern "C" {
 #endif
 
+typedef enum {
+  IO_SATISFIED,
+  IO_UNSATISFIED,
+  IO_STATUS_UNKNOWN
+} io_status_t;
+
 struct sched_task
 {
   struct sched_task * volatile next; // For intrusive allocation in queues.
+  volatile io_status_t io_status;
   task_t task;
   bool registr;
   sync_data_t sync_data;
