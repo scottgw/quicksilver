@@ -97,6 +97,8 @@ declareQsFuncs =
 
                   , ("sync_data_new", syncDataTypeM, [int64TypeM])
                   , ("sync_data_free", voidType, [syncDataTypeM])
+
+                  , ("sync_data_io_mgr_join", voidType, [syncDataTypeM])
                   ]
 
 voidPtrType :: Build Type
