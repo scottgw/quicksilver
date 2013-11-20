@@ -6,11 +6,8 @@ extern "C" {
 #endif
 
 #include <sys/types.h>
+#include "libqs/types.h"
 #include "libqs/sched_task.h"
-
-
-struct io_mgr;
-typedef struct io_mgr* io_mgr_t;
 
 /*!
   Construct a new IO manager referencing the global state.

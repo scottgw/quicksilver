@@ -170,7 +170,7 @@ io_mgr_wait_fd(io_mgr_t mgr, sched_task_t stask, int fd)
   stask_yield_to_executor(stask);
 }
 
-#define IO_PROTOCOL(io_op, epoll_op, cond)                              \
+#define IO_PROTOCOL(op_str, io_op, epoll_op, cond)                      \
   {                                                                     \
     io_op;                                                              \
     if (cond)                                                           \
@@ -178,7 +178,6 @@ io_mgr_wait_fd(io_mgr_t mgr, sched_task_t stask, int fd)
         switch (errno)                                                  \
           {                                                             \
           case EAGAIN:                                                  \
-            printf("Read would block!\n");                              \
             io_mgr_add_fd(io_mgr, stask, epoll_op, fd);                 \
             io_op;                                                      \
             if (cond)                                                   \
@@ -206,54 +205,16 @@ io_mgr_wait_fd(io_mgr_t mgr, sched_task_t stask, int fd)
     io_mgr_del_fd (io_mgr, fd);                                         \
   }                                                                     \
   
-static
 ssize_t
-io_mgr_read1(io_mgr_t io_mgr,
+io_mgr_read(io_mgr_t io_mgr,
              sched_task_t stask,
              int fd, void* buf, size_t nbyte)
 {
   ssize_t read_bytes;
 
-  IO_PROTOCOL(read_bytes = read (fd, buf, nbyte), EPOLLIN, read_bytes == -1);
+  IO_PROTOCOL("read1", read_bytes = read (fd, buf, nbyte), EPOLLIN, read_bytes == -1);
 
   return read_bytes;
-}
-
-ssize_t
-io_mgr_read(io_mgr_t io_mgr,
-            sched_task_t stask,
-            int fd, void* buf, size_t nbyte)
-{
-  ssize_t read_bytes = 0;
-  bool eof = false;
-
-  do
-    {
-      ssize_t last_read_bytes = io_mgr_read1(io_mgr, stask, fd, buf, nbyte);
-      if (last_read_bytes == 0)
-        {
-          eof = true;
-        }
-      read_bytes += last_read_bytes;
-      buf = (char*)buf + last_read_bytes;
-    } while (read_bytes < nbyte && !eof);
-
-  return read_bytes;
-}
-
-
-// Perform one non EAGAIN write.
-static
-ssize_t
-io_mgr_write1(io_mgr_t io_mgr,
-              sched_task_t stask,
-              int fd, void* buf, size_t nbyte)
-{
-  ssize_t written_bytes;
-
-  IO_PROTOCOL(written_bytes = write (fd, buf, nbyte), EPOLLIN, written_bytes == -1);
-
-  return written_bytes;
 }
 
 ssize_t
@@ -261,19 +222,9 @@ io_mgr_write(io_mgr_t io_mgr,
              sched_task_t stask,
              int fd, void* buf, size_t nbyte)
 {
-  ssize_t written_bytes = 0;
-  bool eof = false;
+  ssize_t written_bytes;
 
-  do
-    {
-      ssize_t last_written_bytes = io_mgr_write1(io_mgr, stask, fd, buf, nbyte);
-      if (last_written_bytes == 0)
-        {
-          eof = true;
-        }
-      written_bytes += last_written_bytes;
-      buf = (char*)buf + last_written_bytes;
-    } while (written_bytes < nbyte && !eof);
+  IO_PROTOCOL("write1", written_bytes = write (fd, buf, nbyte), EPOLLIN, written_bytes == -1);
 
   return written_bytes;
 }
@@ -287,7 +238,8 @@ io_mgr_accept(io_mgr_t io_mgr, sched_task_t stask, int fd)
 
   int client_sfd;
 
-  IO_PROTOCOL(client_sfd = accept(fd, (struct sockaddr*)&client, &client_len),
+  IO_PROTOCOL("accept",
+              client_sfd = accept(fd, (struct sockaddr*)&client, &client_len),
               EPOLLIN,
               client_sfd < 0);
 

@@ -1,12 +1,9 @@
 /*! \file */
-
 #ifndef _SYNC_OPS_H
 #define _SYNC_OPS_H
-
-#include <stdint.h>
-#include <glib.h>
-
 #include "types.h"
+#include <glib.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,6 +34,26 @@ sync_data_new(uint32_t max_tasks);
 */
 void
 sync_data_free(sync_data_t sync_data);
+
+/*! 
+  Return the IO manager.
+
+  \param sync_data global data to fetch from
+  \return the IO manager
+ */
+io_mgr_t
+sync_data_io_mgr(sync_data_t sync_data);
+
+
+/*! 
+  Join the IO manager thread
+
+  \param sync_data global data to fetch from
+ */
+void
+sync_data_io_mgr_join(sync_data_t sync_data);
+
+
 
 /*!
   Create the given number of executors.

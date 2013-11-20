@@ -90,4 +90,8 @@ struct qoq;
 typedef struct qoq* qoq_t;
 
 
+// IO manager
+struct io_mgr;
+typedef struct io_mgr* io_mgr_t;
+
 #endif // _TYPES_H

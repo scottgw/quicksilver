@@ -9,7 +9,7 @@
 #include <sched.h>
 
 #include "libqs/sync_ops.h"
-
+#include "libqs/io_manager.h"
 #include "libqs/sched_task.h"
 #include "internal/executor.h"
 #include "internal/task.h"
@@ -39,6 +39,8 @@ struct sync_data
   GArray *executors;
   // Barrier for executors
   pthread_barrier_t barrier;
+
+  io_mgr_t io_mgr;
 };
 
 sync_data_t
@@ -69,6 +71,10 @@ sync_data_new(uint32_t max_tasks)
 
   sync_data->executors = g_array_new (false, false, sizeof(executor_t));
 
+  sync_data->io_mgr = io_mgr_new(sync_data);
+
+  io_mgr_spawn(sync_data->io_mgr);
+
   return sync_data;
 }
 
@@ -87,6 +93,18 @@ sync_data_free(sync_data_t sync_data)
   free(sync_data);
 
   binary_write();
+}
+
+io_mgr_t
+sync_data_io_mgr(sync_data_t sync_data)
+{
+  return sync_data->io_mgr;
+}
+
+void
+sync_data_io_mgr_join(sync_data_t sync_data)
+{
+  io_mgr_join (sync_data->io_mgr);
 }
 
 
