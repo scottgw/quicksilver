@@ -14,7 +14,7 @@ stdlib.bc: externals.cbc ${EBCFILES}
 	qs $< -o $@
 
 %.cbc: %.c
-	clang -pthread -emit-llvm -c $< -o $@ -Wall
+	clang -pthread -emit-llvm -c $< -o $@ -Wall  `pkg-config --cflags libqs`
 
 clean:
 	@rm -f *.bc *.ebc *.cbc

@@ -67,6 +67,7 @@ genMain clas = do
   "llvm.dbg.declare" <#> [meta1, meta2]
 
   "sync_data_join_executors" <#> [syncData]
+  "sync_data_io_mgr_join" <#> [syncData]
   "sync_data_free" <#> [syncData]
 
   zero <- int 0

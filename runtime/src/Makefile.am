@@ -13,10 +13,11 @@ libqs_la_SOURCES = \
 	internal/executor.h \
 	internal/mpscq.h \
 	internal/queue_impl.h \
-	internal/task.h \
 	internal/spsc_queue.h \
+	internal/task.h \
 	internal/task_condition.h \
 	internal/task_mutex.h \
+	io_manager.c \
 	mpscq.c \
 	notifier.c \
 	private_queue.c \
@@ -45,6 +46,7 @@ endif
 # undef the $(includedir).
 pkginclude_HEADERS = \
 	libqs/closure.h \
+	libqs/io_manager.h \
 	libqs/notifier.h \
 	libqs/private_queue.h \
 	libqs/processor.h \

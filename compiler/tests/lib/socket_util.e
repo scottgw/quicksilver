@@ -14,16 +14,4 @@ module Socket_Util
   socket_listen(SocketFd: Integer; BacklogSize: Integer): Integer
     external "socket_listen"
     end
-
-  socket_accept(SocketFd: Integer): Integer
-    external "socket_accept"
-    end
-
-  socket_recv(SocketFd: Integer; str: String): Integer
-    external "socket_recv"
-    end
-
-  socket_send(SocketFd: Integer; Ptr: Pointer_8; Length: Integer): Integer
-    external "socket_send"
-    end
 end

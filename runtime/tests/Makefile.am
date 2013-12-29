@@ -9,7 +9,8 @@ TESTS = task_layer_test\
 	mutex_test \
 	process_test \
 	condvar_test \
-	stack_walk
+	stack_walk \
+	io_mgr
 
 task_layer_test_SOURCES = task_layer/task_layer.cpp
 mpscq_test_SOURCES = data_layer/mpscq.cpp
@@ -23,6 +24,7 @@ mutex_test_SOURCES = sync_layer/mutex.cpp
 condvar_test_SOURCES = sync_layer/condvar.cpp
 process_test_SOURCES = process_layer/process.cpp
 stack_walk_SOURCES = unwind/stack_walk.cpp
+io_mgr_SOURCES = io_mgr/io_mgr.cpp
 
 LDADD=$(top_builddir)/src/libqs.la
 AM_CXXFLAGS = `pkg-config glib-2.0 --libs --cflags` \
