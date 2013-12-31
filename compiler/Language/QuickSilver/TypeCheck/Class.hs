@@ -95,18 +95,6 @@ typedPre cis classInt name = idErrorRead go (mkCtx (maybeCurrType classInt) cis)
                    (do r <- routine (const (return EmptyBody)) rout
                        return (routineReq r))
 
-
--- checkFeatureMap checkBody fm = do
-
--- someFeature :: (body -> TypingBody ctxBody body')  
---               -> SomeFeature body Expr 
---               -> TypingBody ctxBody (SomeFeature body' T.TExpr)
--- someFeature checkBody = checkSome
---   where
---     checkSome (SomeRoutine r) = SomeRoutine <$> routine checkBody r
---     checkSome (SomeAttr a) = SomeAttr <$> attr a
---     checkSome (SomeConst c) = SomeConst <$> constt c
-
 attr :: Attribute -> TypingBody body Attribute
 attr a = return a
 
