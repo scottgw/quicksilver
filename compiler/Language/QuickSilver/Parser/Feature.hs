@@ -99,7 +99,6 @@ routineImplP = do
                    return (RoutineBody
                              { routineLocal = decls
                              , routineBody  = body
-                             , routineLocalProcs = []
                              }
                              ))
 
