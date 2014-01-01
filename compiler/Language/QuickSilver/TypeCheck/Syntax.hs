@@ -29,7 +29,7 @@ import qualified Language.QuickSilver.Parser as U
 type ClassName = Text
 
 classStr :: Text
-classStr = "class A fib (i: Integer): Integer do Result := 1 end end"
+classStr = "class A fib (i: Integer): Integer do if i <= 1 then Result := 1 else Result := fib (i - 1) + fib (i - 2) end end end"
 classAst =
   case U.parseClass classStr of
     Left err -> error $ show err
@@ -37,14 +37,6 @@ classAst =
 
 checkAll :: U.Clas -> Maybe (Witness Class)
 checkAll clas = typeCheckClass (mkClassEnv [clas]) clas
-
-asIntOp op =
-  case op of
-    U.Add -> Just Add
-    U.Sub -> Just Sub
-    U.Mul -> Just Mul
-    U.Div -> Just Div
-    _ -> Nothing
 
 isIntOp = isJust
 
@@ -69,10 +61,8 @@ mkClassEnv = foldr insertClass Map.empty
         addAttr :: U.Attribute -> EClassType -> EClassType
         addAttr attr (EClassType class_) =
           let U.Decl name uty = U.attrDecl attr
-          in
-           case utyToTy uty of
-             ETyp ty -> EClassType (AddAttrType name ty class_)
-
+          in etypMap (\ty -> EClassType (AddAttrType name ty class_))
+                     (utyToTy uty)
         funcPart = foldr addFunc attrPart (view U.routines uclass)
 
         addFunc func (EClassType class_) =
@@ -97,7 +87,7 @@ typeCheckClass classEnv uclass = funcPart
 
     attrPart :: Witness Class
     attrPart =
-      foldr addAttr (ClassNil className :^^ Class (ClassNilType className)) attrs
+      foldr addAttr (ClassNil className :^^ Class className) attrs
 
     -- | FIXME: Lift this higher, add to typed AST module.
     -- It rearranges the order of arguments a bit to work better with
@@ -105,7 +95,7 @@ typeCheckClass classEnv uclass = funcPart
     -- | FIXME: Replace the `Text -> Typ a` arguments with a typed `Decl a`
     addAttr' :: Witness Class -> Text -> Typ a -> Witness Class
     addAttr' (class_ :^^ Class classType) name ty =
-      AddAttr name ty class_ :^^ Class (AddAttrType name ty classType)
+      AddAttr name ty class_ :^^ Class classType
 
     addAttr attr classWitness =
       etypMap (addAttr' classWitness name) (utyToTy type_)
@@ -122,26 +112,32 @@ typeCheckClass classEnv uclass = funcPart
     -- etypMap
     addFunc' :: Witness Class -> Text -> Func a -> Typ a -> Witness Class
     addFunc' (class_ :^^ Class classType) name func ty =
-      AddFunc name func class_ :^^ Class (AddFuncType name ty classType)
+      AddFunc name func class_ :^^ Class classType
 
     addFunc :: Witness Class -> U.Routine -> Maybe (Witness Class)
     addFunc classWitness func =
-      do func' :^^ funcType <- typeCheckRoutine classEnv func
+      do func' :^^ funcType <- typeCheckRoutine currentType  classEnv func
          return (addFunc' classWitness name func' funcType)
-      where
-        name = U.routineName func
+               where
+                 currentType = Class className
+                 name = U.routineName func
 
-typeCheckExpr :: ClassEnv -> SymbolEnv -> U.Expr -> Maybe (Witness Expr)
-typeCheckExpr classEnv symbolEnv e =
+typeCheckExpr :: Typ a -> ClassEnv -> SymbolEnv -> U.Expr -> Maybe (Witness Expr)
+typeCheckExpr currentType classEnv symbolEnv e =
   case contents e of
 
     U.BinOpExpr op e1 e2 ->
-      case asIntOp op of
+      case asIntIntOp op of
         Just op' -> 
           do e1' :^^ IntType <- checkExpr e1
              e2' :^^ IntType <- checkExpr e2
              return (IntIntExpr op' e1' e2' :^^ IntType)
-
+        Nothing ->
+          case asIntBoolOp op of
+            Just op' ->
+              do e1' :^^ IntType <- checkExpr e1
+                 e2' :^^ IntType <- checkExpr e2
+                 return (IntBoolExpr op' e1' e2' :^^ BoolType)
     U.LitInt i ->
       return (LitInt (fromIntegral i) :^^ IntType)
 
@@ -149,14 +145,35 @@ typeCheckExpr classEnv symbolEnv e =
       do ETyp t <- Map.lookup var symbolEnv
          return (VarExpr var :^^ t)
 
+    U.CurrentVar ->
+      return (CurrentVar :^^ currentType)
+
+    U.UnqualCall name args ->
+      checkExpr (takePos e (U.QualCall (takePos e U.CurrentVar) name args))
+
     U.QualCall trg name args ->
       do trg':args' <- mapM checkExpr (trg:args)
-         _  :^^ Class iface <- return trg'
-         ETyp funcType <- findMember name iface
+         _  :^^ Class className <- return trg'
+         ETyp funcType <- findMember className name
          checkFunc (FuncExpr name) funcType (trg':args')
 
+    _ -> error ("typeCheckExpr: unknown case " ++ show e)
+
   where
-    checkExpr = typeCheckExpr classEnv symbolEnv
+    findMember :: Text -> Text -> Maybe ETyp
+    findMember className name =
+      do EClassType iface  <- Map.lookup className classEnv
+         case iface of
+           ClassNilType _ -> Nothing
+           AddAttrType attrName type_ rest
+             | attrName == name -> return (ETyp type_)
+             | otherwise -> Nothing
+           AddFuncType funcName type_ rest
+             | funcName == name -> return (ETyp type_)
+             | otherwise -> Nothing
+
+    
+    checkExpr = typeCheckExpr currentType classEnv symbolEnv
 
     checkFunc :: Expr a -> Typ a -> [Witness Expr] -> Maybe (Witness Expr)
     checkFunc result resultType [] = return (result :^^ resultType)
@@ -167,6 +184,21 @@ typeCheckExpr classEnv symbolEnv e =
              let call = ApplyExpr funcExpr arg
              checkFunc call rest args
         _ -> Nothing
+
+    asIntBoolOp (U.RelOp op _) =
+      case op of
+        U.Lt -> Just Lt
+        U.Lte -> Just Lte
+        _ -> Nothing
+
+    asIntIntOp op =
+      case op of
+        U.Add -> Just Add
+        U.Sub -> Just Sub
+        U.Mul -> Just Mul
+        U.Div -> Just Div
+        _ -> Nothing
+
 
 data Witness f where
   (:^^) :: Show (f a) => f a -> Typ a -> Witness f
@@ -183,8 +215,8 @@ test (FunType a b) (FunType a' b') =
      return Eq
 test _ _               = Nothing
 
-typeCheckStmt :: ClassEnv -> SymbolEnv -> Typ a -> U.Stmt -> Maybe (Stmt a)
-typeCheckStmt classEnv symbolEnv resultType stmt =
+typeCheckStmt :: Typ a -> ClassEnv -> SymbolEnv -> Typ b -> U.Stmt -> Maybe (Stmt b)
+typeCheckStmt currentType classEnv symbolEnv resultType stmt =
   case contents stmt of
 
     U.Block blk -> Block <$> mapM checkStmt blk
@@ -212,22 +244,24 @@ typeCheckStmt classEnv symbolEnv resultType stmt =
          return (CallStmt e')
 
   where
-    checkExpr = typeCheckExpr classEnv symbolEnv
-    checkStmt = typeCheckStmt classEnv symbolEnv resultType
+    checkExpr = typeCheckExpr currentType classEnv symbolEnv
+    checkStmt = typeCheckStmt currentType classEnv symbolEnv resultType
 
-typeCheckRoutine :: ClassEnv -> U.Routine -> Maybe (Witness Func)
-typeCheckRoutine classEnv r = argWrapper <$> bodyMb
+typeCheckRoutine :: Typ a -> ClassEnv -> U.Routine -> Maybe (Witness Func)
+typeCheckRoutine currentType classEnv r = argWrapper <$> bodyMb
   where
     bodyMb = case U.routineImpl r of
       U.RoutineBody locals body ->
         do ETyp resTy <- return (utyToTy (U.routineResult r))
-           s <- typeCheckStmt classEnv localEnv resTy body
+           s <- typeCheckStmt currentType classEnv localEnv resTy body
            return (FuncBody (U.routineName r) resTy s :^^ resTy)
         where
           locals' = U.routineArgs r ++ locals
           localEnv = Map.fromList [(n, utyToTy t) | U.Decl n t <- locals']
 
-    argWrapper body = foldr go body (U.routineArgs r)
+    argWrapper body =
+      case foldr go body (U.routineArgs r) of
+        inner :^^ innerType -> AddArg "Current" currentType inner :^^ FunType currentType innerType
     go (U.Decl name uType) (inner :^^ innerType) =
       case utyToTy uType of
         ETyp typ -> AddArg name typ inner :^^ FunType typ innerType
@@ -242,16 +276,21 @@ utyToTy uty = ETyp $
   case uty of
     U.Int64Type -> IntType
 
-data IntOp
+data IntIntOp
   = Add
   | Sub
   | Mul
   | Div
 
+data IntBoolOp
+  = Lt
+  | Lte
+
 data Expr a where
+  CurrentVar :: Expr a
   LitInt :: Int -> Expr Int
-  IntBoolExpr :: Expr Int -> Expr Int -> Expr Bool
-  IntIntExpr :: IntOp -> Expr Int -> Expr Int -> Expr Int
+  IntBoolExpr :: IntBoolOp -> Expr Int -> Expr Int -> Expr Bool
+  IntIntExpr :: IntIntOp -> Expr Int -> Expr Int -> Expr Int
   FuncExpr :: Text -> Expr a
   ApplyExpr :: Expr (a -> b) -> Expr a -> Expr b
   VarExpr :: Text -> Expr a
@@ -298,27 +337,18 @@ classTypeName iface =
     AddAttrType _ _ c -> classTypeName c
     AddFuncType _ _ c -> classTypeName c
 
-findMember :: Text -> ClassIFace a -> Maybe ETyp
-findMember name iface =
-  case iface of
-    ClassNilType _ -> Nothing
-    AddAttrType attrName type_ rest
-      | attrName == name -> Just (ETyp type_)
-      | otherwise -> Nothing
-    AddFuncType funcName type_ rest
-      | funcName == name -> Just (ETyp type_)
-      | otherwise -> Nothing
-
 data Typ a where
   TupType :: Typ a -> Typ b -> Typ (a, b)
-  Class :: ClassIFace a -> Typ a
+  Class :: Text -> Typ a
   FunType :: Typ a -> Typ b -> Typ (a -> b)
   IntType :: Typ Int
   BoolType :: Typ Bool
   NoType :: Typ ()
 
+deriving instance Show EClassType
 deriving instance Show (Witness f)
-deriving instance Show IntOp
+deriving instance Show IntIntOp
+deriving instance Show IntBoolOp
 deriving instance Show (Expr a)
 deriving instance Show (Stmt a)
 deriving instance Show (Func a)
