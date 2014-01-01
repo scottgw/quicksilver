@@ -67,6 +67,7 @@ Executable qs
                        parsec,
                        text,
                        containers,
+                       transformers
                        mtl,
                        syb,
                        unordered-containers
