@@ -1,29 +1,17 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 module Language.QuickSilver.TypeCheck.Syntax where
 
-import           Control.Applicative
-import           Control.Monad
-import           Control.Monad.Trans.Identity
-import           Control.Monad.Trans.Reader
-import           Control.Monad.Trans.Error
-import           Control.Lens
-
-import           Data.Functor.Identity
 import           Data.Int
-import qualified Data.Map as Map
-import           Data.Map (Map)
-import           Data.Maybe
-import qualified Data.Text as Text
+import           Data.Word
 import           Data.Text (Text)
 
-import           Language.QuickSilver.Position
 import qualified Language.QuickSilver.Syntax as U
-import qualified Language.QuickSilver.Parser as U
 
 type ClassName = Text
 
@@ -33,9 +21,26 @@ etypMap :: (forall a. Typ a -> b) -> ETyp -> b
 etypMap f (ETyp x) = f x
 
 utyToTy :: U.Typ -> ETyp
-utyToTy uty = ETyp $
+utyToTy uty =
   case uty of
-    U.Int64Type -> IntType
+    U.BoolType -> ETyp BoolType
+    U.AnyIntType -> ETyp IntegerType
+    U.Int8Type -> ETyp Int8Type
+    U.Int16Type -> ETyp Int16Type
+    U.Int32Type -> ETyp Int32Type
+    U.Int64Type -> ETyp Int64Type
+    U.DoubleType -> ETyp DoubleType
+    U.CharType -> ETyp CharType
+    U.Natural8Type -> ETyp Word8Type
+    U.Natural16Type -> ETyp Word16Type
+    U.Natural32Type -> ETyp Word32Type
+    U.Natural64Type -> ETyp Word64Type
+    U.VoidType -> ETyp VoidType
+    U.NoType -> ETyp NoType
+    U.Sep baseTy ->
+      case utyToTy baseTy of
+        ETyp t -> ETyp (Sep t)
+
 
 data IntIntOp
   = Add
@@ -47,11 +52,22 @@ data IntBoolOp
   = Lt
   | Lte
 
+-- | Class to tag `whole' number types (integers and naturals).
+class Whole a
+instance Whole Int8
+instance Whole Int16
+instance Whole Int32
+instance Whole Int64
+instance Whole Word8
+instance Whole Word16
+instance Whole Word32
+instance Whole Word64
+
 data Expr a where
   CurrentVar :: Expr a
-  LitInt :: Int -> Expr Int
-  IntBoolExpr :: IntBoolOp -> Expr Int -> Expr Int -> Expr Bool
-  IntIntExpr :: IntIntOp -> Expr Int -> Expr Int -> Expr Int
+  LitInt :: Integer -> Expr Integer
+  IntBoolExpr :: Whole a => IntBoolOp -> Expr a -> Expr a -> Expr Bool
+  IntIntExpr :: Whole a => IntIntOp -> Expr a -> Expr a -> Expr a
   FuncExpr :: Text -> Expr a
   ApplyExpr :: Expr (a -> b) -> Expr a -> Expr b
   VarExpr :: Text -> Expr a
@@ -60,6 +76,7 @@ data Stmt a where
   If :: Expr Bool -> Stmt a -> Maybe (Stmt a) -> Stmt a
   Block :: [Stmt a] -> Stmt a
   ResultAssign :: Expr a -> Stmt a
+  Assign :: Text -> Expr a -> Stmt b
   CallStmt :: Expr a -> Stmt b
 
 data Func a where
@@ -69,8 +86,8 @@ data Func a where
 funcToType :: Func a -> Typ a
 funcToType func =
   case func of
-    FuncBody name resultType stmt -> resultType
-    AddArg name type_ func -> FunType type_ (funcToType func)
+    FuncBody _name resultType _stmt -> resultType
+    AddArg _name type_ base -> FunType type_ (funcToType base)
 
 data Class a where
   ClassNil :: Text -> Nat a -> Class a
@@ -115,13 +132,28 @@ deriving instance Show (Nat a)
 data Succ a
 data Zero
 
+data Sep a
+data Void
+
 data Typ a where
   TupType :: Typ a -> Typ b -> Typ (a, b)
   Class :: Text -> Nat a -> Typ a
   FunType :: Typ a -> Typ b -> Typ (a -> b)
-  IntType :: Typ Int
+  Sep :: Typ a -> Typ (Sep a)
+  CharType :: Typ Char 
+  DoubleType :: Typ Double
+  IntegerType :: Typ Integer
+  Int8Type :: Typ Int8
+  Int16Type :: Typ Int16
+  Int32Type :: Typ Int32
+  Int64Type :: Typ Int64
+  Word8Type :: Typ Word8
+  Word16Type :: Typ Word16
+  Word32Type :: Typ Word32
+  Word64Type :: Typ Word64
   BoolType :: Typ Bool
   NoType :: Typ ()
+  VoidType :: Typ Void
 
 deriving instance Show EClassIFace
 deriving instance Show IntIntOp

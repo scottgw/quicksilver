@@ -24,9 +24,11 @@ import           Language.QuickSilver.Syntax
 -- Class level utilities
 
 -- | Determine if a name is in the creation clause of a class.
+isCreateName :: ClassName -> Clas -> Bool
 isCreateName n c = n `elem` allCreates c
 
 -- | Fetch creation routines from all feature clauses.
+allCreates :: Clas -> [ClassName]
 allCreates = concatMap createNames . view creates
 
 
@@ -36,6 +38,7 @@ allCreates = concatMap createNames . view creates
 
 -- | Map a transformation function over the attributes in a class, replacing the
 -- old attributes with the transformed versions within a class.
+classMapAttributes :: (Attribute -> Attribute) -> (Clas -> Clas)
 classMapAttributes f = over (attributes.traverse) f
 
 -- | Monadic version of 'classMapAttributes'.
@@ -60,6 +63,8 @@ classMapRoutinesM f = mapMOf (routines.traverse) f
 
 -- | Map a transformation function over the constants in a class, replacing the
 -- old constants with the transformed versions within a class.
+classMapConstants :: (Constant e -> Constant e)
+                  -> (AbsClas body e -> AbsClas body e)
 classMapConstants f = over (consts.traverse) f
 
 -- | Map a transformation function over all expressions in a class. 
@@ -222,6 +227,7 @@ equalityOp _ = False
 
 
 -- | Unary operator aliases for everything except `old'.
+unOpAlias :: UnOp -> Text
 unOpAlias Not = "not"
 unOpAlias Neg = "-"
 unOpAlias Old = "unOpAlias: `old' is not a user-operator."
@@ -252,7 +258,7 @@ isBasic t = case t of
 
 -- | Is this a separate type?
 isSeparate :: Typ -> Bool
-isSeparate (Sep _ _ _) = True
+isSeparate (Sep _) = True
 isSeparate _ = False
 
 -- | Is this any reference type?
@@ -306,6 +312,7 @@ isRealType = isInTypeNames realTypeNames
 isCharType :: Typ -> Bool
 isCharType = isInTypeNames charTypeNames
 
+isInTypeNames :: [Text] -> Typ -> Bool
 isInTypeNames names (ClassType name _) = name `elem` names
 isInTypeNames _ _ = False
 
@@ -328,7 +335,7 @@ charTypeNames = ["CHARACTER_8", "CHARACTER_32"]
 -- | Given a type give the name of the class as a string.
 classTypeName :: Typ -> Text
 classTypeName (ClassType cn _) = cn 
-classTypeName (Sep _ _ t) = classTypeName t
+classTypeName (Sep t) = classTypeName t
 classTypeName t = error $ "Non-class type " ++ show t
 
 -- | The default integer type.
@@ -388,10 +395,3 @@ insertDecl (Decl s t) = Map.insert s t
 -- | Turn a list of declarations into a string-type map.
 declsToMap :: [Decl] -> Map Text Typ
 declsToMap = foldr insertDecl Map.empty
-
--- * SCOOP utilities
-
--- | Given a processor declaration, extract the processor.
-newVar :: ProcDecl -> Proc
-newVar (SubTop   p) = p
-newVar (CreateLessThan p _) = p

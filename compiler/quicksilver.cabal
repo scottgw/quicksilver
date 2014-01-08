@@ -67,7 +67,7 @@ Executable qs
                        parsec,
                        text,
                        containers,
-                       transformers
+                       transformers,
                        mtl,
                        syb,
                        unordered-containers
@@ -127,9 +127,11 @@ Library
                        Language.QuickSilver.Parser.Statement,
                        Language.QuickSilver.Parser.Typ
                        Language.QuickSilver.TypeCheck.BasicTypes
+                       Language.QuickSilver.TypeCheck.Check
                        Language.QuickSilver.TypeCheck.Context
                        Language.QuickSilver.TypeCheck.Expr
                        Language.QuickSilver.TypeCheck.Generic
+                       Language.QuickSilver.TypeCheck.Syntax
                        Util.Monad
 
   
@@ -139,5 +141,5 @@ Library
 
 source-repository this
   type:     git
-  location: https://github.com/scottgw/language-eiffel
+  location: https://github.com/scottgw/quicksilver
   tag:      0.1.1

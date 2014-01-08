@@ -162,7 +162,10 @@ data Quant = All | Some deriving (Eq, Ord, Show, G.Generic, D.Data, T.Typeable)
 
 instance Hashable Quant
 
+commaSepShow :: Show a => [a] -> String
 commaSepShow es = intercalate "," (map show es)
+
+argsShow :: Show a => [a] -> String
 argsShow args = "(" ++ commaSepShow args ++ ")"
 
 defaultCreate :: Text
@@ -212,13 +215,12 @@ data Typ = ClassType ClassName [Typ]
          | BoolType
          | DoubleType
          | CharType
-         | ProcessorType
          | Natural8Type
          | Natural16Type
          | Natural32Type
          | Natural64Type
          | AnyRefType Text
-         | Sep (Maybe Proc) [Proc] Typ
+         | Sep Typ
          | VoidType
          | NoType deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
 
@@ -236,12 +238,11 @@ instance Hashable Typ where
       Int32Type -> 8
       Int64Type -> 9
       AnyRefType _ -> 10
-      ProcessorType -> 11
-      Natural8Type -> 12
-      Natural16Type -> 13
-      Natural32Type -> 14
-      Natural64Type -> 15
-      Sep _ _ name -> hashWithSalt salt name
+      Natural8Type -> 11
+      Natural16Type -> 12
+      Natural32Type -> 13
+      Natural64Type -> 14
+      Sep name -> hashWithSalt salt name
       ClassType name _ -> hashWithSalt salt name
 
 data Decl = Decl 
@@ -253,20 +254,8 @@ instance Hashable Decl
 instance Show Decl where
     show (Decl name typ) = show name ++ ":" ++ show typ
 
-
-data Proc = Dot 
-          | Proc {unProcGen :: Text} 
-            deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
-instance Hashable Proc
-
-instance Show Proc where
-    show Dot = "<.>"
-    show p = show $ unProcGen p
-
 instance Show Typ where
-    show (Sep c ps t)  = concat [ "separate <", show c, ">"
-                                , show (map unProcGen ps)," ",show t
-                                ]
+    show (Sep t)  = concat [ "separate ", show t ]
     show NoType        = "notype"
     show VoidType      = "NONE"
     show AnyIntType    = "Integer"
@@ -274,7 +263,6 @@ instance Show Typ where
     show Int16Type     = "Integer_16"
     show Int32Type     = "Integer_32"
     show Int64Type     = "Integer_64"
-    show ProcessorType = "<Processor>"
     show Natural8Type      = "Natural_8"
     show Natural16Type     = "Natural_16"
     show Natural32Type     = "Natural_32"
@@ -345,25 +333,25 @@ instance Show a => Show (AbsStmt a) where
         concat ["create ", braced t, show trg, ".", show fName, show args]
     show (CallStmt e) = show e
     show (Assign i e) = show i ++ " := " ++ show e ++ "\n"
-    show (Loop fr _ un l var) = "from" ++ show fr ++ " until" ++ show un ++
-                          " loop " ++ show l ++ "variant" ++ show var ++ "end"
-    show (Debug str stmt) = "debug (" ++ show str ++ ")\n" 
-                            ++ show stmt ++ "end\n"
+    show (Loop fr _ untl body var) =
+      concat ["from", show fr, " until", show untl,
+              " loop ", show body, "variant", show var, "end"
+             ]
+    show (Debug str stmt) =
+      concat ["debug (", show str, ")\n", show stmt, "end\n"]
     show BuiltIn = "built_in"
-  
+
+braced :: Show a => Maybe a -> String
 braced t = case t of
   Nothing -> ""
   Just t' -> "{" ++ show t' ++ "}"
   
+showCase :: (Show a, Show b) => (a, b) -> String
 showCase (l, s) = "when " ++ show l ++ " then\n" ++ show s
+
+showDefault :: Show a => Maybe a -> String
 showDefault Nothing = ""
 showDefault (Just s) = "else\n" ++ show s
-
-data ProcExpr = LessThan Proc Proc deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
-
-data ProcDecl = SubTop Proc
-              | CreateLessThan Proc Proc 
-                deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
 data Clause a = Clause 
     { clauseName :: Maybe Text
@@ -388,8 +376,6 @@ $( derive makeBinary ''ROp )
 $( derive makeBinary ''AbsStmt )
 $( derive makeBinary ''ElseIfPart )
 
-$( derive makeBinary ''ProcExpr )
-
 $( derive makeBinary ''Constant )
 $( derive makeBinary ''Attribute )
 $( derive makeBinary ''AbsRoutine )
@@ -397,8 +383,6 @@ $( derive makeBinary ''EmptyBody )
 
 $( derive makeBinary ''Contract )
 
-$( derive makeBinary ''Proc )
-$( derive makeBinary ''ProcDecl )
 $( derive makeBinary ''Clause )
 $( derive makeBinary ''CreateClause )
 $( derive makeBinary ''AbsClas )
@@ -415,8 +399,6 @@ $( derive makeNFData ''ROp )
 $( derive makeNFData ''AbsStmt )
 $( derive makeNFData ''ElseIfPart )
 
-$( derive makeNFData ''ProcExpr )
-
 $( derive makeNFData ''Constant )
 $( derive makeNFData ''Attribute )
 $( derive makeNFData ''AbsRoutine )
@@ -425,8 +407,6 @@ $( derive makeNFData ''EmptyBody )
 
 $( derive makeNFData ''Contract )
 
-$( derive makeNFData ''Proc )
-$( derive makeNFData ''ProcDecl )
 $( derive makeNFData ''Clause )
 $( derive makeNFData ''CreateClause )
 $( derive makeNFData ''AbsClas )

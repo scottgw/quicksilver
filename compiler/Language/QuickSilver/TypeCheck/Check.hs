@@ -3,22 +3,22 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts #-}
 module Language.QuickSilver.TypeCheck.Check where
 
-import Control.Lens
-import Control.Monad.Error
+import           Control.Lens hiding (op)
+import           Control.Monad.Error
 
-import Data.Functor.Identity
-import Data.Map.Lazy (Map)
+import           Data.Map.Lazy (Map)
 import qualified Data.Map.Lazy as Map
-import Data.Text (Text)
+import           Data.Text (Text)
 import qualified Data.Text as Text
 
 import           Language.QuickSilver.TypeCheck.Syntax
 import           Language.QuickSilver.Position
 import qualified Language.QuickSilver.Syntax as U
 import qualified Language.QuickSilver.Parser as U
-import Control.Applicative
+import           Control.Applicative
 
 type TC a = ErrorT String Identity a
 
@@ -133,7 +133,7 @@ typeCheckClass' classEnv classId uclass = funcPart
     -- It rearranges the order of arguments a bit to work better with
     -- etypMap
     addFunc' :: Witness Class -> Text -> Func a -> Typ a -> Witness Class
-    addFunc' (class_ :^^ Class classType n) name func ty =
+    addFunc' (class_ :^^ Class classType n) name func _ty =
       AddFunc name func class_ :^^ Class classType n
 
     addFunc :: Witness Class -> U.Routine -> TC (Witness Class)
@@ -152,17 +152,23 @@ typeCheckExpr currentType classEnv symbolEnv e =
     U.BinOpExpr op e1 e2 ->
       case asIntIntOp op of
         Just op' -> 
-          do e1' :^^ IntType <- checkExpr e1
-             e2' :^^ IntType <- checkExpr e2
-             return (IntIntExpr op' e1' e2' :^^ IntType)
+          do e1' :^^ t1 <- checkExpr e1
+             e2' :^^ t2 <- checkExpr e2
+             Eq <- test t1 t2
+             IsWhole <- isWhole t1
+             return (IntIntExpr op' e1' e2' :^^ t1)
         Nothing ->
           case asIntBoolOp op of
             Just op' ->
-              do e1' :^^ IntType <- checkExpr e1
-                 e2' :^^ IntType <- checkExpr e2
+              do e1' :^^ t1 <- checkExpr e1
+                 e2' :^^ t2 <- checkExpr e2
+                 Eq <- test t1 t2
+                 IsWhole <- isWhole t1
                  return (IntBoolExpr op' e1' e2' :^^ BoolType)
+            Nothing -> throwError $ "typeCheckExpr: doesn't handle op: " ++ show op
+
     U.LitInt i ->
-      return (LitInt (fromIntegral i) :^^ IntType)
+      return (LitInt (fromIntegral i) :^^ IntegerType)
 
     U.VarOrCall var ->
       do ETyp t <- tcLookup var symbolEnv
@@ -223,6 +229,21 @@ typeCheckExpr currentType classEnv symbolEnv e =
         U.Div -> Just Div
         _ -> Nothing
 
+data IsWhole a where
+  IsWhole :: Whole a => IsWhole a
+
+isWhole :: Typ a -> TC (IsWhole a)
+isWhole t =
+  case t of
+    Int8Type -> return IsWhole
+    Int16Type -> return IsWhole
+    Int32Type -> return IsWhole
+    Int64Type -> return IsWhole
+    Word8Type -> return IsWhole
+    Word16Type -> return IsWhole
+    Word32Type -> return IsWhole
+    Word64Type -> return IsWhole
+    _ -> throwError $ "isn't a natural or integer"
 
 data Witness f where
   (:^^) :: Show (f a) => f a -> Typ a -> Witness f
@@ -239,7 +260,9 @@ natEq (SuccN n) (SuccN m) =
 natEq _n _m = throwError "natEq: unequal"
 
 test :: Typ a -> Typ b -> TC (Equal a b)
-test IntType IntType   = return Eq
+test Int8Type Int8Type   = return Eq
+test Int32Type Int32Type = return Eq
+test Int64Type Int64Type = return Eq
 test BoolType BoolType = return Eq
 test (Class _a n) (Class _b m) =
   do Eq <- natEq n m
@@ -249,7 +272,7 @@ test (FunType a b) (FunType a' b') =
      Eq <- test b b'
      return Eq
 test a b               =
-  throwError ("test: couldn't match " ++ show a ++ " and " ++ show b)
+  throwError ("test: couldn't match" ++ show a ++ " and " ++ show b)
 
 typeCheckStmt :: Typ a -> ClassEnv -> SymbolEnv -> Typ b -> U.Stmt -> TC (Stmt b)
 typeCheckStmt currentType classEnv symbolEnv resultType stmt =
@@ -269,11 +292,15 @@ typeCheckStmt currentType classEnv symbolEnv resultType stmt =
          return (If cond' thenStmt' elseStmtMb')
 
     U.Assign loc expr ->
-      case contents loc of
-        U.ResultVar ->
-          do expr' :^^ t <- checkExpr expr
-             Eq <- test t resultType
-             return (ResultAssign expr')
+      do expr' :^^ t <- checkExpr expr
+         case contents loc of
+           U.ResultVar ->
+             do Eq <- test t resultType
+                return (ResultAssign expr')
+           U.VarOrCall name ->
+             do ETyp locType <- tcLookup name symbolEnv
+                Eq <- test t locType
+                return (Assign name expr')
 
     U.CallStmt e ->
       do e' :^^ _ <- checkExpr e

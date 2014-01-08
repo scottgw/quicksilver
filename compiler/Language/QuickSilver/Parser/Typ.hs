@@ -1,6 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Language.QuickSilver.Parser.Typ where
 
+import           Control.Applicative ((*>), (<$>))
+
 import           Data.Text (Text)
 
 import           Language.QuickSilver.Syntax
@@ -26,7 +28,7 @@ basicType = choice $ map tyFunc nameAndType
       , ("Character_8", CharType)
       , ("Integer", Int64Type)
       , ("Integer_8", Int8Type)
-      , ("Integer_32", Int8Type)        
+      , ("Integer_32", Int32Type)        
       , ("Integer_64", Int64Type)
       , ("Natural", Natural64Type)
       , ("Natural_8", Natural8Type)
@@ -52,12 +54,7 @@ baseTyp :: Parser Typ
 baseTyp = basicType <|> classTyp
 
 sepTyp :: Parser Typ
-sepTyp = do
-  keyword TokSeparate
-  p   <- return Nothing -- optionMaybe (angles procGen)
-  ps  <- return [] -- option [] procGens
-  t   <- typ
-  return $ Sep p ps t
+sepTyp = keyword TokSeparate *> (Sep <$> typ)
 
 decl :: Parser [Decl]
 decl = do

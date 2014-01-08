@@ -42,9 +42,13 @@ import Text.Parsec
 import Text.Parsec.Pos
 import Text.Parsec.ByteString
 
-data Pos a = Pos SourcePos a
-             deriving (Ord, G.Generic, D.Data, T.Typeable)
+newtype PosWrap =
+  PosWrap {unPosWrap :: SourcePos}
+  deriving (Eq, Ord, G.Generic, D.Data, T.Typeable)
 
+data Pos a =
+  Pos PosWrap a
+  deriving (Ord, G.Generic, D.Data, T.Typeable)
 instance Hashable a => Hashable (Pos a)
 
 instance Eq a => Eq (Pos a) where
@@ -63,10 +67,11 @@ inheritPos f a = attachPos (position a) (f a)
 takePos :: Pos a -> b -> Pos b
 takePos pa b = attachPos (position pa) b
 
+attachEmptyPos :: a -> Pos a
 attachEmptyPos = attachPos (initialPos "<no file name>")
 
 attachPos :: SourcePos -> a -> Pos a
-attachPos = Pos
+attachPos p = Pos (PosWrap p)
 
 attachPosM :: Monad m => m SourcePos -> m a -> m (Pos a)
 attachPosM = liftM2 attachPos
@@ -78,17 +83,17 @@ attachPosBefore :: Parser a -> Parser (Pos a)
 attachPosBefore = attachPosM getPosition
 
 position :: Pos a -> SourcePos
-position (Pos p _) = p
+position (Pos p _) = unPosWrap p
 
 contents :: Pos a -> a
 contents (Pos _ a) = a
 
-instance Binary SourcePos where
-  get = return (newPos "filename lost" 0 0)
+instance Binary PosWrap where
+  get = return (PosWrap (newPos "filename lost" 0 0))
   put _p = return ()
 
-instance Hashable SourcePos where
-    hashWithSalt s pos = hashWithSalt s (show pos)
+instance Hashable PosWrap where
+    hashWithSalt s (PosWrap p) = hashWithSalt s (show p)
 
 -- instance Binary SourcePos where
 --     get = do (line, col, name) <- get
@@ -98,7 +103,10 @@ instance Hashable SourcePos where
 
 $( derive makeBinary ''Pos )
 
-instance NFData SourcePos where
-    rnf p = sourceLine p `seq` sourceColumn p `seq` sourceName p `seq` ()
+instance NFData PosWrap where
+    rnf (PosWrap p) = sourceLine p `seq`
+                      sourceColumn p `seq`
+                      sourceName p `seq`
+                      ()
 
 $( derive makeNFData ''Pos )
