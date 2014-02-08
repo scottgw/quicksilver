@@ -50,12 +50,8 @@ namespace
     virtual bool
     runOnFunction(Function &F)
     {
-      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
-
-      std::map<BasicBlock*, block_sync_info> simple_block_map =
-	sync_end_basic_pass (F);
-      std::map<BasicBlock*, block_sync_info> final_block_map =
-	sync_end_cfg_pass (F, simple_block_map);
+      std::map<BasicBlock*, pq_nodes> final_block_map =
+	sync_end_cfg_pass (F);
 
       trim_syncs (F, final_block_map);
 
@@ -66,7 +62,7 @@ namespace
     // of `block'.
     pq_nodes
     common_syncs (BasicBlock* block,
-		  std::map<BasicBlock*, block_sync_info> &block_map)
+		  std::map<BasicBlock*, pq_nodes> &block_map)
     {
       pq_nodes accum;
       bool first = true;
@@ -79,13 +75,13 @@ namespace
 
 	  if (first)
 	    {
-	      accum = block_map [pred].synced;
+	      accum = block_map [pred];
 	      first = false;
 	    }
 	  else
 	    {
 	      pq_nodes intersect;
-	      pq_nodes synced = block_map [pred].synced;
+	      pq_nodes synced = block_map [pred];
 	      std::set_intersection (synced.begin(), synced.end(),
 				     accum.begin(), accum.end(),
 				     std::inserter (intersect,
@@ -97,16 +93,16 @@ namespace
       return accum;
     }
 
-    std::map<BasicBlock*, block_sync_info>
-    sync_end_cfg_pass (Function &F,
-		       std::map<BasicBlock*, block_sync_info> &block_map)
+    std::map<BasicBlock*, pq_nodes>
+    sync_end_cfg_pass (Function &F)
     {
       std::set <BasicBlock*> changed_blocks;
-      std::map<BasicBlock*, block_sync_info> cfg_block_map = block_map;
+      std::map<BasicBlock*, pq_nodes> cfg_block_map;
 
       for (auto &block : F)
 	{
 	  changed_blocks.insert (&block);
+	  cfg_block_map [&block] = pq_nodes();
 	}
 
       while (!changed_blocks.empty())
@@ -115,31 +111,17 @@ namespace
 	  BasicBlock *block = *changed_blocks.begin ();
 	  changed_blocks.erase (block);
 
-	  block_sync_info block_info = cfg_block_map [block];
-	  pq_nodes end_synced = block_info.synced;
-
 	  // Find all common nodes that are synced at the end of
 	  // the predecessors
 	  pq_nodes common = common_syncs (block, cfg_block_map);
 
-	  // Add the nodes that we sync.
-	  pq_nodes sync_union;
-	  std::set_union (end_synced.begin(), end_synced.end(),
-			  common.begin(), common.end(),
-			  std::inserter (sync_union, sync_union.begin()));
-
-	  // Remove the nodes that we async
-	  pq_nodes remaining;
-	  std::set_difference (sync_union.begin(), sync_union.end(),
-			       block_info.asynced.begin(),
-			       block_info.asynced.end(),
-			       std::inserter (remaining, remaining.begin()));
+	  pq_nodes synced_new = update_synced (common, block);
 
 	  // If we added/removed some sync_nodes, then update the map and
 	  // add our successors to the changed set.
-	  if (remaining != block_info.synced)
+	  if (synced_new != cfg_block_map [block])
 	    {
-	      cfg_block_map [block].synced = remaining;
+	      cfg_block_map [block] = synced_new;
 	      for (auto it = succ_begin (block), end = succ_end (block);
 		   it != end;
 		   ++it)
@@ -153,8 +135,7 @@ namespace
     }
 
     void
-    trim_syncs (Function &F,
-		std::map<BasicBlock*, block_sync_info> &block_map)
+    trim_syncs (Function &F, std::map<BasicBlock*, pq_nodes> &block_map)
     {
       for (auto &block : F)
     	{
@@ -165,7 +146,7 @@ namespace
     // returns true if all predecessors of the given block have q in their
     // sync-end (i.e., q is synced up by the end of all predecessors).
     bool
-    predecessor_has_sync (std::map<BasicBlock*, block_sync_info> &block_map,
+    predecessor_has_sync (std::map<BasicBlock*, pq_nodes> &block_map,
 			  BasicBlock *BB, pq_node q)
     {
       for (pred_iterator PI = pred_begin (BB), E = pred_end (BB);
@@ -174,7 +155,7 @@ namespace
     	{
     	  BasicBlock *pred = *PI;
 
-    	  if (!block_map [pred].synced.count (q))
+    	  if (!block_map [pred].count (q))
     	    {
     	      return false;
     	    }
@@ -184,7 +165,7 @@ namespace
     }
 
     void
-    trim_syncs_for_block (std::map<BasicBlock*, block_sync_info> &block_map,
+    trim_syncs_for_block (std::map<BasicBlock*, pq_nodes> &block_map,
 			  BasicBlock *block)
     {
       std::set<pq_node> has_bound;
@@ -227,6 +208,39 @@ namespace
     	}
 
       return block_map;
+    }
+
+    pq_nodes
+    update_synced (pq_nodes &start_synced, BasicBlock *block)
+    {
+      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
+
+      pq_nodes synced = start_synced;
+
+      for (auto &inst : *block)
+	{
+	  pq_node q;
+
+	  if ((q = is_sync (&inst)))
+	    {
+	      synced.insert (q);
+	    }
+	  else if ((q = is_bound (&inst)))
+	    {
+	      pq_nodes mod_synced;
+
+	      std::copy_if (synced.begin(), synced.end(),
+			    std::inserter (mod_synced, mod_synced.begin()),
+			    [&] (const pq_node n)
+			    {
+			      return aa.alias (q, n) == AliasAnalysis::NoAlias;
+			    });
+
+	      synced = mod_synced;
+	    }
+	}
+
+      return synced;
     }
 
     block_sync_info
