@@ -17,35 +17,6 @@ using namespace llvm;
 typedef Value* pq_node;
 typedef std::set<pq_node> pq_nodes;
 
-template <class A1, class A2, class R>
-R
-easy_union (A1 a1, A2 a2)
-{
-  R result;
-  std::set_union (a1.begin(), a1.end(), a2.begin(), a2.end(),
-		  std::inserter (result, result.begin()));
-}
-
-
-template <class A1, class A2, class R>
-R
-easy_intersection (A1 a1, A2 a2)
-{
-  R result;
-  std::set_intersection (a1.begin(), a1.end(), a2.begin(), a2.end(),
-			 std::inserter (result, result.begin()));
-}
-
-
-template <class A1, class A2, class R>
-R
-easy_difference (A1 a1, A2 a2)
-{
-  R result;
-  std::set_difference (a1.begin(), a1.end(), a2.begin(), a2.end(),
-		       std::inserter (result, result.begin()));
-}
-
 namespace
 {
 
@@ -75,7 +46,6 @@ namespace
       pq_nodes synced;
       pq_nodes asynced;
     };
-
 
     virtual bool
     runOnFunction(Function &F)
