@@ -1,9 +1,6 @@
 #include <algorithm>
-#include <iterator>
 #include <map>
 #include <set>
-#include <string>
-#include <vector>
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
