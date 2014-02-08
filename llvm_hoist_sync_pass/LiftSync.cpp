@@ -208,13 +208,16 @@ namespace
 
     void
     trim_syncs_for_block (std::map<BasicBlock*, block_sync_info> &block_map,
-			  BasicBlock *BB)
+			  BasicBlock *block)
     {
       std::set<pq_node> has_bound;
 
-      for (auto &inst : *BB)
+      for (auto it = block->begin(), end = block->end();
+	   it != end;
+	   ++it)
     	{
     	  pq_node q;
+	  auto inst = &(*it);
 
     	  // The candidate node, `q', must be a sync node, all the predecessors
     	  // must have it, and it cannot yet be invalidated within this block
@@ -222,14 +225,14 @@ namespace
 	  //
 	  // We can run a separate pass to coalesce the sync operations
 	  // within blocks.
-    	  if ((q = is_sync (&inst)) &&
-    	      predecessor_has_sync (block_map, BB, q) &&
+    	  if ((q = is_sync (inst)) &&
+    	      predecessor_has_sync (block_map, block, q) &&
     	      !has_bound.count (q))
     	    {
 	      changed = true;
-    	      inst.removeFromParent();
+	      it = block->getInstList().erase (it);
     	    }
-    	  else if ((q = is_bound (&inst)))
+    	  else if ((q = is_bound (inst)))
     	    {
     	      has_bound.insert (q);
     	    }
