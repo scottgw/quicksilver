@@ -56,12 +56,12 @@ namespace
     LiftSync() : FunctionPass(ID) {}
     
     Function* priv_sync_func;
-    bool changed;
+    int removed_count;
 
     virtual bool doInitialization(Module &M)
     {
       priv_sync_func = M.getFunction("priv_queue_sync");
-      changed = false;
+      removed_count = 0;
       return false;
     }
 
@@ -82,7 +82,7 @@ namespace
 
       trim_syncs (F, final_block_map);
 
-      return changed;
+      return removed_count > 0;
     }
 
     // Calculate the nodes which are synchronized in the all predecessors
@@ -203,7 +203,7 @@ namespace
     	    }
     	}
 
-      return true;
+      return pred_begin (BB) != pred_end (BB);
     }
 
     void
@@ -229,7 +229,7 @@ namespace
     	      predecessor_has_sync (block_map, block, q) &&
     	      !has_bound.count (q))
     	    {
-	      changed = true;
+	      removed_count++;
 	      it = block->getInstList().erase (it);
     	    }
     	  else if ((q = is_bound (inst)))
@@ -296,7 +296,7 @@ namespace
                 }
               else
                 {
-                  changed = true;
+                  // changed = true;
                   II = block->getInstList().erase(II);
                 }
             }
