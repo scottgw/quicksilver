@@ -4,13 +4,11 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "llvm/Pass.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/ADT/SCCIterator.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CFG.h" // required for a scc_iterator<Function*>
+#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
