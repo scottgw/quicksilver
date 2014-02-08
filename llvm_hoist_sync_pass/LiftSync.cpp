@@ -168,7 +168,8 @@ namespace
     trim_syncs_for_block (std::map<BasicBlock*, pq_nodes> &block_map,
 			  BasicBlock *block)
     {
-      std::set<pq_node> has_bound;
+      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
+      pq_nodes synced = common_syncs (block, block_map);
 
       for (auto it = block->begin(), end = block->end();
 	   it != end;
@@ -177,37 +178,46 @@ namespace
     	  pq_node q;
 	  auto inst = &(*it);
 
-    	  // The candidate node, `q', must be a sync node, all the predecessors
-    	  // must have it, and it cannot yet be invalidated within this block
-    	  // by having a bound node encountered for it.
-	  //
-	  // We can run a separate pass to coalesce the sync operations
-	  // within blocks.
-    	  if ((q = is_sync (inst)) &&
-    	      predecessor_has_sync (block_map, block, q) &&
-    	      !has_bound.count (q))
+    	  if ((q = is_sync (inst)))
     	    {
-	      removed_count++;
-	      it = block->getInstList().erase (it);
+	      auto pred =
+		[&q, &aa](pq_node n)
+		{
+		  return aa.alias (n, q) == AliasAnalysis::MustAlias;
+		};
+
+	      bool already_in_synced =
+		std::any_of (synced.begin(), synced.end(), pred);
+
+	      if (already_in_synced)
+		{
+		  removed_count++;
+		  it = block->getInstList().erase (it);
+		}
+
+	      synced.insert (q);
     	    }
     	  else if ((q = is_bound (inst)))
     	    {
-    	      has_bound.insert (q);
+	      pq_nodes mod_synced;
+	      auto pred =
+		[&] (const pq_node n)
+		{
+		  auto res = aa.alias (q, n);
+		  
+		  printf ("alias analysis: %d\n", res);
+
+		  return res == AliasAnalysis::NoAlias;
+		};
+
+	      std::copy_if (synced.begin(), synced.end(),
+			    std::inserter (mod_synced, mod_synced.begin()),
+			    pred);
+
+	      synced = mod_synced;
+	      printf ("updated synced size: %d\n", synced.size());
     	    }
     	}
-    }
-
-    std::map<BasicBlock*, block_sync_info>
-    sync_end_basic_pass (Function &F)
-    {
-      std::map<BasicBlock*, block_sync_info> block_map;
-
-      for (auto &block : F)
-    	{
-    	  block_map[&block] = sync_end_for_block (&block);
-    	}
-
-      return block_map;
     }
 
     pq_nodes
@@ -228,13 +238,15 @@ namespace
 	  else if ((q = is_bound (&inst)))
 	    {
 	      pq_nodes mod_synced;
+	      auto pred =
+		[&] (const pq_node n)
+		{
+		  return aa.alias (q, n) == AliasAnalysis::NoAlias;
+		};
 
 	      std::copy_if (synced.begin(), synced.end(),
 			    std::inserter (mod_synced, mod_synced.begin()),
-			    [&] (const pq_node n)
-			    {
-			      return aa.alias (q, n) == AliasAnalysis::NoAlias;
-			    });
+			    pred);
 
 	      synced = mod_synced;
 	    }
@@ -242,31 +254,6 @@ namespace
 
       return synced;
     }
-
-    block_sync_info
-    sync_end_for_block (BasicBlock *BB)
-    {
-      block_sync_info info;
-
-      for (auto &inst : *BB)
-	{
-	  pq_node q;
-
-	  if ((q = is_sync (&inst)))
-	    {
-	      info.synced.insert (q);
-	      info.asynced.erase (q);
-	    }
-	  else if ((q = is_bound (&inst)))
-	    {
-	      info.synced.erase (q);
-	      info.asynced.insert (q);
-	    }
-	}
-
-      return info;
-    }
-
 
     void block_coalesce_sync(BasicBlock *block, pq_node n)
     {
