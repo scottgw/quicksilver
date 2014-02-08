@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "llvm/Pass.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
@@ -65,6 +66,12 @@ namespace
       return false;
     }
 
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const
+    {
+      AU.addRequiredTransitive<AliasAnalysis>();
+      AU.addPreserved<AliasAnalysis>();
+    }
+
     struct block_sync_info 
     {
       pq_nodes synced;
@@ -75,6 +82,8 @@ namespace
     virtual bool
     runOnFunction(Function &F)
     {
+      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
+
       std::map<BasicBlock*, block_sync_info> simple_block_map =
 	sync_end_basic_pass (F);
       std::map<BasicBlock*, block_sync_info> final_block_map =
