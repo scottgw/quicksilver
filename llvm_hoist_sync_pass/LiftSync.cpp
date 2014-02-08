@@ -7,7 +7,6 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -19,18 +18,15 @@ typedef std::set<pq_node> pq_nodes;
 
 namespace
 {
-
   struct LiftSync : public FunctionPass
   {
     static char ID;
     LiftSync() : FunctionPass(ID) {}
-    
-    Function* priv_sync_func;
+
     int removed_count;
 
     virtual bool doInitialization(Module &M)
     {
-      priv_sync_func = M.getFunction("priv_queue_sync");
       removed_count = 0;
       return false;
     }
@@ -41,17 +37,10 @@ namespace
       AU.addPreserved<AliasAnalysis>();
     }
 
-    struct block_sync_info 
-    {
-      pq_nodes synced;
-      pq_nodes asynced;
-    };
-
     virtual bool
     runOnFunction(Function &F)
     {
-      std::map<BasicBlock*, pq_nodes> final_block_map =
-	sync_end_cfg_pass (F);
+      std::map<BasicBlock*, pq_nodes> final_block_map = sync_end_cfg_pass (F);
 
       trim_syncs (F, final_block_map);
 
@@ -143,27 +132,6 @@ namespace
     	}
     }
 
-    // returns true if all predecessors of the given block have q in their
-    // sync-end (i.e., q is synced up by the end of all predecessors).
-    bool
-    predecessor_has_sync (std::map<BasicBlock*, pq_nodes> &block_map,
-			  BasicBlock *BB, pq_node q)
-    {
-      for (pred_iterator PI = pred_begin (BB), E = pred_end (BB);
-    	   PI != E;
-    	   ++PI)
-    	{
-    	  BasicBlock *pred = *PI;
-
-    	  if (!block_map [pred].count (q))
-    	    {
-    	      return false;
-    	    }
-    	}
-
-      return pred_begin (BB) != pred_end (BB);
-    }
-
     void
     trim_syncs_for_block (std::map<BasicBlock*, pq_nodes> &block_map,
 			  BasicBlock *block)
@@ -203,11 +171,7 @@ namespace
 	      auto pred =
 		[&] (const pq_node n)
 		{
-		  auto res = aa.alias (q, n);
-		  
-		  printf ("alias analysis: %d\n", res);
-
-		  return res == AliasAnalysis::NoAlias;
+		  return aa.alias (q, n) == AliasAnalysis::NoAlias;
 		};
 
 	      std::copy_if (synced.begin(), synced.end(),
@@ -215,7 +179,6 @@ namespace
 			    pred);
 
 	      synced = mod_synced;
-	      printf ("updated synced size: %d\n", synced.size());
     	    }
     	}
     }
@@ -253,38 +216,6 @@ namespace
 	}
 
       return synced;
-    }
-
-    void block_coalesce_sync(BasicBlock *block, pq_node n)
-    {
-      bool first = true;
-
-      for (BasicBlock::iterator
-             II = block->begin(),
-             IIE = block->end();
-           II != IIE;
-           ++II)
-        {
-          pq_node m = is_sync(&(*II));
-          if (m && m == n)
-            {
-              if (first)
-                {
-                  first = false;
-                }
-              else
-                {
-                  // changed = true;
-                  II = block->getInstList().erase(II);
-                }
-            }
-          else
-            {
-              // FIXME: add code to detect routine and unlock here and 
-              // reset 'first' to true
-            }
-        }
-
     }
 
   private:
