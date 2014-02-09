@@ -1,4 +1,4 @@
-; RUN: opt -load=/home/scott/src/llvm-3.4/Release+Asserts/lib/libLLVMQs.so -O3 -lift-sync < %s | llvm-dis -o - | FileCheck %s
+; RUN: opt -load=../LLVMQs.so -O3 -lift-sync < %s | llvm-dis -o - | FileCheck %s
 
 %struct.priv_queue_ = type { i32 }
 
