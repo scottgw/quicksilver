@@ -75,7 +75,7 @@ test3 (priv_queue *p)
   for (i = 0; i < 200000; i++)
     {
       priv_queue_sync (p);
-      s += i*i - sqrt (i);
+      s += i*i - (i >> 2);
     }
 
   priv_queue_sync (p);
