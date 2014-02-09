@@ -235,7 +235,7 @@ namespace
 
     pq_node first_arg_call(Instruction *inst, StringRef str)
     {
-      if (CallInst *CI = dyn_cast_or_null<CallInst>(inst))
+      if (CallInst *CI = dyn_cast<CallInst>(inst))
         {
           Function *fun = CI->getCalledFunction();
           if (fun && fun->getName() == str)
