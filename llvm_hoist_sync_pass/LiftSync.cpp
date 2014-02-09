@@ -150,7 +150,17 @@ namespace
     pq_nodes
     clear_synced_for_call (CallInst *call, pq_nodes &synced)
     {
-      return pq_nodes();
+      Function *func = call->getCalledFunction();
+
+      if (func->hasFnAttribute (Attribute::ReadOnly) ||
+	  func->hasFnAttribute (Attribute::ReadNone))
+	{
+	  return synced;
+	}
+      else
+	{
+	  return pq_nodes();
+	}
     }
 
     bool
