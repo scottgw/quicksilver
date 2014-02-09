@@ -129,11 +129,41 @@ namespace
     	}
     }
 
+    pq_nodes
+    clear_bound (pq_node q, pq_nodes &synced)
+    {
+      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
+      pq_nodes mod_synced;
+      auto pred =
+	[&] (const pq_node n)
+	{
+	  return aa.alias (q, n) == AliasAnalysis::NoAlias;
+	};
+
+      std::copy_if (synced.begin(), synced.end(),
+		    std::inserter (mod_synced, mod_synced.begin()),
+		    pred);
+
+      return mod_synced;
+    }
+
+    bool
+    already_synced (pq_node q, pq_nodes &synced)
+    {
+      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
+      auto pred =
+	[&q, &aa](pq_node n)
+	{
+	  return aa.alias (n, q) == AliasAnalysis::MustAlias;
+	};
+
+      return std::any_of (synced.begin(), synced.end(), pred);
+    }
+
     void
     trim_syncs_for_block (std::map<BasicBlock*, pq_nodes> &block_map,
 			  BasicBlock *block)
     {
-      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
       pq_nodes synced = common_syncs (block, block_map);
 
       for (auto it = block->begin(), end = block->end();
@@ -145,16 +175,8 @@ namespace
 
     	  if ((q = is_sync (inst)))
     	    {
-	      auto pred =
-		[&q, &aa](pq_node n)
-		{
-		  return aa.alias (n, q) == AliasAnalysis::MustAlias;
-		};
 
-	      bool already_in_synced =
-		std::any_of (synced.begin(), synced.end(), pred);
-
-	      if (already_in_synced)
+	      if (already_synced (q, synced))
 		{
 		  removed_count++;
 		  it = block->getInstList().erase (it);
@@ -164,18 +186,7 @@ namespace
     	    }
     	  else if ((q = is_bound (inst)))
     	    {
-	      pq_nodes mod_synced;
-	      auto pred =
-		[&] (const pq_node n)
-		{
-		  return aa.alias (q, n) == AliasAnalysis::NoAlias;
-		};
-
-	      std::copy_if (synced.begin(), synced.end(),
-			    std::inserter (mod_synced, mod_synced.begin()),
-			    pred);
-
-	      synced = mod_synced;
+	      synced = clear_bound (q, synced);
     	    }
     	}
     }
@@ -183,8 +194,6 @@ namespace
     pq_nodes
     update_synced (pq_nodes &start_synced, BasicBlock *block)
     {
-      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
-
       pq_nodes synced = start_synced;
 
       for (auto &inst : *block)
@@ -197,18 +206,7 @@ namespace
 	    }
 	  else if ((q = is_bound (&inst)))
 	    {
-	      pq_nodes mod_synced;
-	      auto pred =
-		[&] (const pq_node n)
-		{
-		  return aa.alias (q, n) == AliasAnalysis::NoAlias;
-		};
-
-	      std::copy_if (synced.begin(), synced.end(),
-			    std::inserter (mod_synced, mod_synced.begin()),
-			    pred);
-
-	      synced = mod_synced;
+	      synced = clear_bound (q, synced);
 	    }
 	}
 
