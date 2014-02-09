@@ -15,24 +15,22 @@ declare zeroext i1 @pred(%struct.priv_queue_*) readonly #1
 define i32 @f() #0 {
   %p_ = alloca %struct.priv_queue_, align 4
   %q_ = alloca %struct.priv_queue_, align 4
-  %1 = bitcast %struct.priv_queue_* %p_ to i8*
-  %2 = bitcast %struct.priv_queue_* %q_ to i8*
 
   call void @priv_queue_sync(%struct.priv_queue_* %p_)
-  %3 = call zeroext i1 @pred(%struct.priv_queue_* %p_)
-  br i1 %3, label %4, label %5
+  %b = call zeroext i1 @pred(%struct.priv_queue_* %p_)
+  br i1 %b, label %1, label %2
 
-; <label>:4                                       ; preds = %0
+; <label>:1                                       ; preds = %0
   call void @priv_queue_routine(%struct.priv_queue_* %q_)
   call void @priv_queue_sync(%struct.priv_queue_* %p_)
-  br label %6
+  br label %3
 
-; <label>:5                                       ; preds = %0
+; <label>:2                                       ; preds = %0
   call void @priv_queue_sync(%struct.priv_queue_* %p_)
-  br label %6
+  br label %3
 
-; <label>:6                                       ; preds = %5, %4
-  %i.0 = phi i32 [ 1, %4 ], [ 2, %5 ]
+; <label>:3                                       ; preds = %2, %1
+  %i.0 = phi i32 [ 1, %1 ], [ 2, %2 ]
   call void @priv_queue_sync(%struct.priv_queue_* %p_)
   ret i32 %i.0
 }
