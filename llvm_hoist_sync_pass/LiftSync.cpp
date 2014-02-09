@@ -147,6 +147,12 @@ namespace
       return mod_synced;
     }
 
+    pq_nodes
+    clear_synced_for_call (CallInst *call, pq_nodes &synced)
+    {
+      return pq_nodes();
+    }
+
     bool
     already_synced (pq_node q, pq_nodes &synced)
     {
@@ -188,6 +194,10 @@ namespace
     	    {
 	      synced = clear_bound (q, synced);
     	    }
+	  else if (CallInst *call = dyn_cast<CallInst>(inst))
+	    {
+	      synced = clear_synced_for_call (call, synced);
+	    }
     	}
     }
 
@@ -207,6 +217,10 @@ namespace
 	  else if ((q = is_bound (&inst)))
 	    {
 	      synced = clear_bound (q, synced);
+	    }
+	  else if (CallInst *call = dyn_cast<CallInst>(&inst))
+	    {
+	      synced = clear_synced_for_call (call, synced);
 	    }
 	}
 
