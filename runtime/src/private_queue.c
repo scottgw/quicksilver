@@ -146,12 +146,12 @@ priv_queue_set_in_body(priv_queue_t pq)
   pq->supplier_proc->processing_wait = false;
 }
 
-static
-void
-priv_queue_resume_supplier(priv_queue_t pq, processor_t client)
-{
-  stask_wake(&pq->supplier_proc->stask, client->stask.executor);
-}
+/* static */
+/* void */
+/* priv_queue_resume_supplier(priv_queue_t pq, processor_t client) */
+/* { */
+/*   stask_wake(&pq->supplier_proc->stask, client->stask.executor); */
+/* } */
 
 void
 priv_queue_lock(priv_queue_t pq, processor_t client)
@@ -162,7 +162,7 @@ priv_queue_lock(priv_queue_t pq, processor_t client)
 void
 priv_queue_unlock(priv_queue_t pq, processor_t client)
 {
-  priv_queue_resume_supplier(pq, client);
+  /* priv_queue_resume_supplier(pq, client); */
   spsc_enqueue_wait(pq->supplier_proc->qoq, NULL, &client->stask);
   proc_unlock(pq->supplier_proc, client);
 }
