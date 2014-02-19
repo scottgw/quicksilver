@@ -1,18 +1,20 @@
 #include <assert.h>
 #include <fcntl.h>
+#include <libqs/io_manager.h>
+#include <libqs/processor.h>
+#include <libqs/sched_task.h>
+#include <libqs/sync_ops.h>
 #include <math.h>
+#include <netinet/in.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 
-
-#include <netinet/in.h>
-
-#include <sys/socket.h>
-#include <sys/stat.h>
 
 void
 qs_init()
@@ -198,7 +200,7 @@ real_to_str(double d)
   // should be enough for the times we expect (from the benchmarks).
   char* data = malloc(sizeof(char) * 20);
   int len = snprintf(data, 20, "%f", d);
-  
+
   string->data = (uint8_t*) data;
   string->length = len;
 
@@ -246,6 +248,8 @@ new_tcp_socket()
 
   setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &enable, sizeof(enable));
 
+  io_mgr_set_nonblocking(socketfd);
+
   return socketfd;
 }
 
@@ -254,7 +258,7 @@ int
 socket_bind(int socketfd, int port)
 {
   struct sockaddr_in local_addr;
-  
+
   local_addr.sin_family = AF_INET;
   local_addr.sin_addr.s_addr = INADDR_ANY;
   local_addr.sin_port = htons(port);
@@ -268,24 +272,56 @@ socket_listen(int socketfd, int backlog_size)
   return listen(socketfd, backlog_size);
 }
 
-int
-socket_accept(int socketfd)
+/* Blocking operations, need to call through the IO manager */
+
+struct eif_socket
 {
-  return accept(socketfd, NULL, NULL);
+  int64_t fd;
+};
+
+int
+socket_accept(processor_t proc, struct eif_socket *socket)
+{
+  sched_task_t stask = (sched_task_t)proc;
+  int socketfd = io_mgr_accept(sync_data_io_mgr(stask->sync_data),
+                               stask,
+                               socket->fd);
+
+  io_mgr_set_nonblocking(socketfd);
+
+  return socketfd;
 }
 
 int
-socket_recv(int socketfd, struct string* str)
+socket_recv(processor_t proc, struct eif_socket *socket, struct string* str)
 {
-  ssize_t recv_size = recv(socketfd, str->data, str->length, 0);
+  sched_task_t stask = (sched_task_t)proc;
+
+  ssize_t recv_size = io_mgr_read(sync_data_io_mgr(stask->sync_data),
+                                  stask,
+                                  socket->fd,
+                                  str->data,
+                                  str->length);
+
   str->length = recv_size;
+
   return recv_size;
 }
 
 int
-socket_send(int socketfd, void* buf, int len)
+socket_send(processor_t proc, struct eif_socket *socket, struct string* str)
 {
-  return send(socketfd, buf, len, 0);
+  sched_task_t stask = (sched_task_t)proc;
+  void* buf = str->data;
+  int len = str->length;
+
+  ssize_t sent_size = io_mgr_write (sync_data_io_mgr(stask->sync_data),
+                                    stask,
+                                    socket->fd,
+                                    buf,
+                                    len);
+
+  return sent_size;
 }
 
 

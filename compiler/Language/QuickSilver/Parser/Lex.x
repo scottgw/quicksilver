@@ -47,6 +47,7 @@ module Language.QuickSilver.Parser.Lex
 import           Control.DeepSeq
 
 import           Data.Char
+import           Data.Int
 import qualified Data.Map as Map
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Char8 as BS
@@ -300,7 +301,7 @@ data Token
 
 bsToText = Text.decodeUtf8 . BS.concat . BL.toChunks
 
-withPos :: (Text -> Token) -> AlexInput -> Int -> Alex Token
+withPos :: (Text -> Token) -> AlexInput -> Int64 -> Alex Token
 withPos f (_pos, _last, str) i 
   = return (f $ bsToText $ ByteString.take (fromIntegral i) str)
 
@@ -336,7 +337,7 @@ alexGetChar input =
     Just (_, input') -> Just (alexInputPrevChar input', input')
     Nothing -> Nothing
 
-blockStringLex :: AlexInput -> Int -> Alex Token
+blockStringLex :: AlexInput -> Int64 -> Alex Token
 blockStringLex _ _ = do
   input <- alexGetInput
   go Text.empty LineStart input
@@ -519,8 +520,8 @@ keyword t = grabToken f >> return ()
           | t == t'   = Just Text.unpack
           | otherwise = Nothing
 
-ignorePendingBytes :: AlexInput -> AlexInput
-ignorePendingBytes p = p
+-- ignorePendingBytes :: AlexInput -> AlexInput
+-- ignorePendingBytes p = p
 
 alexInitUserState = "<nofile>"
 

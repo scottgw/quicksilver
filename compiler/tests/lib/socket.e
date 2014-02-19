@@ -12,7 +12,7 @@ create make_server, make_fd
     do
       fd := fd_in
     end
-  
+
   make_server(port: Integer)
     do
       fd := {Socket_Util}.new_tcp_socket()
@@ -21,7 +21,7 @@ create make_server, make_fd
         {Prelude}.print ("Could not create socket%N")
         {Prelude}.exit_with (fd)
       end
-      
+
       if {Socket_Util}.socket_bind(fd, port) /= 0 then
         {Prelude}.print ("Could not bind socket%N")
         {Prelude}.exit_with (1)
@@ -35,12 +35,16 @@ create make_server, make_fd
       end
     end
 
+  accept_external(): Integer
+    external "socket_accept"
+    end
+
   accept(): Socket
     local
       new_socket: Socket
       new_fd: Integer
     do
-      new_fd := {Socket_Util}.socket_accept(fd)
+      new_fd := accept_external()
       if new_fd = -1 then
         {Prelude}.print("Error in accept%N")
         {Prelude}.exit_with(1)
@@ -48,26 +52,34 @@ create make_server, make_fd
       create new_socket.make_fd(new_fd)
       Result := new_socket
     end
-  
+
+  recv_external(str: String): Integer
+    external "socket_recv"
+    end
+
   recv(): String
     local
       str: String
     do
       create str.make(1024)
-      {Socket_Util}.socket_recv(fd, str)
+      recv_external (str)
 
       if str.length = -1 or str.length = 0 then
         Result := Void
-      else      
+      else
         Result := str
       end
+    end
+
+  send_external(str: String): Integer
+    external "socket_send"
     end
 
   send(str: String): Integer
     local
       sent_length: Integer
     do
-      sent_length := {Socket_Util}.socket_send(fd, str.data, str.length)
+      sent_length := send_external(str)
       Result := sent_length
     end
 
@@ -83,7 +95,7 @@ create make_server, make_fd
         str := str.substring(sent_length + 1, str.length + 1)
       end
     end
-  
+
   close()
     do
       {Prelude}.fd_close(fd)

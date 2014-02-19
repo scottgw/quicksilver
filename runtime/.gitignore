@@ -3,10 +3,13 @@ ar-lib
 test-driver
 build/
 *.lai
-*.0
+*.o
 *.m4
 *.lo
 *.la
+*.Plo
+*.Po
+*.Tpo
 Makefile.in
 configure.in
 m4/

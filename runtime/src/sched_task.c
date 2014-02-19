@@ -23,7 +23,7 @@ stask_init(sched_task_t stask, sync_data_t sync_data, bool register_task)
   stask->sync_data = sync_data;
   stask->executor = (void*)0xDEADBEEF;
   stask->next = NULL;
-
+  stask->io_status = IO_SATISFIED;
   if (register_task)
     {
       sync_data_register_task(sync_data);

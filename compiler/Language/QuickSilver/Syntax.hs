@@ -78,7 +78,6 @@ data RoutineBody exp
   = RoutineExternal Text (Maybe Text)
   | RoutineBody 
     { routineLocal :: [Decl]
-    , routineLocalProcs :: [ProcDecl]
     , routineBody  :: PosAbsStmt exp
     } deriving (Show, Eq, Ord, G.Generic, D.Data, T.Typeable)
 
