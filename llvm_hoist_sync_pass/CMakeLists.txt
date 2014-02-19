@@ -9,7 +9,7 @@ link_directories(${LLVM_LIBRARY_DIRS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fno-rtti -std=c++11")
 
-add_llvm_loadable_module(LLVMQs
+add_llvm_loadable_module(libLLVMQs
   LiftSync.cpp)
 
 enable_testing()
