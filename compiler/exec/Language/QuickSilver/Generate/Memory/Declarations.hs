@@ -66,7 +66,7 @@ setupRoutines pcMap (ClassInfo cls _t) =
                            void (addFunction extern fType)
                        _ -> return ()
              llvmFeatVal <- addFunction name fType
-             setGC llvmFeatVal "qsgc"
+             -- setGC llvmFeatVal "qsgc"
              debug $ concat [ "Added routine prototype "
                             , Text.unpack name ," @ ", show llvmFeatVal
                             ]
@@ -121,7 +121,8 @@ mkCreateFunc :: ClasInterface -> RoutineI -> Build ()
 mkCreateFunc c f =
   do llvmFeatType <- featDeclType f'
      llvmFeatVal <- addFunction crName llvmFeatType
-     setGC llvmFeatVal "qsgc"
+     return ()
+     -- setGC llvmFeatVal "qsgc"
   where crName = featureAsCreate (view className c) (routineName f)
         f' = f { routineName = crName
                , routineResult = ClassType (view className c) [ClassType "G" []]
