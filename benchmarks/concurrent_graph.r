@@ -59,7 +59,8 @@ concurrent_graph = function (df)
   p <- p + ylab('Time (s)')
   p <- p + facet_grid(~ Task, scales="free_y")
 
-  p <- p + theme(text=element_text(family="Times", size=8))
+  p <- p + theme(text=element_text(family="Times", size=8),
+                 axis.text=element_text(family="Times", size=6, colour="black"))
 
   return (p)
 }

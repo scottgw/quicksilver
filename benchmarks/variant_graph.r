@@ -79,11 +79,15 @@ variant_graph = function (df, parallel_data) {
 
   p <- p + scale_fill_brewer()
   p <- p + xlab('Optimization')
-  p <- p + ylab('Time (s)')
 
   if (parallel_data)
     {
       p <- p + scale_y_log10()
+      p <- p + ylab('Time (normalized)')
+    }
+  else
+    {
+      p <- p + ylab('Time (s)')
     }
 
   p <- p + scale_fill_manual(values=c("dodgerblue3", "cornflowerblue"),
@@ -96,7 +100,8 @@ variant_graph = function (df, parallel_data) {
   p <- p + facet_grid(~ Task, scales="free")
   
   # change the fonts to Times
-  p <- p + theme(text=element_text(family="Times", size=8))
+  p <- p + theme(text=element_text(family="Times", size=8, colour="black"),
+                 axis.text=element_text(family="Times", size=6, colour="black"))
   
   return (p)
 }

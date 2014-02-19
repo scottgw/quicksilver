@@ -3,6 +3,7 @@
 library(plyr)
 library(ggplot2)
 library(reshape)
+library(grid) ## for 'unit' used in legend.key.size theme setting
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = args[1]
@@ -72,7 +73,9 @@ parallel_summary_graph = function (df)
 
   
   # change the fonts to Times
-  p <- p + theme(text=element_text(family="Times", size=8))
+  p <- p + theme(text=element_text(family="Times", size=8),
+                 axis.text=element_text(family="Times", size=6, colour="black"),
+                 legend.key.size = unit(0.3, "cm"))
 
   return (p)
 }
@@ -117,7 +120,9 @@ parallel_speedup_graph = function (df)
   p <- p + theme(legend.position="top")
 
   # change the fonts to Times
-  p <- p + theme(text=element_text(family="Times", size=8))
+  p <- p + theme(text=element_text(family="Times", size=8),
+                 axis.text=element_text(family="Times", size=6, colour="black"),
+                 legend.key.size = unit(0.3, "cm"))
 
   ggsave('parallel_speedup.pdf', p, height=6, width=18, units="cm", dpi=600)
 }
