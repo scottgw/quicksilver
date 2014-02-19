@@ -44,7 +44,7 @@ allocDeclEnv d = singleEnv d `fmap` allocDecl d
 genDecls :: TRoutine -> Build Env
 genDecls r = 
   case routineImpl r of 
-    RoutineBody locals _ _ -> unions <$> mapM allocDeclEnv locals
+    RoutineBody locals _ -> unions <$> mapM allocDeclEnv locals
     _ -> return empty
 
 allocP :: Value -> Decl -> Int -> Build Env
@@ -101,7 +101,7 @@ routineEnv rout func =
 genBody :: TRoutine -> Build ()
 genBody r =
   case routineImpl r of
-    RoutineBody _ _ body -> genStmt (contents body)
+    RoutineBody _ body -> genStmt (contents body)
     RoutineExternal name _ -> genExternal name
 
 genExternal name =
