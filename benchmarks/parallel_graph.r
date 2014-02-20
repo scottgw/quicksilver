@@ -119,6 +119,8 @@ parallel_speedup_graph = function (df)
   p <- p + facet_grid(~ Task, scales="free_y")
   p <- p + theme(legend.position="top")
 
+  p <- p + scale_x_continuous(breaks=c(2,4,8,16,32))
+
   # change the fonts to Times
   p <- p + theme(text=element_text(family="Times", size=8),
                  axis.text=element_text(family="Times", size=6, colour="black"),
