@@ -3,7 +3,9 @@
 library(plyr)
 library(ggplot2)
 library(reshape)
-library(doBy) # For summary statistics
+library(doBy) ## For summary statistics
+library(grid) ## for 'unit' used in legend.key.size theme setting
+library(xtable) ## For outputing LaTeX tables
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = args[1]
@@ -63,20 +65,15 @@ geom_mean = function (x) {
 }
 
 variant_graph = function (df, parallel_data) {
-  if (parallel_data)
-    {
-      df = subset(df, df$TimeType %in% c("CommTime"))
-      ## df$Time.FUN3 = df$Time.FUN3 * 10
-    }
-  
-  p <- ggplot(df, aes(x=Variant, y=Time.FUN3, fill="TimeType"))
-  # The combination of these two puts the colour down, but then
-  # removes the black crossbar from the legend.
-  p <- p + geom_bar(stat="identity")
-  ## p <- p + geom_bar(stat="identity", colour="black", show_guide=FALSE)
-  ## p <- p + geom_errorbar(aes(ymin=Time.FUN1, ymax=Time.FUN5),
-  ##                        position=position_dodge(.9))
+  p <- ggplot(df, aes(x=Variant, y=Time.mean, fill=TimeType))
 
+  p <- p + geom_bar(stat="identity")
+  
+  p <- p + geom_errorbar(aes(ymin=Time.mean - Time.sd,
+                             ymax=Time.mean + Time.sd),
+                         width=0.25,
+                         position=position_dodge(.9))
+  
   p <- p + scale_fill_brewer()
   p <- p + xlab('Optimization')
 
@@ -97,7 +94,22 @@ variant_graph = function (df, parallel_data) {
 
   p <- p + theme(legend.position="none")
   p <- p + guides(fill=guide_legend(title=""))
-  p <- p + facet_grid(~ Task, scales="free")
+  p <- p + facet_wrap(~ Task, nrow = 1, scales="free")
+
+  ## trim plot whitespace
+  p <- p + theme(plot.margin = unit(c(0,0,0,0), "cm"),
+                 panel.margin = unit(0.5, "mm"),
+                 strip.background = element_rect(fill=NA),
+                 legend.margin = unit(-0.5, "cm"))
+
+  # remove grid background
+  p <- p + theme(plot.background = element_blank(),
+                 panel.grid.major.y = element_line(colour="grey"),
+                 panel.grid.major.x = element_blank(),
+                 panel.grid.minor = element_blank(),
+                 panel.border = element_blank(),
+                 panel.background = element_blank())
+  
   
   # change the fonts to Times
   p <- p + theme(text=element_text(family="Times", size=8, colour="black"),
@@ -107,10 +119,9 @@ variant_graph = function (df, parallel_data) {
 }
 
 splits = split_comm_time(results)
-
 splits = summaryBy(Time ~ TimeType + Variant + Task,
   data = splits,
-  FUN = function (x) {return (quantile(x, names=FALSE))})
+  FUN = list (mean, sd))
 
 splits = subset(splits, splits$Variant %in% c("None", "Dyn.", "Static", "QoQ", "All"))
 
@@ -120,19 +131,23 @@ parallel = subset(splits, splits$Task %in% par_tasks)
 concurrent = subset(splits, splits$Task %in% c("mutex", "prodcons", "condition", "threadring", "chameneos"))
 
 
-# normalize the CommTime for each parallel task
+## normalize the CommTime for each parallel task
 for (t in par_tasks)
   {
     s = parallel$Task == t & parallel$TimeType == 'CommTime'
-    parallel[s,]$Time.FUN3 <- parallel[s,]$Time.FUN3 /
-      min(parallel[s,]$Time.FUN3)
+    parallel[s,]$Time.mean <- parallel[s,]$Time.mean /
+      min(parallel[s,]$Time.mean)
   }
-
+parallel = subset(parallel, parallel$TimeType %in% c("CommTime"))
+print (xtable(cast(parallel, Task ~ Variant, value='Time.mean')))
 p = variant_graph(parallel, TRUE)
-ggsave('variant_parallel.pdf', p, height=4.5, width=18, units="cm")
+ggsave('variant_parallel.pdf', p, height=4, width=18, units="cm")
+print ("finished parallel saving")
+concurrent = subset(concurrent, concurrent$TimeType %in% c("CompTime"))
 
+print (xtable(cast(concurrent, Task ~ Variant, value='Time.mean')))
 p = variant_graph(concurrent, FALSE)
-ggsave('variant_concurrent.pdf', p, height=4.5, width = 18, units="cm")
+ggsave('variant_concurrent.pdf', p, height=4, width = 18, units="cm")
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime, results$Variant, geom_mean))
