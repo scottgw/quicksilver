@@ -26,15 +26,15 @@ allocDecl (Decl n t) =
     do llvmType <- typeOfM t
        v <- alloca llvmType n
 
-       -- Non-basic types should be marked as GC roots
-       when (not $ isBasic t) $
-            do charPtrPtr <- pointer0 <$> ptr
-               int0 <- int 0
-               ptrType <- ptr
-               nullPtr <- intToPtr int0 ptrType ""
-               gcRootPtr <- bitcast v charPtrPtr ""
-               "llvm.gcroot" <#> [gcRootPtr, nullPtr]
-               return ()
+       -- -- Non-basic types should be marked as GC roots
+       -- when (not $ isBasic t) $
+       --      do charPtrPtr <- pointer0 <$> ptr
+       --         int0 <- int 0
+       --         ptrType <- ptr
+       --         nullPtr <- intToPtr int0 ptrType ""
+       --         gcRootPtr <- bitcast v charPtrPtr ""
+       --         "llvm.gcroot" <#> [gcRootPtr, nullPtr]
+       --         return ()
 
        return v
 
