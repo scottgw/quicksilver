@@ -152,8 +152,9 @@ namespace
     {
       Function *func = call->getCalledFunction();
 
-      if (func->hasFnAttribute (Attribute::ReadOnly) ||
-	  func->hasFnAttribute (Attribute::ReadNone))
+      if (func != 0 &&
+          (func->hasFnAttribute (Attribute::ReadOnly) ||
+           func->hasFnAttribute (Attribute::ReadNone)))
 	{
 	  return synced;
 	}
