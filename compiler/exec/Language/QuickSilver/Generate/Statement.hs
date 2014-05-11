@@ -135,6 +135,7 @@ genStmt (Shutdown e) =
 genStmt (Separate args clauses body) =
   do startB  <- getInsertBlock
      func    <- getBasicBlockParent startB
+     currProc <- getCurrProc
 
      getQueuesB <- appendBasicBlock func "get queues block"
      lockB   <- appendBasicBlock func "lock block"
@@ -148,7 +149,18 @@ genStmt (Separate args clauses body) =
 
      positionAtEnd lockB
 
-     mapM_ lockSep' privQs
+     -- Reservation process
+     "proc_start_reservation" <#> [currProc]
+     let reserveHandler h = "proc_reserve_handler" <#> [currProc, h]
+     mapM_ (getProcExpr >=> reserveHandler) args
+     "proc_finish_reservation" <#> [currProc]
+
+     -- FIXME: this is here to document how the old reservation worked,
+     -- and to make it easier to compare implementations. This should
+     -- be removed when it's clear the new implementation is better than
+     -- the old.
+     -- mapM_ lockSep' privQs
+
      -- FIXME: raise exception/exit on non-separate failure
      cond <- local (updateQueues (zip args privQs))
                    (evalClauses clauses)

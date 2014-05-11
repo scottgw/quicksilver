@@ -28,6 +28,9 @@ declareQsFuncs =
                     )
                   , ("proc_get_queue", privQueueTypeM, [procTypeM, procTypeM])
                   , ("proc_shutdown", voidType, [procTypeM, procTypeM])
+                  , ("proc_start_reservation", voidType, [procTypeM])
+                  , ("proc_reserve_handler", voidType, [procTypeM, procTypeM])
+                  , ("proc_finish_reservation", voidType, [procTypeM])
                   , ("proc_wait_for_available"
                     , voidType
                     , [procTypeM, procTypeM]
@@ -57,14 +60,6 @@ declareQsFuncs =
                   , ("priv_queue_unlock"                    
                     , voidType
                     , [privQueueTypeM, procTypeM]
-                    )
-                  , ("priv_queue_set_in_wait"
-                    , voidType
-                    , [privQueueTypeM]
-                    )
-                  , ("priv_queue_set_in_body"
-                    , voidType
-                    , [privQueueTypeM]
                     )
                   , ("priv_queue_routine"
                     , voidType
