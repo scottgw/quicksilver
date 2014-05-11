@@ -17,7 +17,22 @@ main()
     create setter2.make (x, y)
     create setter3.make (x, y)
 
-    
+    separate setter1
+      do
+        setter1.run()
+      end
+
+    separate setter2
+      do
+        setter2.run()
+      end
+
+    separate setter3
+      do
+        setter3.run()
+      end
+
+
   end
 
 end
