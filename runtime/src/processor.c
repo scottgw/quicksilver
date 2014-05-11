@@ -308,7 +308,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
   proc->qoq = spsc_new(2048);
   proc->qoq_mutex = task_mutex_new();
   #else
-  proc->qoq = qoq_new(2048);
+  proc->qoq = qoq_new();
   #endif
 
   stask_init(&proc->stask, sync_data, true);
