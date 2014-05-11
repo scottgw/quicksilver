@@ -57,9 +57,7 @@ struct processor
   GPtrArray* reservation_list;
 
   /*! Spin lock to use when doing multi-reservations */
-  /* pthread_spinlock_t spinlock; */
-  task_mutex_t spinlock;
-
+  pthread_spinlock_t spinlock;
 
   #ifdef DISABLE_QOQ
   /*! Lock for the main queue/ */

@@ -278,43 +278,20 @@ proc_finish_reservation (processor_t client)
   GPtrArray* reservations = client->reservation_list;
   int n = reservations->len;
 
-  /* if (n == 1) */
-  /*   { */
-  /*     processor_t supplier = (processor_t) g_ptr_array_index(reservations, 0); */
-  /*     priv_queue_t pq = proc_get_queue (client, supplier); */
-
-  /*     priv_queue_lock (pq, client); */
-  /*     return; */
-  /*   } */
-
   for (int i = 0; i < n; i++)
     {
       processor_t supplier = (processor_t) g_ptr_array_index(reservations, i);
       priv_queue_t pq = proc_get_queue (client, supplier);
       
-      printf("%p locking %p (%d of %d)\n", client, supplier, i, n);
-      
-      /* while (pthread_spin_trylock (&supplier->spinlock) != 0) */
-      /*   { */
-      /*     client->stask.task->state = TASK_TRANSITION_TO_RUNNABLE; */
-      /*     stask_yield_to_executor(&client->stask); */
-      /*   } */
-
-      /* pthread_spin_lock (&supplier->spinlock); */
-      
-      printf("%p locked %p (%d of %d)\n", client, supplier, i, n);
-
-      task_mutex_lock (supplier->spinlock, &client->stask);
-      printf("%p pq locked %p (%d of %d)\n", client, supplier, i, n);
+      pthread_spin_lock (&supplier->spinlock);
+      priv_queue_lock (pq, client);
     }
 
   for (int i = 0; i < n; i++)
     {
       processor_t supplier =
 	(processor_t) g_ptr_array_index(reservations, n-(i+1));
-      printf("%p unlocking %p (%d of %d)\n", client, supplier, i, n);
-      task_mutex_unlock (supplier->spinlock, &client->stask);
-      /* pthread_spin_unlock (&supplier->spinlock); */
+      pthread_spin_unlock (&supplier->spinlock);
     }
 }
 
@@ -346,8 +323,7 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
   proc->privq_cache = g_hash_table_new(NULL, NULL);
 
   proc->reservation_list = g_ptr_array_sized_new (8);
-  /* pthread_spin_init (&proc->spinlock, PTHREAD_PROCESS_PRIVATE); */
-  proc->spinlock = task_mutex_new();
+  pthread_spin_init (&proc->spinlock, PTHREAD_PROCESS_PRIVATE);
 
   stask_set_func(&proc->stask, (void (*)(void*))func, proc);
 
@@ -389,8 +365,7 @@ proc_free(processor_t proc)
   g_hash_table_destroy(proc->privq_cache);
 
   g_ptr_array_free(proc->reservation_list, TRUE);
-  /* pthread_spin_destroy(&proc->spinlock); */
-  task_mutex_free(proc->spinlock);
+  pthread_spin_destroy(&proc->spinlock);
 
   free (proc);
 }
