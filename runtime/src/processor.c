@@ -243,6 +243,62 @@ proc_sleep(processor_t proc, struct timespec duration)
 }
 
 
+/*!
+  Start handler reservation process.
+  
+  \param client client processor
+*/
+void
+proc_start_reservation (processor_t client)
+{
+  g_ptr_array_set_size (client->reservation_list, 0);
+}
+
+
+/*!
+  Add handler to reservation.
+  
+  \param client client processor
+  \param supplier supplier processor
+*/
+void
+proc_reserve_handler (processor_t client, processor_t supplier)
+{
+  g_ptr_array_add (client->reservation_list, (gpointer) supplier);
+}
+
+/*!
+  Finish handler reservation process.
+  
+  \param client client processor
+*/
+void
+proc_finish_reservation (processor_t client)
+{
+  GPtrArray* reservations = client->reservation_list;
+  int n = reservations->len;
+
+  for (int i = 0; i < n; i++)
+    {
+      processor_t supplier = (processor_t) g_ptr_array_index(reservations, i);
+      priv_queue_t pq = proc_get_queue (client, supplier);
+      
+      pthread_spin_lock (&supplier->spinlock);
+      priv_queue_lock (pq, client);
+    }
+
+  for (int i = 0; i < n; i++)
+    {
+      processor_t supplier =
+	(processor_t) g_ptr_array_index(reservations, n-(i+1));
+      pthread_spin_unlock (&supplier->spinlock);
+    }
+}
+
+
+
+
+
 processor_t
 proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 {
