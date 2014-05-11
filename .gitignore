@@ -13,3 +13,9 @@ ms_print*
 gmon.out
 Lex.hs
 .cabal-sandbox
+*.sandbox.config
+CMakeCache
+CMakeCache.txt
+CTestTestfile.cmake
+cmake_install.cmake
+install_manifest.txt
