@@ -198,6 +198,14 @@ namespace
 		  removed_count++;
 		  it = block->getInstList().erase (it);
 		}
+              else
+                {
+                  // If it's not already synced (i.e., this is the first sync),
+                  // skip to the next instruction because we don't want to
+                  // clear the synced list for it (we know it won't affect the
+                  // synced-ness).
+                  ++it;
+                }
 
 	      synced.insert (q);
     	    }
@@ -217,19 +225,27 @@ namespace
     {
       pq_nodes synced = start_synced;
 
-      for (auto &inst : *block)
+      for (auto it = block->begin(), end = block->end();
+	   it != end;
+	   ++it)
 	{
 	  pq_node q;
+          auto inst = &(*it);
 
-	  if ((q = is_sync (&inst)))
+	  if ((q = is_sync (inst)))
 	    {
 	      synced.insert (q);
+
+              // Skip the next instruction because we don't want to
+              // clear the synced list for it (we know it won't
+              // affect the synced-ness).
+              ++it;
 	    }
-	  else if ((q = is_bound (&inst)))
+	  else if ((q = is_bound (inst)))
 	    {
 	      synced = clear_bound (q, synced);
 	    }
-	  else if (CallInst *call = dyn_cast<CallInst>(&inst))
+	  else if (CallInst *call = dyn_cast<CallInst>(inst))
 	    {
 	      synced = clear_synced_for_call (call, synced);
 	    }
