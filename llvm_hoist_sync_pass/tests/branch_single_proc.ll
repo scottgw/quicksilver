@@ -1,4 +1,4 @@
-; RUN: opt -load=../LLVMQs.so -O3 -lift-sync < %s | llvm-dis -o - | FileCheck %s
+; RUN: opt -load=../libLLVMQs.so -O3 -lift-sync < %s | llvm-dis -o - | FileCheck %s
 
 declare void @priv_queue_sync(%struct.priv_queue_*) #1
 declare zeroext i1 @pred(%struct.priv_queue_*) readonly #1
