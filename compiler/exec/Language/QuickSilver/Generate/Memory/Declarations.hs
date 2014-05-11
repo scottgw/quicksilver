@@ -121,8 +121,9 @@ mkCreateFunc :: ClasInterface -> RoutineI -> Build ()
 mkCreateFunc c f =
   do llvmFeatType <- featDeclType f'
      llvmFeatVal <- addFunction crName llvmFeatType
-     return ()
      -- setGC llvmFeatVal "qsgc"
+     return ()
+
   where crName = featureAsCreate (view className c) (routineName f)
         f' = f { routineName = crName
                , routineResult = ClassType (view className c) [ClassType "G" []]
