@@ -322,6 +322,9 @@ proc_new_with_func(sync_data_t sync_data, void (*func)(processor_t))
 
   proc->privq_cache = g_hash_table_new(NULL, NULL);
 
+  proc->reservation_list = g_ptr_array_sized_new (8);
+  pthread_spin_init (&proc->spinlock, PTHREAD_PROCESS_PRIVATE);
+
   stask_set_func(&proc->stask, (void (*)(void*))func, proc);
 
   sync_data_enqueue_runnable(sync_data, &proc->stask);
@@ -360,6 +363,9 @@ proc_free(processor_t proc)
   #endif
 
   g_hash_table_destroy(proc->privq_cache);
+
+  g_ptr_array_free(proc->reservation_list, TRUE);
+  pthread_spin_destroy(&proc->spinlock);
 
   free (proc);
 }
