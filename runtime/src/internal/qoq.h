@@ -4,7 +4,7 @@
 #include "../libqs/types.h"
 
 qoq_t
-qoq_new(uint32_t size);
+qoq_new();
 
 void
 qoq_enqueue_wait(qoq_t q, void *data, sched_task_t stask);

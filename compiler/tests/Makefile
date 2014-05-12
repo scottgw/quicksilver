@@ -1,5 +1,8 @@
 all: array_test odd_even_test separate_test http_test socket_test helloworld \
-	passive1
+	passive1 multi_reserve
+
+multi_reserve: multi_reserve.e data.ebc multi_setter.ebc lib/stdlib.bc
+	qsc $< data.ebc multi_setter.ebc
 
 array_test: array_test.e c.ebc lib/stdlib.bc
 	qsc $< c.ebc

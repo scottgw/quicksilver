@@ -73,7 +73,7 @@ sync_data_new(uint32_t max_tasks)
 
   sync_data->io_mgr = io_mgr_new(sync_data);
 
-  io_mgr_spawn(sync_data->io_mgr);
+  /* io_mgr_spawn(sync_data->io_mgr); */
 
   return sync_data;
 }
@@ -104,7 +104,7 @@ sync_data_io_mgr(sync_data_t sync_data)
 void
 sync_data_io_mgr_join(sync_data_t sync_data)
 {
-  io_mgr_join (sync_data->io_mgr);
+  /* io_mgr_join (sync_data->io_mgr); */
 }
 
 

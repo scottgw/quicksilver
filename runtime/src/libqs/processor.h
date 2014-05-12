@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <glib.h>
+#include <pthread.h>
 
 #include "types.h"
 #include "sched_task.h"
@@ -50,6 +51,13 @@ struct processor
 
   /*! Cache of private queues for suppliers that this processor has accessed. */
   GHashTable *privq_cache;
+
+
+  /*! Reservation list */
+  GPtrArray* reservation_list;
+
+  /*! Spin lock to use when doing multi-reservations */
+  pthread_spinlock_t spinlock;
 
   #ifdef DISABLE_QOQ
   /*! Lock for the main queue/ */
@@ -171,6 +179,36 @@ proc_shutdown(processor_t proc, processor_t requester);
 */
 void
 proc_maybe_yield(processor_t proc);
+
+/*!
+  Start handler reservation process.
+  
+  \param client client processor
+*/
+void
+proc_start_reservation (processor_t client);
+
+
+/*!
+  Add handler to reservation.
+  
+  \param client client processor
+  \param supplier supplier processor
+*/
+void
+proc_reserve_handler (processor_t client, processor_t supplier);
+
+
+/*!
+  Finish handler reservation process.
+  
+  \param client client processor
+*/
+void
+proc_finish_reservation (processor_t client);
+
+
+
 
 #ifdef __cplusplus
 }

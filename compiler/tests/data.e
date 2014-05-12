@@ -13,4 +13,9 @@ create make
     do
       value := value + 1
     end
+
+  set_value(a_value: Integer)
+    do
+      value := a_value
+    end
 end
