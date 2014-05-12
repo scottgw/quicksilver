@@ -14,23 +14,21 @@ module Language.QuickSilver.Generate.Eval
        , (<#>)
        ) where
 
-import Control.Applicative
-import Control.Monad
-
-import Data.Text (Text)
+import           Control.Applicative
+import           Control.Monad
+import           Data.Text (Text)
 import qualified Data.Text as Text
-
-import Language.QuickSilver.Syntax
-    (Typ (..), BinOp(..), UnOp(..), ROp(..)
-    , AbsRoutine(..), EmptyBody(..), Clause(..))
-import Language.QuickSilver.Util
-import Language.QuickSilver.Position
-import Language.QuickSilver.TypeCheck.TypedExpr as T
-import Language.QuickSilver.Generate.LibQs
-import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Build
-import Language.QuickSilver.Generate.Memory.Types
-import Language.QuickSilver.Generate.Memory.Object
+import           Language.QuickSilver.Syntax (Typ (..), BinOp(..), UnOp(..),
+                                              ROp(..) , AbsRoutine(..),
+                                              EmptyBody(..), Clause(..))
+import           Language.QuickSilver.Generate.LLVM.Build
+import           Language.QuickSilver.Generate.LLVM.Simple
+import           Language.QuickSilver.Generate.LibQs
+import           Language.QuickSilver.Generate.Memory.Object
+import           Language.QuickSilver.Generate.Memory.Types
+import           Language.QuickSilver.Position
+import           Language.QuickSilver.TypeCheck.TypedExpr as T
+import           Language.QuickSilver.Util
 
 (<#>) :: Text.Text -> [Value] -> Build Value
 (<#>) name args =
