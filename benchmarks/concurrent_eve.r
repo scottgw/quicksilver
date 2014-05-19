@@ -39,7 +39,7 @@ concurrent_graph = function (df)
   p <- p + geom_bar(stat="identity", fill="dodgerblue3")
   p <- p + xlab('Language')
   p <- p + ylab('Time (s)')
-  p <- p + facet_wrap(~ Task, nrow = 3, scales="free")
+  p <- p + facet_wrap(~ Task, nrow = 2, scales="free")
 
   p <- p + geom_errorbar(aes(ymin=TotalTime.mean - TotalTime.sd,
                              ymax=TotalTime.mean + TotalTime.sd),
@@ -73,7 +73,7 @@ print (results)
 
 p = concurrent_graph(results)
 
-ggsave('concurrent_eve.pdf', p, height=14, width=12, units="cm")
+ggsave('concurrent_eve.pdf', p, height=8, width=10, units="cm")
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime.mean, results$Language, geom_mean))

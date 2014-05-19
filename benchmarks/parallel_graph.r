@@ -14,8 +14,13 @@ csv_file = args[1]
 
 results = read.csv(csv_file)
 
-levels(results$Language) <- c(levels(results$Language), 'Qs')
+levels(results$Language) <- c(levels(results$Language),
+                             'Qs', 'Erl.', 'Hask.', 'C++', 'Go')
 results$Language[results$Language == 'qs'] <- 'Qs'
+results$Language[results$Language == 'go'] <- 'Go'
+results$Language[results$Language == 'cxx'] <- 'C++'
+results$Language[results$Language == 'haskell'] <- 'Hask.'
+results$Language[results$Language == 'erlang'] <- 'Erl.'
 
 results$CommTime = results$TotalTime - results$CompTime
 
@@ -143,7 +148,7 @@ parallel_speedup_graph = function (df)
   p <- p + xlab('Benchmark')
   p <- p + ylab('Speedup')
   p <- p + facet_wrap(~ Task, nrow=3)
-  p <- p + theme(legend.position="top")
+  # p <- p + theme(legend.position="top")
 
   ## trim plot whitespace
   p <- p + theme(plot.margin = unit(c(0,0,0,0), "cm"),
@@ -166,7 +171,7 @@ parallel_speedup_graph = function (df)
                  axis.text=element_text(family="Times", size=8, colour="black")
                  )
 
-  ggsave('parallel_speedup.pdf', p, height=15, width=12, units="cm", dpi=600)
+  ggsave('parallel_speedup.pdf', p, height=10, width=12, units="cm", dpi=600)
 }
 
 
@@ -188,7 +193,7 @@ parallel_speedup_graph(results)
 
 p = parallel_summary_graph(splits)
 
-ggsave('parallel.pdf', p, height=15, width=12, units="cm", dpi=600)
+ggsave('parallel.pdf', p, height=10, width=10, units="cm", dpi=600)
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime, results$Language, geom_mean))

@@ -96,14 +96,14 @@ parallel_speedup_graph = function (df)
   p <- p + xlab('Benchmark') + ylab('Speedup')
   p <- p + ylim(0,32)
   p <- p + facet_wrap(~ Task, nrow=3)
-  p <- p + theme(legend.position="top")
+# p <- p + theme(legend.position="top")
   
   p <- p + theme_defaults()
 
   ## only put breaks at where the cores are used.
   p <- p + scale_x_continuous(breaks=c(2,4,8,16,32))
 
-  ggsave('parallel_speedup_eve.pdf', p, height=15, width=12, units="cm", dpi=600)
+  ggsave('parallel_speedup_eve.pdf', p, height=10, width=10, units="cm", dpi=600)
 }
 
 splits = summaryBy(TotalTime ~ Language + Task + Threads,
@@ -122,7 +122,7 @@ parallel_speedup_graph(results)
 
 p = parallel_summary_graph(splits)
 
-ggsave('parallel_eve.pdf', p, height=7.5, width=10, units="cm", dpi=600)
+ggsave('parallel_eve.pdf', p, height=7, width=10, units="cm", dpi=600)
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime, results$Language, geom_mean))

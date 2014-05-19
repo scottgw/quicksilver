@@ -15,8 +15,14 @@ csv_file = args[1]
 
 results = read.csv(csv_file)
 
-levels(results$Language) <- c(levels(results$Language), 'Qs')
+levels(results$Language) <- c(levels(results$Language),
+                             'Qs', 'Erl.', 'Hask.', 'C++', 'Go')
 results$Language[results$Language == 'qs'] <- 'Qs'
+results$Language[results$Language == 'go'] <- 'Go'
+results$Language[results$Language == 'cxx'] <- 'C++'
+results$Language[results$Language == 'haskell'] <- 'Hask.'
+results$Language[results$Language == 'erlang'] <- 'Erl.'
+
 
 ## Aggregate all the timing columns by the median value.
 # Task + Language + Threads,
@@ -73,7 +79,7 @@ print (results)
 
 p = concurrent_graph(results)
 
-ggsave('concurrent.pdf', p, height=14, width=12, units="cm")
+ggsave('concurrent.pdf', p, height=10, width=10, units="cm")
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime.mean, results$Language, geom_mean))
