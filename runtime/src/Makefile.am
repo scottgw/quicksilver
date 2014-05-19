@@ -25,7 +25,7 @@ libqs_la_SOURCES = \
 	qoq.c \
 	queue_impl.cpp \
 	sched_task.c \
-	spsc_queue.c \
+	spsc_queue.cpp \
 	sync_ops.c \
 	task.c \
 	task_condition.c \

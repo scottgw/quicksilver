@@ -4,7 +4,6 @@ module Language.QuickSilver.Generate.Eval
        ( eval
        , evalClause
        , evalClauses
-       -- , loadEval
        , evalUnPos
        , accessLoc
        , getCurrProc
@@ -15,23 +14,21 @@ module Language.QuickSilver.Generate.Eval
        , (<#>)
        ) where
 
-import Control.Applicative
-import Control.Monad
-
--- import Data.Text (Text)
+import           Control.Applicative
+import           Control.Monad
+import           Data.Text (Text)
 import qualified Data.Text as Text
-
-import Language.QuickSilver.Syntax
-    (Typ (..), BinOp(..), UnOp(..), ROp(..)
-    , AbsRoutine(..), EmptyBody(..), Clause(..))
-import Language.QuickSilver.Util
-import Language.QuickSilver.Position
-import Language.QuickSilver.TypeCheck.TypedExpr as T
-import Language.QuickSilver.Generate.LibQs
-import Language.QuickSilver.Generate.LLVM.Simple
-import Language.QuickSilver.Generate.LLVM.Build
-import Language.QuickSilver.Generate.Memory.Types
-import Language.QuickSilver.Generate.Memory.Object
+import           Language.QuickSilver.Syntax (Typ (..), BinOp(..), UnOp(..),
+                                              ROp(..) , AbsRoutine(..),
+                                              EmptyBody(..), Clause(..))
+import           Language.QuickSilver.Generate.LLVM.Build
+import           Language.QuickSilver.Generate.LLVM.Simple
+import           Language.QuickSilver.Generate.LibQs
+import           Language.QuickSilver.Generate.Memory.Object
+import           Language.QuickSilver.Generate.Memory.Types
+import           Language.QuickSilver.Position
+import           Language.QuickSilver.TypeCheck.TypedExpr as T
+import           Language.QuickSilver.Util
 
 (<#>) :: Text.Text -> [Value] -> Build Value
 (<#>) name args =
@@ -69,20 +66,12 @@ castType Natural32Type v =
   do debug "castType: to int32 start"
      i32 <- int32TypeM
      trunc v i32 "castType: to int32"
-    -- do v' <- load' v
-    --    debugDump v'
-    --    i64 <- int64TypeM
-    --    sext v' i64 "castType: to int64" >>= simpStore
--- castType DoubleType v    = do
---   v' <- load' v
---   dblT <- doubleTypeM
---   siToFP v' dblT "intToDouble" >>= simpStore
 castType (AnyRefType _) v = do
   ptrType <- voidPtrType
-  bitcast v ptrType ("castToAnyRef")
-castType t@(Sep _ _ _s) v = do
+  bitcast v ptrType "castToAnyRef"
+castType t@(Sep {}) v = do
   sepType <- typeOfM t
-  bitcast v sepType ("castToSep")
+  bitcast v sepType "castToSep"
 castType t@(ClassType c _) v = do
   tRep <- typeOfM t
   bitcast v tRep ("castTo" ++ Text.unpack c)
@@ -91,14 +80,8 @@ castType t _ = error $ "castType: not implemented for " ++ show t
 eval :: TExpr -> Build Value
 eval (contents -> e) = evalUnPos e
 
--- simpStore v = do
---   t <- typeOfVal v
---   r <- alloca t ""
---   store v r
---   return r
-
+load' :: LLVM m => Value -> m Value
 load' ref = load ref ""
--- loadEval e = eval e >>= load'
 
 genBinOp :: BinOp -> TExpr -> TExpr -> Typ -> Build Value
 genBinOp op e1 e2 _resType =
@@ -135,17 +118,20 @@ genBinOp op e1 e2 _resType =
          e2' <- eval e2
          f e1' e2' str
 
-    orElse _str =
+    orElse _str = true >>= shortCircuitOp
+    andThen _str = false >>= shortCircuitOp
+
+    shortCircuitOp shortValue =
       do startB <- getInsertBlock
          func   <- getBasicBlockParent startB
-         tr     <- true
 
-         fullEvalB <- appendBasicBlock func "orElse full evaluate"
-         afterB    <- appendBasicBlock func "orElse after"
+         fullEvalB <- appendBasicBlock func "full evaluate"
+         afterB    <- appendBasicBlock func "after"
 
          positionAtEnd startB
          e1'  <- eval e1
-         condBr e1' afterB fullEvalB
+         c <- icmp IntEQ e1' shortValue ""
+         condBr c afterB fullEvalB
 
          positionAtEnd fullEvalB
          e2'  <- eval e2
@@ -153,29 +139,9 @@ genBinOp op e1 e2 _resType =
 
          positionAtEnd afterB
          phiNode <- join (phi <$> int1TypeM <*> pure "")
-         addIncoming phiNode [(tr, startB), (e2', fullEvalB)]
+         addIncoming phiNode [(shortValue, startB), (e2', fullEvalB)]
          return phiNode
 
-    andThen _str =
-      do startB <- getInsertBlock
-         func   <- getBasicBlockParent startB
-         fl     <- false
-
-         fullEvalB <- appendBasicBlock func "andThen full evaluate"
-         afterB    <- appendBasicBlock func "andThen after"
-
-         positionAtEnd startB
-         e1'  <- eval e1
-         condBr e1' fullEvalB afterB
-
-         positionAtEnd fullEvalB
-         e2'  <- eval e2
-         br afterB
-
-         positionAtEnd afterB
-         phiNode <- join (phi <$> int1TypeM <*> pure "")
-         addIncoming phiNode [(fl, startB), (e2', fullEvalB)]
-         return phiNode
 
 
 genUnOp :: UnOp -> TExpr -> Typ -> Build Value
@@ -271,7 +237,7 @@ evalUnPos (EqExpr op e1 e2) =
 
 evalUnPos (Call trg fName args retVal)
     |  isSeparate (texpr trg) = separateCall trg fName args retVal
-    |  otherwise              = nonSeparateCall trg fName args retVal
+    |  otherwise              = nonSeparateCall trg fName args
 
 evalUnPos (LitInt i _t)   = int (fromIntegral i)
 evalUnPos (LitDouble d)   = dbl d
@@ -336,15 +302,13 @@ evalUnPos (LitString s) = do
   debug "Creating string.. hold on!"
   strPtr <- mallocObject "String"
   debugDump strPtr
- --  str <- load strPtr "loading created string"
-  -- debugDump str
   call f [currProc, strPtr, n, rawStrPtr]
   debug "Creating string done"
   return strPtr
 evalUnPos e = error $ "evalUnPos: unhandled case, " ++ show e
 
-
-nonSeparateCall trg fName args _retType =
+nonSeparateCall :: TExpr -> Text -> [TExpr] -> Build Value
+nonSeparateCall trg fName args =
     do let cName = classTypeName (texpr trg)
 
        currProc <- getCurrProc
@@ -363,11 +327,11 @@ nonSeparateCall trg fName args _retType =
 
        call f (currProc:trg':args')
 
+separateCall :: TExpr -> Text -> [TExpr] -> Typ -> Build Value
 separateCall trg fName args retType =
   do let cName = classTypeName (texpr trg)
      debug "generating separate call"
 
-     -- positionAtEnd sepCallStartB
      trg'  <- eval trg
      debugDump trg'
      args' <- mapM eval args
@@ -420,6 +384,8 @@ separateCall trg fName args retType =
               then wrapSepResult trgProc retType resultVal
               else return resultVal
 
+prepareClosure :: Typ -> Pos UnPosTExpr -> Value -> [TExpr] -> Value
+               -> Value -> [Value] -> Build Value
 prepareClosure retType trg f args trgProc nonSepTrg args' =
   do let Sep _ _ nonSepTrgType = texpr trg
          allTypes = ProcessorType : nonSepTrgType : map texpr args 
@@ -462,12 +428,14 @@ prepareClosure retType trg f args trgProc nonSepTrg args' =
               castedArgRef <- bitcast argRef valPtrType ""
               store val castedArgRef
 
-     zipWithM storeType allTypes [0 ..]
-     zipWithM storeArg (zip allTypes allEvald) [0 ..]
+     zipWithM_ storeType allTypes [0 ..]
+     zipWithM_ storeArg (zip allTypes allEvald) [0 ..]
      return closure
 
+splitSepRef :: Value -> Build (Value, Value)
 splitSepRef ref = (,) <$> gepInt ref [0, 0] <*> gepInt ref [0, 1]
 
+wrapSepResult :: Value -> Typ -> Value -> Build Value
 wrapSepResult trgProc retType result =
   do debug "wrap separate result"
      sepInst <- mallocSeparate retType
@@ -488,15 +456,6 @@ getQueueFor e =
       InheritProc inh _ -> getQueueFor inh
       _ -> lookupQueueFor e
 
-closLocFor :: Typ -> Build Value
-closLocFor t =
-    case t of
-      BoolType -> lookupEnv "<closResult1>"
-      Int64Type -> lookupEnv "<closResult64>"
-      ClassType _ _ -> lookupEnv "<closResult64>"
-      NoType -> lookupEnv "<closResult64>"
-      e -> error ("closLocFor: " ++ show e)
-
 closType :: Typ -> Build Value
 closType t =
     case t of
@@ -507,8 +466,8 @@ closType t =
       Int32Type -> "closure_sint32_type" <#> []
       Int64Type -> "closure_sint_type" <#> []
       DoubleType -> "closure_double_type" <#> []
-      ClassType _ _ -> "closure_pointer_type" <#> []
+      ClassType {} -> "closure_pointer_type" <#> []
       NoType -> "closure_void_type" <#> []
       ProcessorType -> "closure_pointer_type" <#> []
-      Sep _ _ _ -> "closure_pointer_type" <#> []
+      Sep {} -> "closure_pointer_type" <#> []
       _ -> error $ "closType: " ++ show t

@@ -1,15 +1,10 @@
 #include <algorithm>
-#include <iterator>
 #include <map>
 #include <set>
-#include <string>
-#include <vector>
-#include "llvm/Pass.h"
-#include "llvm/ADT/SCCIterator.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/CFG.h" // required for a scc_iterator<Function*>
+#include "llvm/IR/Instructions.h"
+#include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -20,250 +15,246 @@ typedef std::set<pq_node> pq_nodes;
 
 namespace
 {
-
   struct LiftSync : public FunctionPass
   {
     static char ID;
     LiftSync() : FunctionPass(ID) {}
-    
-    Function* priv_sync_func;
-    bool full_lift;
-    bool coalesce;
+
+    int removed_count;
 
     virtual bool doInitialization(Module &M)
     {
-      priv_sync_func = M.getFunction("priv_queue_sync");
+      removed_count = 0;
       return false;
     }
 
-    virtual bool runOnFunction(Function &F)
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const
     {
-      full_lift = false;
-      coalesce = false;
-      // We work backwards through the strongly connected components
-      // because we want to pull the syncs up the graph.
-      for (scc_iterator<Function *>
-             I = scc_begin(&F),
-             IE = scc_end(&F);
-           I != IE;
-           ++I)
-        {
-          std::vector<BasicBlock*> &component = *I;
-          pq_nodes all_syncs = get_all_syncs(component);
-
-          // Find all sync operations that aren't bound in any part of
-          // the component.
-          for (std::vector<BasicBlock*>::iterator
-                 BBI = component.begin(),
-                 BBIE = component.end();
-               BBI != BBIE;
-               ++BBI)
-            {
-              pq_nodes bound_nodes = block_gather_bound(*BBI);
-
-              all_syncs = pq_difference(all_syncs, bound_nodes);
-
-              // Coalesce the bound nodes as much as possible within the block.
-              // This may help some straight-line code.
-              for (pq_nodes::iterator
-                     ni = bound_nodes.begin(),
-                     nie = bound_nodes.end();
-                   ni != nie;
-                   ++ni)
-                {
-                  block_coalesce_sync(*BBI, *ni);
-                }
-            }
-
-          // Go through all blocks in the SCC and lift those syncs
-          // that should be lifted outside the SCC.
-          for (std::vector<BasicBlock*>::iterator
-                 BBI = component.begin(),
-                 BBIE = component.end();
-               BBI != BBIE;
-               ++BBI)
-            {
-              for (pq_nodes::iterator
-                     ni = all_syncs.begin(),
-                     nie = all_syncs.end();
-                   ni != nie;
-                   ++ni)
-                {
-                  block_lift_sync(F, component, *BBI, all_syncs, *ni);
-                }
-            }
-        }
-
-      if (full_lift || coalesce)
-        {
-          if (full_lift)
-            {
-              errs() << "full lift\n";
-            }
-
-          if (coalesce)
-            {
-              errs() << "coalesce\n";
-            }
-        }
-      return full_lift || coalesce;
+      AU.addRequiredTransitive<AliasAnalysis>();
+      AU.addPreserved<AliasAnalysis>();
     }
 
-
-    void block_coalesce_sync(BasicBlock *block, pq_node n)
+    virtual bool
+    runOnFunction(Function &F)
     {
+      std::map<BasicBlock*, pq_nodes> final_block_map = sync_end_cfg_pass (F);
+
+      trim_syncs (F, final_block_map);
+
+      return removed_count > 0;
+    }
+
+    // Calculate the nodes which are synchronized in the all predecessors
+    // of `block'.
+    pq_nodes
+    common_syncs (BasicBlock* block,
+		  std::map<BasicBlock*, pq_nodes> &block_map)
+    {
+      pq_nodes accum;
       bool first = true;
 
-      for (BasicBlock::iterator
-             II = block->begin(),
-             IIE = block->end();
-           II != IIE;
-           ++II)
-        {
-          pq_node m = is_sync(&(*II));
-          if (m && m == n)
-            {
-              if (first)
-                {
-                  first = false;
-                }
+      for (pred_iterator PI = pred_begin (block), E = pred_end (block);
+	   PI != E;
+	   ++PI)
+	{
+	  BasicBlock *pred = *PI;
+
+	  if (first)
+	    {
+	      accum = block_map [pred];
+	      first = false;
+	    }
+	  else
+	    {
+	      pq_nodes intersect;
+	      pq_nodes synced = block_map [pred];
+	      std::set_intersection (synced.begin(), synced.end(),
+				     accum.begin(), accum.end(),
+				     std::inserter (intersect,
+						    intersect.begin()));
+	      accum = intersect;
+	    }
+	}
+
+      return accum;
+    }
+
+    std::map<BasicBlock*, pq_nodes>
+    sync_end_cfg_pass (Function &F)
+    {
+      std::set <BasicBlock*> changed_blocks;
+      std::map<BasicBlock*, pq_nodes> cfg_block_map;
+
+      for (auto &block : F)
+	{
+	  changed_blocks.insert (&block);
+	  cfg_block_map [&block] = pq_nodes();
+	}
+
+      while (!changed_blocks.empty())
+	{
+	  // Remove a basic block from the blocks left to process.
+	  BasicBlock *block = *changed_blocks.begin ();
+	  changed_blocks.erase (block);
+
+	  // Find all common nodes that are synced at the end of
+	  // the predecessors
+	  pq_nodes common = common_syncs (block, cfg_block_map);
+
+	  pq_nodes synced_new = update_synced (common, block);
+
+	  // If we added/removed some sync_nodes, then update the map and
+	  // add our successors to the changed set.
+	  if (synced_new != cfg_block_map [block])
+	    {
+	      cfg_block_map [block] = synced_new;
+	      for (auto it = succ_begin (block), end = succ_end (block);
+		   it != end;
+		   ++it)
+		{
+		  changed_blocks.insert (*it);
+		}
+	    }
+	}
+
+      return cfg_block_map;
+    }
+
+    void
+    trim_syncs (Function &F, std::map<BasicBlock*, pq_nodes> &block_map)
+    {
+      for (auto &block : F)
+    	{
+    	  trim_syncs_for_block (block_map, &block);
+    	}
+    }
+
+    pq_nodes
+    clear_bound (pq_node q, pq_nodes &synced)
+    {
+      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
+      pq_nodes mod_synced;
+      auto pred =
+	[&] (const pq_node n)
+	{
+	  return aa.alias (q, n) == AliasAnalysis::NoAlias;
+	};
+
+      std::copy_if (synced.begin(), synced.end(),
+		    std::inserter (mod_synced, mod_synced.begin()),
+		    pred);
+
+      return mod_synced;
+    }
+
+    pq_nodes
+    clear_synced_for_call (CallInst *call, pq_nodes &synced)
+    {
+      Function *func = call->getCalledFunction();
+
+      if (func != 0 &&
+          (func->hasFnAttribute (Attribute::ReadOnly) ||
+           func->hasFnAttribute (Attribute::ReadNone)))
+	{
+	  return synced;
+	}
+      else
+	{
+	  return pq_nodes();
+	}
+    }
+
+    bool
+    already_synced (pq_node q, pq_nodes &synced)
+    {
+      AliasAnalysis &aa = getAnalysis<AliasAnalysis>();
+      auto pred =
+	[&q, &aa](pq_node n)
+	{
+	  return aa.alias (n, q) == AliasAnalysis::MustAlias;
+	};
+
+      return std::any_of (synced.begin(), synced.end(), pred);
+    }
+
+    void
+    trim_syncs_for_block (std::map<BasicBlock*, pq_nodes> &block_map,
+			  BasicBlock *block)
+    {
+      pq_nodes synced = common_syncs (block, block_map);
+
+      for (auto it = block->begin(), end = block->end();
+	   it != end;
+	   ++it)
+    	{
+    	  pq_node q;
+	  auto inst = &(*it);
+
+    	  if ((q = is_sync (inst)))
+    	    {
+
+	      if (already_synced (q, synced))
+		{
+		  removed_count++;
+		  it = block->getInstList().erase (it);
+		}
               else
                 {
-                  coalesce = true;
-                  II = block->getInstList().erase(II);
+                  // If it's not already synced (i.e., this is the first sync),
+                  // skip to the next instruction because we don't want to
+                  // clear the synced list for it (we know it won't affect the
+                  // synced-ness).
+                  ++it;
                 }
-            }
-          else
-            {
-              // FIXME: add code to detect routine and unlock here and 
-              // reset 'first' to true
-            }
-        }
 
+	      synced.insert (q);
+    	    }
+    	  else if ((q = is_bound (inst)))
+    	    {
+	      synced = clear_bound (q, synced);
+    	    }
+	  else if (CallInst *call = dyn_cast<CallInst>(inst))
+	    {
+	      synced = clear_synced_for_call (call, synced);
+	    }
+    	}
     }
 
-    // Lift the sync out of the block. This involves two things:
-    //   1) removing the sync on the the node 'n' from the basic block.
-    //   2) inserting the sync into the incoming edges to this block
-    //      from OUTSIDE the SCC.
-    void block_lift_sync(Function &F,
-                         std::vector<BasicBlock*> &scc,
-                         BasicBlock *block,
-                         pq_nodes &ns,
-                         pq_node n)
+    pq_nodes
+    update_synced (pq_nodes &start_synced, BasicBlock *block)
     {
-      // Remove the sync instructions that operate on the queues
-      // in the diff_syncs set.
-      for (BasicBlock::iterator
-             II = block->begin(),
-             IIE = block->end();
-           II != IIE;
-           ++II)
-        {
-          pq_node m = is_sync(&(*II));
-          if (m && m == n)
-            {
-              full_lift = true;
-              II = block->getInstList().erase(II);
-            }
-        }
+      pq_nodes synced = start_synced;
 
-      // Examine incoming edges to the first node and see if they coem
-      // from outside the component. If they do, insert a sync node
-      // there.
+      for (auto it = block->begin(), end = block->end();
+	   it != end;
+	   ++it)
+	{
+	  pq_node q;
+          auto inst = &(*it);
 
-      for (pred_iterator
-             pi = pred_begin(block),
-             pie = pred_end(block);
-           pi != pie;
-           ++pi)
-        {
-          // For every predecessor that's not in this component
-          if (count(scc.begin(), scc.end(), *pi) == 0)
-            {
-              full_lift = true;
-              BasicBlock* new_pred = SplitEdge(*pi, block, this);
-              fill_split (F, new_pred, ns);
-            }
-        }
+	  if ((q = is_sync (inst)))
+	    {
+	      synced.insert (q);
+
+              // Skip the next instruction because we don't want to
+              // clear the synced list for it (we know it won't
+              // affect the synced-ness).
+              ++it;
+	    }
+	  else if ((q = is_bound (inst)))
+	    {
+	      synced = clear_bound (q, synced);
+	    }
+	  else if (CallInst *call = dyn_cast<CallInst>(inst))
+	    {
+	      synced = clear_synced_for_call (call, synced);
+	    }
+	}
+
+      return synced;
     }
-
-    void fill_split(Function &F, BasicBlock *new_block, pq_nodes &ns)
-    {
-
-      Value *currProc = &(*(F.arg_begin()));
-
-      for (pq_nodes::iterator
-             ni = ns.begin(),
-             nie = ns.end();
-           ni != nie;
-           ++ni)
-        {
-          std::vector<Value*> args(2);
-          args[0] = *ni;
-          args[1] = currProc;
-
-          CallInst::Create(priv_sync_func, args, "", &new_block->back());
-        }      
-    }
-
 
   private:
-    pq_nodes pq_difference(pq_nodes &s1, pq_nodes &s2)
-    {
-      pq_nodes result;
-
-      std::set_difference(s1.begin(), s1.end(),
-                          s2.begin(), s2.end(),
-                          std::inserter(result, result.end()));
-
-      return result;
-    }
-
-    pq_nodes get_all_syncs(std::vector<BasicBlock*> &component)
-    {
-      pq_nodes syncs;
-      for (std::vector<BasicBlock*>::const_iterator
-             BBI = component.begin(),
-             BBIE = component.end();
-           BBI != BBIE;
-           ++BBI)
-        {
-          BasicBlock* block = *BBI;
-          for (BasicBlock::iterator
-                 II = block->begin(),
-                 IIE = block->end();
-               II != IIE;
-               ++II)
-            {
-              if (pq_node q = is_sync(&(*II)))
-                {
-                  syncs.insert(q);
-                }
-            }
-        }
-      return syncs;
-    }
-
-    pq_nodes block_gather_bound(BasicBlock *block)
-    {
-      pq_nodes bound;
-
-      for (BasicBlock::iterator
-             II = block->begin(),
-             IIE = block->end();
-           II != IIE;
-           ++II)
-        {
-          if (pq_node q = is_bound(&(*II)))
-            {
-              bound.insert(q);
-            }
-        }
-
-      return bound;
-    }
-
     pq_node is_sync(Instruction *inst)
     {
       return first_arg_call(inst, "priv_queue_sync");

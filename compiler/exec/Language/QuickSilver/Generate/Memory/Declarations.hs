@@ -123,6 +123,7 @@ mkCreateFunc c f =
      llvmFeatVal <- addFunction crName llvmFeatType
      -- setGC llvmFeatVal "qsgc"
      return ()
+
   where crName = featureAsCreate (view className c) (routineName f)
         f' = f { routineName = crName
                , routineResult = ClassType (view className c) [ClassType "G" []]
