@@ -94,7 +94,7 @@ variant_graph = function (df, parallel_data) {
 
   p <- p + theme(legend.position="none")
   p <- p + guides(fill=guide_legend(title=""))
-  p <- p + facet_wrap(~ Task, nrow = 1, scales="free")
+  p <- p + facet_wrap(~ Task, nrow = 3, scales="free")
 
   ## trim plot whitespace
   p <- p + theme(plot.margin = unit(c(0,0,0,0), "cm"),
@@ -112,8 +112,8 @@ variant_graph = function (df, parallel_data) {
   
   
   # change the fonts to Times
-  p <- p + theme(text=element_text(family="Times", size=8, colour="black"),
-                 axis.text=element_text(family="Times", size=6, colour="black"))
+  p <- p + theme(text=element_text(family="Times", size=10, colour="black"),
+                 axis.text=element_text(family="Times", size=8, colour="black"))
   
   return (p)
 }
@@ -141,13 +141,13 @@ for (t in par_tasks)
 parallel = subset(parallel, parallel$TimeType %in% c("CommTime"))
 print (xtable(cast(parallel, Task ~ Variant, value='Time.mean')))
 p = variant_graph(parallel, TRUE)
-ggsave('variant_parallel.pdf', p, height=4, width=18, units="cm")
+ggsave('variant_parallel.pdf', p, height=14, width=12, units="cm")
 print ("finished parallel saving")
 concurrent = subset(concurrent, concurrent$TimeType %in% c("CompTime"))
 
 print (xtable(cast(concurrent, Task ~ Variant, value='Time.mean')))
 p = variant_graph(concurrent, FALSE)
-ggsave('variant_concurrent.pdf', p, height=4, width = 18, units="cm")
+ggsave('variant_concurrent.pdf', p, height=14, width=12, units="cm")
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime, results$Variant, geom_mean))

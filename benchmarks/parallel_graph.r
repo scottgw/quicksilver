@@ -73,14 +73,14 @@ parallel_summary_graph = function (df)
 
   ## p <- p + geom_bar(stat="identity", colour="black", show_guide=FALSE)
 
-  p <- p + scale_fill_manual(values=c("dodgerblue3", "cornflowerblue"),
+  p <- p + scale_fill_manual(values=c("dodgerblue3", "darkslategray3"),
                              breaks=c("CompTime", "CommTime"),
                              labels=c("Computation time",
                                "Communication time"))
   p <- p + guides(fill=guide_legend(title=""))
   p <- p + ylab("Time (s)")
   p <- p + theme(legend.position = "top")
-  p <- p + facet_wrap(~ Task, nrow=1, scales="free")
+  p <- p + facet_wrap(~ Task, nrow=3, scales="free")
 
   ## trim plot whitespace
   p <- p + theme(plot.margin = unit(c(0,0,0,0), "cm"),
@@ -99,8 +99,8 @@ parallel_summary_graph = function (df)
   
   
   # change the fonts to Times
-  p <- p + theme(text=element_text(family="Times", size=8),
-                 axis.text=element_text(family="Times", size=6, colour="black"),
+  p <- p + theme(text=element_text(family="Times", size=10),
+                 axis.text=element_text(family="Times", size=8, colour="black"),
                  legend.key.size = unit(0.3, "cm"))
 
   return (p)
@@ -139,10 +139,10 @@ parallel_speedup_graph = function (df)
                          y=TimeScale,
                          colour=Language,
                          shape=Language))
-  p <- p + geom_point(size = I(1.3))
+  p <- p + geom_point()
   p <- p + xlab('Benchmark')
   p <- p + ylab('Speedup')
-  p <- p + facet_grid(~ Task, scales="free_y")
+  p <- p + facet_wrap(~ Task, nrow=3)
   p <- p + theme(legend.position="top")
 
   ## trim plot whitespace
@@ -162,11 +162,11 @@ parallel_speedup_graph = function (df)
   p <- p + scale_x_continuous(breaks=c(2,4,8,16,32))
 
   # change the fonts to Times
-  p <- p + theme(text=element_text(family="Times", size=8),
-                 axis.text=element_text(family="Times", size=6, colour="black"),
-                 legend.key.size = unit(0.3, "cm"))
+  p <- p + theme(text=element_text(family="Times", size=10),
+                 axis.text=element_text(family="Times", size=8, colour="black")
+                 )
 
-  ggsave('parallel_speedup.pdf', p, height=4.5, width=18, units="cm", dpi=600)
+  ggsave('parallel_speedup.pdf', p, height=15, width=12, units="cm", dpi=600)
 }
 
 
@@ -188,7 +188,7 @@ parallel_speedup_graph(results)
 
 p = parallel_summary_graph(splits)
 
-ggsave('parallel.pdf', p, height=4.5, width=18, units="cm", dpi=600)
+ggsave('parallel.pdf', p, height=15, width=12, units="cm", dpi=600)
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime, results$Language, geom_mean))
