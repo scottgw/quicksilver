@@ -292,8 +292,10 @@ proc_finish_reservation (processor_t client)
     {
       processor_t supplier = (processor_t) g_ptr_array_index(reservations, i);
       priv_queue_t pq = proc_get_queue (client, supplier);
-      
+
+#ifndef DISABLE_QOQ
       pthread_spin_lock (&supplier->spinlock);
+#endif
       priv_queue_lock (pq, client);
     }
 
@@ -301,7 +303,9 @@ proc_finish_reservation (processor_t client)
     {
       processor_t supplier =
 	(processor_t) g_ptr_array_index(reservations, n-(i+1));
+#ifndef DISABLE_QOQ
       pthread_spin_unlock (&supplier->spinlock);
+#endif
     }
 }
 
