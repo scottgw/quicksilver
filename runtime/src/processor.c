@@ -124,12 +124,12 @@ proc_lock(processor_t proc, processor_t client)
   task_mutex_lock(proc->qoq_mutex, &client->stask);
 }
 
+static
 void
-proc_unlock(processor_t proc, processor_t client)
+proc_unlock(processor_t proc)
 {
-  task_mutex_unlock(proc->qoq_mutex, &client->stask);
+  task_mutex_unlock(proc->qoq_mutex, &proc->stask);
 }
-
 
 // Returns true if the processor continue, false
 // if it should shutdown.
@@ -146,6 +146,7 @@ proc_duty_loop(processor_t proc)
         {
           // unlock signal (not used here?)
           /* assert (false && "proc_duty_loop: no notify"); */
+	  proc_unlock(proc);
           notify_available(proc);
           return true;
         }
