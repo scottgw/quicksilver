@@ -25,22 +25,33 @@ inputs= {'mutex': '20000 32',
          'product': '10000',
          'chain': '10000 0 1 10000'}
 
+def core_list():
+    i = 1
+    cores = []
+
+    while i <= multiprocessing.cpu_count():
+        cores.append(i)
+        i = i * 2
+
+    return cores
+
+
 def make_command(lang, task, num_workers):
     
     return './run.sh ' + inputs[task] + ' ' + str(num_workers)
 
 def make_variant_command(variant, num_workers):
-    flags = {'norm': '',
-             'nolift': '-l ',
-             'noqoq': '-q '}
+    flags = {'all': '',
+             'qoq': '-q ',
+             'dyn': '-d ',
+             'stat': '-s ',
+             'none': '-n '}
 
     return './run.sh ' + flags[variant] + str(num_workers)
 
-
-
 # Run the qs benchmarks with/without the different optimizations
 def run_variant (results, sort, task, workers):
-    variants = ['norm', 'nolift', 'noqoq']
+    variants = ['all', 'qoq', 'dyn', 'stat', 'none']
     lang = 'qs'
 
     os.chdir (os.path.join(sort, lang, task))
@@ -66,16 +77,6 @@ def run_variant (results, sort, task, workers):
         print (data)
 
     os.chdir (os.path.join ('..', '..', '..'))
-
-def core_list():
-    i = 1
-    cores = []
-
-    while i <= multiprocessing.cpu_count():
-        cores.append(i)
-        i = i * 2
-
-    return cores
 
 def run(results, sort, task, lang, num_workers):
     t1 = time.time ()
