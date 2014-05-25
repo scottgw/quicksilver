@@ -13,6 +13,8 @@
 #include "internal/task_condition.h"
 #include "internal/spsc_queue.h"
 
+#define LAST_FUNC(pq) (pq->last_was_func && pq->sync_check_enabled)
+
 #ifndef DISABLE_QOQ
 priv_queue_t
 priv_queue_new(processor_t proc)
@@ -40,7 +42,6 @@ priv_queue_free(priv_queue_t pq)
 
   free(pq);
 }
-
 
 void
 priv_queue_set_in_wait(priv_queue_t pq)
@@ -83,7 +84,7 @@ priv_queue_unlock(priv_queue_t pq, processor_t client)
 bool
 priv_queue_last_was_func(priv_queue_t pq)
 {
-  return pq->last_was_func && pq->sync_check_enabled;
+  return LAST_FUNC(pq);
 }
 
 void
@@ -92,23 +93,6 @@ priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
   spsc_enqueue_wait(pq->q, clos, &wait_proc->stask);
   priv_queue_resume_supplier(pq, wait_proc);
   pq->last_was_func = false;
-}
-
-void
-priv_queue_lock_sync(priv_queue_t pq, processor_t client)
-{
-  /* struct closure sync_clos; */
-  closure_t sync_clos = malloc(sizeof(*sync_clos));
-  closure_new_sync(sync_clos, client);
-
-  spsc_enqueue_wait(pq->q, sync_clos, &client->stask);
-  assert (client->stask.task->state == TASK_RUNNING);
-  qoq_enqueue_wait(pq->supplier_proc->qoq, pq, &client->stask);
-
-  task_set_state(client->stask.task, TASK_TRANSITION_TO_WAITING);
-  stask_yield_to_executor(&client->stask);
-
-  pq->last_was_func = true;
 }
 
 closure_t
@@ -122,10 +106,15 @@ priv_dequeue(priv_queue_t pq, processor_t proc)
 void
 priv_queue_sync(priv_queue_t pq, processor_t client)
 {
-  if (!pq->last_was_func)
+  if (!LAST_FUNC(pq))
     {
       /* struct closure sync_clos; */
       /* closure_t sync_clos = malloc(sizeof(*sync_clos)); */
+      if (pq->last_was_func && !pq->sync_check_enabled)
+	{
+	  priv_queue_resume_supplier(pq, client);
+	}
+
       struct closure sync_clos;
       closure_new_sync(&sync_clos, client);
 
@@ -209,7 +198,7 @@ priv_queue_unlock(priv_queue_t pq, processor_t client)
 bool
 priv_queue_last_was_func(priv_queue_t pq)
 {
-  return pq->last_was_func && pq->sync_check_enabled;
+  return LAST_FUNC(pq);
 }
 
 void
@@ -221,28 +210,17 @@ priv_queue_routine(priv_queue_t pq, closure_t clos, processor_t wait_proc)
 }
 
 void
-priv_queue_lock_sync(priv_queue_t pq, processor_t client)
-{
-  /* struct closure sync_clos; */
-  closure_t sync_clos = malloc(sizeof(*sync_clos));
-  closure_new_sync(sync_clos, client);
-
-  assert (client->stask.task->state == TASK_RUNNING);
-  spsc_enqueue_wait(pq->supplier_proc->qoq, sync_clos, &client->stask);
-
-  task_set_state(client->stask.task, TASK_TRANSITION_TO_WAITING);
-  stask_yield_to_executor(&client->stask);
-
-  pq->last_was_func = true;
-}
-
-void
 priv_queue_sync(priv_queue_t pq, processor_t client)
 {
-  if (!pq->last_was_func)
+  if (!LAST_FUNC(pq))
     {
       /* struct closure sync_clos; */
       /* closure_t sync_clos = malloc(sizeof(*sync_clos)); */
+      if (pq->last_was_func && !pq->sync_check_enabled)
+	{
+	  priv_queue_resume_supplier(pq, client);
+	}
+
       struct closure sync_clos;
       closure_new_sync(&sync_clos, client);
 

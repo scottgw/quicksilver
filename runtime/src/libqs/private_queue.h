@@ -50,9 +50,6 @@ void
 priv_queue_routine(priv_queue_t q, closure_t clos, processor_t wait_proc);
 
 void
-priv_queue_lock_sync(priv_queue_t pq, processor_t client);
-
-void
 priv_queue_sync(priv_queue_t pq, processor_t client);
 
 #ifdef __cplusplus
