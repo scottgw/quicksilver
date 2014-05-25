@@ -19,6 +19,7 @@ set(ll_tests
   branch_multi_proc_no_alias.ll
   branch_single_proc.ll
   loop_single_proc.ll
+  straight_line.ll
   )
 
 foreach(ll_test ${ll_tests})
