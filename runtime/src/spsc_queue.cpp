@@ -153,7 +153,7 @@ struct spsc_queue
 
 extern "C" {
 spsc_queue_t
-spsc_new(uint32_t size)
+spsc_new()
 {
   spsc_queue_t q = (spsc_queue_t)malloc(sizeof(struct spsc_queue));
 

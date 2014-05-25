@@ -20,10 +20,15 @@ priv_queue_new(processor_t proc)
   priv_queue_t pq = (priv_queue_t) malloc(sizeof(struct priv_queue));
 
   pq->last_was_func = false;
-  pq->last = NULL;
+  pq->sync_check_enabled = true;
   pq->q = spsc_new(2048);
   pq->supplier_proc = proc;
   pq->shutdown = false;
+
+  if (getenv("QS_SYNC_CHECK_DISABLE"))
+    {
+      pq->sync_check_enabled = false;
+    }
 
   return pq;
 }
@@ -31,11 +36,6 @@ priv_queue_new(processor_t proc)
 void
 priv_queue_free(priv_queue_t pq)
 {
-  if (pq->last != NULL)
-    {
-      closure_free(pq->last);
-    }
-
   spsc_free(pq->q);
 
   free(pq);
@@ -83,7 +83,7 @@ priv_queue_unlock(priv_queue_t pq, processor_t client)
 bool
 priv_queue_last_was_func(priv_queue_t pq)
 {
-  return pq->last_was_func;
+  return pq->last_was_func && pq->sync_check_enabled;
 }
 
 void
@@ -100,7 +100,6 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
   /* struct closure sync_clos; */
   closure_t sync_clos = malloc(sizeof(*sync_clos));
   closure_new_sync(sync_clos, client);
-  pq->last = NULL;
 
   spsc_enqueue_wait(pq->q, sync_clos, &client->stask);
   assert (client->stask.task->state == TASK_RUNNING);
@@ -129,7 +128,6 @@ priv_queue_sync(priv_queue_t pq, processor_t client)
       /* closure_t sync_clos = malloc(sizeof(*sync_clos)); */
       struct closure sync_clos;
       closure_new_sync(&sync_clos, client);
-      pq->last = NULL;
 
       spsc_enqueue_wait(pq->q, &sync_clos, &client->stask);
 
@@ -151,8 +149,14 @@ priv_queue_new(processor_t proc)
   priv_queue_t pq = (priv_queue_t) malloc(sizeof(struct priv_queue));
 
   pq->last_was_func = false;
+  pq->sync_check_enabled = true;
   pq->supplier_proc = proc;
   pq->shutdown = false;
+
+  if (getenv("QS_SYNC_CHECK_DISABLE"))
+    {
+      pq->sync_check_enabled = false;
+    }
 
   return pq;
 }
@@ -206,7 +210,7 @@ priv_queue_unlock(priv_queue_t pq, processor_t client)
 bool
 priv_queue_last_was_func(priv_queue_t pq)
 {
-  return pq->last_was_func;
+  return pq->last_was_func && pq->sync_check_enabled;
 }
 
 void
@@ -223,8 +227,6 @@ priv_queue_lock_sync(priv_queue_t pq, processor_t client)
   /* struct closure sync_clos; */
   closure_t sync_clos = malloc(sizeof(*sync_clos));
   closure_new_sync(sync_clos, client);
-
-  pq->last = NULL;
 
   assert (client->stask.task->state == TASK_RUNNING);
   spsc_enqueue_wait(pq->supplier_proc->qoq, sync_clos, &client->stask);
@@ -244,7 +246,6 @@ priv_queue_sync(priv_queue_t pq, processor_t client)
       /* closure_t sync_clos = malloc(sizeof(*sync_clos)); */
       struct closure sync_clos;
       closure_new_sync(&sync_clos, client);
-      pq->last = NULL;
 
       spsc_enqueue_wait(pq->supplier_proc->qoq, &sync_clos, &client->stask);
 

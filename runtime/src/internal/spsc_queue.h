@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 spsc_queue_t
-spsc_new(uint32_t size);
+spsc_new();
 
 void
 spsc_free(spsc_queue_t q);
