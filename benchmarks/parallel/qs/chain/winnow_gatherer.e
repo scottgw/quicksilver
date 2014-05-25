@@ -98,7 +98,8 @@ create make
           {Prelude}.print("Winnow_Gatherer: copy copy%N")
           create other_points.make(worker.val_points.count)
           from
-            other_i := 0
+				 other_i := 0
+				 worker.val_points.count
           until
             other_i >= other_points.count
           loop

@@ -336,7 +336,8 @@ module Main
         separate worker_vector
           do
             {Prelude}.print("Master: fetching product%N")
-            from
+				 from
+					 worker_vector.count
               j := start
             until
               j >= final

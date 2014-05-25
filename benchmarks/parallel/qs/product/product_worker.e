@@ -62,7 +62,9 @@ create make
 
       separate sep_vector
         do
-          from i := 0
+			  from
+				  i := 0
+				  sep_vector.count
           until i >= n
           loop
             vector.put (i, sep_vector.item (i))
@@ -72,7 +74,9 @@ create make
 
       separate sm
         do
-          from i := s
+			  from
+				  i := s
+				  sm.height
           until i >= f
           loop
             from j := 0

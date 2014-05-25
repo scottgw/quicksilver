@@ -141,7 +141,9 @@ create make
     do
       separate source
         do
-          from i := start
+			  from
+				  i := start
+				  source.height
           until i >= final
           loop
             from j := 0

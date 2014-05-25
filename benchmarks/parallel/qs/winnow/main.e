@@ -117,7 +117,7 @@ module Main
     local
       i: Integer
       j, jj: Integer
-
+		n: Integer 
       val_pt_count: Integer
 
       val_pt: Winnow_Value_Point
@@ -160,8 +160,10 @@ module Main
           end
         separate sep_val_points
           do
-            from jj := 0
-            until jj >= sep_val_points.count
+				 from
+					 jj := 0
+					 n := sep_val_points.count
+            until jj >= n
             loop
               create val_pt.make (sep_val_points.item (jj).value,
                                   sep_val_points.item (jj).x,

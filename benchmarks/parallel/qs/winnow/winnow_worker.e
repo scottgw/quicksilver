@@ -98,7 +98,9 @@ create make
           from i := start
           until i >= final
           loop
-            from j := 0
+				 from
+					 j := 0
+					 sep_matrix.height
             until j >= ncols
             loop
               local_mat.put(j, i - start, sep_matrix.item(j, i))
@@ -119,7 +121,9 @@ create make
           from i := start
           until i >= final
           loop
-            from j := 0
+				 from
+					 j := 0
+					 sep_mask.height
             until j >= ncols
             loop
               mask.put(j, i - start, sep_mask.item(j, i))

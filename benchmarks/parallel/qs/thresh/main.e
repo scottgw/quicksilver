@@ -127,6 +127,7 @@ module Main
         do
           from
              ii := start
+				 worker_mask.height
           until ii >= iend
           loop
             from jj := 0

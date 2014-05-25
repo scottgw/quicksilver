@@ -115,6 +115,7 @@ module Main
       separate worker_matrix
         do
           from
+            worker_matrix.height
             i := worker_start
             iend := i + worker_height
           until i >= iend

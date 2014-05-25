@@ -244,7 +244,8 @@ create make
       separate winnow_gatherer
         do
           from
-            i := 0
+				 i := 0
+				 winnow_gatherer.chunked_points.count
           until
             i >= winnow_nelts
           loop
@@ -324,9 +325,10 @@ create make
 
       separate shared_outer_vector shared_outer_count
         do
-          from i := start
+			  from
+				  i := start
           until i >= final
-          Loop
+          loop
             shared_outer_vector.put (i, outer_vector.item(i - start))
             i := i + 1
           end
@@ -336,12 +338,14 @@ create make
         
       separate shared_outer_count
         require shared_outer_count.item(0) = winnow_nelts
-	do
+		do
         end
 
       separate shared_outer_vector
         do
-          from i := 0
+			  from
+				  i := 0
+				  shared_outer_vector.count
           until i >= winnow_nelts
           loop
             outer_vector.put (i, shared_outer_vector.item(i))
