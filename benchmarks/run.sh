@@ -4,19 +4,28 @@
 set -e
 
 OPTIND=1
-MAIN=main
+MAIN="./main"
 
-while getopts "ql" opt; do
+while getopts "qdsn" opt; do
     case "$opt" in
         q)
-            MAIN="${MAIN}_noqoq"
+	    export QS_SYNC_CHECK_DISABLE=1
+            MAIN="./${MAIN}_justqoq"
             ;;
-        l)
-            MAIN="${MAIN}_nolift"
+        d)
+            MAIN="./${MAIN}_none"
+            ;;
+        s)
+	    export QS_SYNC_CHECK_DISABLE=1
+            MAIN="./${MAIN}_juststat"
+            ;;
+        n)
+	    export QS_SYNC_CHECK_DISABLE=1
+            MAIN="./${MAIN}_none"
             ;;
     esac
 done
 
 shift $((OPTIND-1))
 
-LIBQS_EXECS=${@: -1} ./${MAIN}
+LIBQS_EXECS=${@: -1} ${MAIN}
