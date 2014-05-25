@@ -55,7 +55,9 @@ create make
     do
       separate sep_x_points
         do
-          from i := 0
+			  from
+				  i := 0
+				  sep_x_points.count
           until i >= nelts
           loop
             x_points.put (i, sep_x_points.item(i))
@@ -65,7 +67,9 @@ create make
 
       separate sep_y_points
         do
-          from i := 0
+			  from
+				  i := 0
+				  sep_y_points.count
           until i >= nelts
           loop
             y_points.put (i, sep_y_points.item(i))

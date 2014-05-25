@@ -103,7 +103,9 @@ module Main
 
       separate sep_mat
         do
-          from i := start
+			  from
+				  sep_mat.height
+				  i := start
           until i >= final
           loop
             from j := 0
@@ -118,7 +120,9 @@ module Main
 
       separate sep_vec
         do
-          from i := start
+			  from
+				  i := start
+				  sep_vec.count
           until i >= final
           loop
             result_vector.put (i, sep_vec.item (i - start))
