@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <map>
 #include <set>
+#include <iostream>
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -59,6 +60,11 @@ namespace
 	{
 	  BasicBlock *pred = *PI;
 
+	  if (block_map.find(pred) == block_map.end())
+	    {
+	      continue;
+	    }
+
 	  if (first)
 	    {
 	      accum = block_map [pred];
@@ -74,6 +80,7 @@ namespace
 						    intersect.begin()));
 	      accum = intersect;
 	    }
+
 	}
 
       return accum;
@@ -86,10 +93,10 @@ namespace
       std::map<BasicBlock*, pq_nodes> cfg_block_map;
 
       for (auto &block : F)
-	{
-	  changed_blocks.insert (&block);
-	  cfg_block_map [&block] = pq_nodes();
-	}
+      	{
+      	  changed_blocks.insert (&block);
+      	  // cfg_block_map [&block] = pq_nodes();
+      	}
 
       while (!changed_blocks.empty())
 	{
@@ -105,7 +112,11 @@ namespace
 
 	  // If we added/removed some sync_nodes, then update the map and
 	  // add our successors to the changed set.
-	  if (synced_new != cfg_block_map [block])
+	  if (cfg_block_map.count(block) == 0)
+	    {
+	      cfg_block_map [block] = synced_new;
+	    }
+	  else if (synced_new != cfg_block_map [block])
 	    {
 	      cfg_block_map [block] = synced_new;
 	      for (auto it = succ_begin (block), end = succ_end (block);
@@ -183,6 +194,14 @@ namespace
     {
       pq_nodes synced = common_syncs (block, block_map);
 
+      // // Debug stuff
+      // std::cout << block->getName().str() << ": ";
+      // for (auto &n : synced)
+      // 	{
+      // 	  std::cout << n << " - " << n->getValueID() << ", ";
+      // 	}
+      // std::cout << std::endl;
+
       for (auto it = block->begin(), end = block->end();
 	   it != end;
 	   ++it)
@@ -215,7 +234,7 @@ namespace
     	    }
 	  else if (CallInst *call = dyn_cast<CallInst>(inst))
 	    {
-	      synced = clear_synced_for_call (call, synced);
+	      // synced = clear_synced_for_call (call, synced);
 	    }
     	}
     }
@@ -247,7 +266,7 @@ namespace
 	    }
 	  else if (CallInst *call = dyn_cast<CallInst>(inst))
 	    {
-	      synced = clear_synced_for_call (call, synced);
+	      // synced = clear_synced_for_call (call, synced);
 	    }
 	}
 
