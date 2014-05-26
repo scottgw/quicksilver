@@ -279,14 +279,14 @@ proc_finish_reservation (processor_t client)
   GPtrArray* reservations = client->reservation_list;
   int n = reservations->len;
 
-  /* if (n == 1) */
-  /*   { */
-  /*     processor_t supplier = (processor_t) g_ptr_array_index(reservations, 0); */
-  /*     priv_queue_t pq = proc_get_queue (client, supplier); */
+  if (n == 1)
+    {
+      processor_t supplier = (processor_t) g_ptr_array_index(reservations, 0);
+      priv_queue_t pq = proc_get_queue (client, supplier);
 
-  /*     priv_queue_lock (pq, client); */
-  /*     return; */
-  /*   } */
+      priv_queue_lock (pq, client);
+      return;
+    }
 
   for (int i = 0; i < n; i++)
     {
@@ -296,6 +296,7 @@ proc_finish_reservation (processor_t client)
 #ifndef DISABLE_QOQ
       pthread_spin_lock (&supplier->spinlock);
 #endif
+
       priv_queue_lock (pq, client);
     }
 
