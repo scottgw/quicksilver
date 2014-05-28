@@ -108,7 +108,9 @@ module Main
 				  i := start
           until i >= final
           loop
-            from j := 0
+				  from
+					  j := 0
+					  sep_mat.width
             until j >= nelts
             loop
               result_matrix.put (j, i, sep_mat.item (j, i - start))
