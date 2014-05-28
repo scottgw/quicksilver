@@ -43,8 +43,6 @@ notify_available(processor_t proc)
   /* proc->processing_wait = false; */
 }
 
-#ifndef DISABLE_QOQ
-
 static
 void
 proc_duty_loop(processor_t proc, priv_queue_t priv_queue)
@@ -115,85 +113,6 @@ proc_shutdown(processor_t proc, processor_t wait_proc)
   qoq_enqueue_wait(proc->qoq, NULL, &wait_proc->stask);
 }
 
-
-#else
-
-void
-proc_lock(processor_t proc, processor_t client)
-{
-  task_mutex_lock(proc->qoq_mutex, &client->stask);
-}
-
-static
-void
-proc_unlock(processor_t proc)
-{
-  task_mutex_unlock(proc->qoq_mutex, &proc->stask);
-}
-
-// Returns true if the processor continue, false
-// if it should shutdown.
-static
-bool
-proc_duty_loop(processor_t proc)
-{
-  while (true)
-    {
-      closure_t clos = NULL;
-      spsc_dequeue_wait(proc->qoq, (void**) &clos, &proc->stask);
-
-      if (clos == NULL)
-        {
-          // unlock signal (not used here?)
-          /* assert (false && "proc_duty_loop: no notify"); */
-	  proc_unlock(proc);
-          notify_available(proc);
-          return true;
-        }
-      else if (closure_is_end(clos))
-        {
-          closure_free (clos);
-          return false;
-        }
-      else if (closure_is_sync(clos))
-        {
-          processor_t client = (processor_t) clos->fn;
-          while (client->stask.task->state != TASK_WAITING);
-          proc->stask.task->state = TASK_TRANSITION_TO_WAITING;
-
-          stask_switch(&proc->stask, &client->stask);
-          /* proc_wake(client, proc->executor); */
-        }
-      else
-        {
-          closure_apply(clos, NULL);
-          closure_free(clos);
-        }
-    }
-}
-
-static
-void
-proc_loop(processor_t proc)
-{
-  stask_step_previous(&proc->stask);
-
-  while (proc_duty_loop(proc))
-    {
-      notify_available(proc);
-      proc_maybe_yield(proc);
-    }
-}
-
-
-void
-proc_shutdown(processor_t proc, processor_t wait_proc)
-{
-  closure_t clos_end = closure_new_end();
-  spsc_enqueue_wait(proc->qoq, clos_end, &wait_proc->stask);
-}
-
-#endif
 
 priv_queue_t
 proc_get_queue(processor_t proc, processor_t supplier_proc)
@@ -293,9 +212,7 @@ proc_finish_reservation (processor_t client)
       processor_t supplier = (processor_t) g_ptr_array_index(reservations, i);
       priv_queue_t pq = proc_get_queue (client, supplier);
 
-#ifndef DISABLE_QOQ
       pthread_spin_lock (&supplier->spinlock);
-#endif
 
       priv_queue_lock (pq, client);
     }
@@ -304,9 +221,7 @@ proc_finish_reservation (processor_t client)
     {
       processor_t supplier =
 	(processor_t) g_ptr_array_index(reservations, n-(i+1));
-#ifndef DISABLE_QOQ
       pthread_spin_unlock (&supplier->spinlock);
-#endif
     }
 }
 
@@ -370,12 +285,8 @@ proc_free(processor_t proc)
 {
   task_condition_free(proc->cv);
   task_mutex_free(proc->mutex);
-  #ifdef DISABLE_QOQ
-  spsc_free(proc->qoq);
-  task_mutex_free(proc->qoq_mutex);
-  #else
+
   qoq_free(proc->qoq);
-  #endif
 
   g_hash_table_destroy(proc->privq_cache);
 

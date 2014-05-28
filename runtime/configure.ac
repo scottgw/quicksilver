@@ -45,15 +45,7 @@ if test "x${ENABLE_SYSTEMTAP}" = xyes; then
 fi
 
 
-# END systemtap (almost) verbatim copy
-
-## Queue of queues enable/disable
-AC_ARG_ENABLE([qoq],
-              [AS_HELP_STRING([--disable-qoq],
-                              [Disable QoQ queues (default=enabled)])],
-              [ENABLE_QOQ='no'],
-              [ENABLE_QOQ="${enableval}"])
-                
+# END systemtap (almost) verbatim copy                
 
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_FILES([Makefile src/Makefile tests/Makefile tapset/Makefile])
