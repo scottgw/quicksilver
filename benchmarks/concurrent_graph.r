@@ -5,13 +5,10 @@ library(ggplot2)
 library(reshape)
 library(grid) ## for 'unit' used in legend.key.size theme setting
 library(doBy)
+library(xtable)
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = args[1]
-
-## print(args)
-## print(run_type)
-## print(csv_file)
 
 results = read.csv(csv_file)
 
@@ -24,6 +21,9 @@ results$Language[results$Language == 'haskell'] <- 'Hask.'
 results$Language[results$Language == 'erlang'] <- 'Erl.'
 
 
+results$TotalTime = as.numeric(as.character(results$TotalTime))
+results$CompTime = as.numeric(as.character(results$CompTime))
+
 ## Aggregate all the timing columns by the median value.
 # Task + Language + Threads,
 ## results =
@@ -31,8 +31,6 @@ results$Language[results$Language == 'erlang'] <- 'Erl.'
 ##     cbind(TotalTime, CompTime, CommTime) ~ . ,
 ##     data=results,
 ##     FUN=median)
-
-print(names(results))
 
 geom_mean = function (x) {
   return (exp(mean(log(x))))
@@ -75,13 +73,11 @@ results = summaryBy(TotalTime + CompTime ~ Language + Task + Threads,
   data = results,
   FUN = list (mean, sd))
 
-print (results)
+print (xtable(cast(results, Task ~ Language, value="TotalTime.mean")))
+
 
 p = concurrent_graph(results)
-
 ggsave('concurrent.pdf', p, height=10, width=10, units="cm")
 
-print ("Geometric means (total):")
+print ("Geometric mean:")
 print (tapply(results$TotalTime.mean, results$Language, geom_mean))
-print ("Geometric mean (comp):")
-print (tapply(results$CompTime.mean, results$Language, geom_mean))

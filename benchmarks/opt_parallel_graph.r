@@ -5,6 +5,7 @@ library(ggplot2)
 library(reshape)
 library(doBy) ## For summary statistics
 library(grid) ## for 'unit' used in legend.key.size theme setting
+library(xtable)
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = args[1]
@@ -16,12 +17,13 @@ results = read.csv(csv_file)
 
 
 levels(results$Variant) <- c(levels(results$Variant),
-                             'None', 'Dyn.', 'Static', 'QoQ', 'All')
+                             'None', 'Dyn.', 'Static', 'QoQ', 'All', 'All/TC')
 results$Variant[results$Variant == 'none'] <- 'None'
 results$Variant[results$Variant == 'dyn'] <- 'Dyn.'
 results$Variant[results$Variant == 'stat'] <- 'Static'
 results$Variant[results$Variant == 'qoq'] <- 'QoQ'
 results$Variant[results$Variant == 'all'] <- 'All'
+results$Variant[results$Variant == 'qstc'] <- 'All/TC'
 results <- droplevels(results)
 
 results$TotalTime = as.numeric(as.character(results$TotalTime))
@@ -69,9 +71,8 @@ parallel_summary_graph = function (df)
   # df = df[df$Language != 'qs',]
   df$TotalTime.mean[df$TimeType == 'CommTime'] <- NA
   df$TotalTime.sd[df$TimeType == 'CommTime'] <- NA
-  
-  print (df)
 
+  
   p <- ggplot(df, aes(x=Variant, y=Time.mean, fill=TimeType))
 
   # The combination of these two puts the colour down, but then
@@ -139,7 +140,7 @@ parallel_speedup_graph = function (df)
           all=TRUE)
   df = subset(df, select = -c(Threads.y))
 
-  print (df)
+  ## print (df)
   
   df$TimeScale = df$TotalTime.y / df$TotalTime.x
   
@@ -197,10 +198,10 @@ results =
     data=results,
     FUN=median)
 
-print ("printing speedup")
 parallel_speedup_graph(results)
 
-print ("printing summary")
+print (xtable(cast(results, Task + Variant ~ Threads, value="TotalTime")))
+
 p = parallel_summary_graph(splits)
 
 ggsave('opt_parallel.pdf', p, height=10, width=10, units="cm", dpi=600)

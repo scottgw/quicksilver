@@ -5,25 +5,22 @@ library(ggplot2)
 library(reshape)
 library(grid) ## for 'unit' used in legend.key.size theme setting
 library(doBy)
+library(xtable)
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = args[1]
 
-## print(args)
-## print(run_type)
-## print(csv_file)
-
 results = read.csv(csv_file)
 
-
-
+## replace with more print friendly names
 levels(results$Variant) <- c(levels(results$Variant),
-                             'None', 'Dyn.', 'Static', 'QoQ', 'All')
+                             'None', 'Dyn.', 'Static', 'QoQ', 'All', 'All/TC')
 results$Variant[results$Variant == 'none'] <- 'None'
 results$Variant[results$Variant == 'dyn'] <- 'Dyn.'
 results$Variant[results$Variant == 'stat'] <- 'Static'
 results$Variant[results$Variant == 'qoq'] <- 'QoQ'
 results$Variant[results$Variant == 'all'] <- 'All'
+results$Variant[results$Variant == 'qstc'] <- 'All/TC'
 results <- droplevels(results)
 
 results$TotalTime = as.numeric(as.character(results$TotalTime))
@@ -36,8 +33,6 @@ results$CompTime = as.numeric(as.character(results$CompTime))
 ##     cbind(TotalTime, CompTime, CommTime) ~ . ,
 ##     data=results,
 ##     FUN=median)
-
-print(names(results))
 
 geom_mean = function (x) {
   return (exp(mean(log(x))))
@@ -80,13 +75,11 @@ results = summaryBy(TotalTime + CompTime ~ Variant + Task + Threads,
   data = results,
   FUN = list (mean, sd))
 
-print (results)
-
 p = concurrent_graph(results)
+
+print (xtable(cast(results, Task ~ Variant, value="TotalTime.mean")))
 
 ggsave('opt_concurrent.pdf', p, height=10, width=10, units="cm")
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime.mean, results$Variant, geom_mean))
-print ("Geometric mean (comp):")
-print (tapply(results$CompTime.mean, results$Variant, geom_mean))

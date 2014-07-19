@@ -5,6 +5,7 @@ library(ggplot2)
 library(reshape)
 library(grid) ## for 'unit' used in legend.key.size theme setting
 library(doBy)
+library(xtable)
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = args[1]
@@ -17,6 +18,11 @@ results = read.csv(csv_file)
 
 levels(results$Language) <- c(levels(results$Language), 'Qs')
 results$Language[results$Language == 'qs'] <- 'Qs'
+
+
+results$TotalTime = as.numeric(as.character(results$TotalTime))
+results$CompTime = as.numeric(as.character(results$CompTime))
+
 
 ## Aggregate all the timing columns by the median value.
 # Task + Language + Threads,
@@ -72,6 +78,8 @@ results = summaryBy(TotalTime + CompTime ~ Language + Task + Threads,
 print (results)
 
 p = concurrent_graph(results)
+
+print (xtable(cast(results, Task ~ Language, value="TotalTime.mean")))
 
 ggsave('concurrent_eve.pdf', p, height=8, width=10, units="cm")
 

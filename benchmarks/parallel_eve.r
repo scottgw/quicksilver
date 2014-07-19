@@ -20,6 +20,9 @@ results = read.csv(csv_file)
 levels(results$Language) <- c(levels(results$Language), 'Qs')
 results$Language[results$Language == 'qs'] <- 'Qs'
 
+results$TotalTime = as.numeric(as.character(results$TotalTime))
+results$CompTime = as.numeric(as.character(results$CompTime))
+
 results$CommTime = results$TotalTime - results$CompTime
 
 non_time_names = setdiff (names(results), c("CompTime", "CommTime"))
@@ -123,6 +126,10 @@ parallel_speedup_graph(results)
 p = parallel_summary_graph(splits)
 
 ggsave('parallel_eve.pdf', p, height=7, width=10, units="cm", dpi=600)
+
+
+print (xtable(cast(results, Task + Language ~ Threads, value="TotalTime")))
+
 
 print ("Geometric means (total):")
 print (tapply(results$TotalTime, results$Language, geom_mean))

@@ -5,6 +5,7 @@ library(ggplot2)
 library(reshape)
 library(doBy) ## For summary statistics
 library(grid) ## for 'unit' used in legend.key.size theme setting
+library(xtable)
 
 args = commandArgs(trailingOnly = TRUE)
 csv_file = args[1]
@@ -22,11 +23,12 @@ results$Language[results$Language == 'cxx'] <- 'C++'
 results$Language[results$Language == 'haskell'] <- 'Hask.'
 results$Language[results$Language == 'erlang'] <- 'Erl.'
 
+results$TotalTime = as.numeric(as.character(results$TotalTime))
+results$CompTime = as.numeric(as.character(results$CompTime))
+
 results$CommTime = results$TotalTime - results$CompTime
 
 non_time_names = setdiff (names(results), c("CompTime", "CommTime"))
-
-print (non_time_names)
 
 ## Aggregate all the timing columns by the median value.
 # Task + Language + Threads,
@@ -35,8 +37,6 @@ print (non_time_names)
 ##     cbind(TotalTime, CompTime, CommTime) ~ . ,
 ##     data=results,
 ##     FUN=median)
-
-print(names(results))
 
 split_comm_time = function (df)
 {
@@ -64,8 +64,6 @@ parallel_summary_graph = function (df)
   df = df[df$Language != 'qs',]
   df$TotalTime.mean[df$TimeType == 'CommTime'] <- NA
   df$TotalTime.sd[df$TimeType == 'CommTime'] <- NA
-  
-  print (df)
 
   p <- ggplot(df, aes(x=Language, y=Time.mean, fill=TimeType))
 
@@ -113,10 +111,11 @@ parallel_summary_graph = function (df)
 
 parallel_speedup_graph = function (df)
 {
-  with_comp_time = df[df$Language == 'Qs' | df$Language == 'erlang',]
+
+  with_comp_time = df[df$Language == 'Qs' | df$Language == 'Erl.',]
 
   levels(with_comp_time$Language)[levels(with_comp_time$Language) == 'Qs'] <- 'Qs (comp.)'
-  levels(with_comp_time$Language)[levels(with_comp_time$Language) == 'erlang'] <- 'erlang (comp.)'
+  levels(with_comp_time$Language)[levels(with_comp_time$Language) == 'Erl.'] <- 'Erl. (comp.)'
   
   with_comp_time = subset(with_comp_time, select = -c(TotalTime, CommTime))
   names(with_comp_time) = c("Task", "Language", "Threads", "Time")
@@ -125,6 +124,9 @@ parallel_speedup_graph = function (df)
   names(with_total_time) = c("Task", "Language", "Threads", "Time")
 
   df = rbind(with_total_time, with_comp_time)
+
+  print (xtable(cast(df, Task + Language ~ Threads, value="Time")))
+
 
   singleCore = df[df$Threads == 1,]
   df =
@@ -180,8 +182,6 @@ splits = split_comm_time(results)
 splits = summaryBy(TotalTime + Time ~ TimeType + Language + Task + Threads,
   data = splits,
   FUN = list (mean, sd))
-
-print (splits[splits$Language == 'Qs',])
 
 results =
   aggregate(
